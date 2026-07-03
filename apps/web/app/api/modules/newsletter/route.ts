@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isMissingNewsletterTable } from '@/lib/supabase/errors'
 
-const DEFAULT_INTERESTS = ['HCI research', 'Contemporary art', 'German B1', 'Job hunt']
+import { DEFAULT_INTERESTS } from '@/lib/newsletter/sources'
 
 export async function GET() {
   const supabase = await createClient()

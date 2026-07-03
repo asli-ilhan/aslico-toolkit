@@ -6,6 +6,13 @@ export interface NewsHeadline {
   source: string
   snippet?: string
   publishedAt?: string
+  topic?: string
+}
+
+export interface NewsTopicSection {
+  topicId: string
+  topicLabel: string
+  headlines: NewsHeadline[]
 }
 
 export interface NewsletterDayEvent {
@@ -25,6 +32,7 @@ export interface NewsletterInput {
   interests: string[]
   date: string
   headlines: NewsHeadline[]
+  topicSections?: NewsTopicSection[]
   todayEvents: NewsletterDayEvent[]
   todayTodos: NewsletterDayTodo[]
   jobBrief?: {
@@ -37,6 +45,7 @@ export interface NewsletterInput {
 export interface NewsletterSections {
   greeting: string
   headlines: NewsHeadline[]
+  topicSections: NewsTopicSection[]
   todayEvents: NewsletterDayEvent[]
   todayTodos: NewsletterDayTodo[]
   jobPulse: string
@@ -57,6 +66,7 @@ export async function generateNewsletterIssue(input: NewsletterInput): Promise<{
 
   const jobPulse = formatJobPulse(input.jobBrief, input.locale)
   const pendingTodos = input.todayTodos.filter((t) => !t.done)
+  const topicSections = input.topicSections ?? []
 
   let greeting = defaultGreeting(input.locale, input.date)
   let closing = defaultClosing(input.locale, pendingTodos.length, input.todayEvents.length)
@@ -64,16 +74,17 @@ export async function generateNewsletterIssue(input: NewsletterInput): Promise<{
   if (process.env.ANTHROPIC_API_KEY) {
     try {
       const raw = await createClaudeMessage({
-        system: `Write a 1-sentence morning greeting and 1-sentence closing for a personal daily brief. Language: ${lang}. Return JSON only: {"greeting":"...","closing":"..."}. Warm, concise. Reference the day if helpful.`,
+        system: `Write a 1-sentence morning greeting and 1-sentence closing for a personal daily brief. Language: ${lang}. Return JSON only: {"greeting":"...","closing":"..."}. Warm, worldly, concise — the reader is a maritime AI/ML researcher (shipbuilding, ocean engineering) who also follows politics, culture, finance, tech, tennis, and F1.`,
         messages: [
           {
             role: 'user',
             content: JSON.stringify({
               date: input.date,
               headlineCount: input.headlines.length,
+              topics: topicSections.map((s) => s.topicLabel),
               events: input.todayEvents.length,
               todos: pendingTodos.length,
-              interests: input.interests,
+              interests: input.interests.slice(0, 8),
             }),
           },
         ],
@@ -91,6 +102,7 @@ export async function generateNewsletterIssue(input: NewsletterInput): Promise<{
   const sections: NewsletterSections = {
     greeting,
     headlines: input.headlines,
+    topicSections,
     todayEvents: input.todayEvents,
     todayTodos: input.todayTodos,
     jobPulse,
@@ -135,17 +147,29 @@ function buildMarkdown(sections: NewsletterSections, locale: string): string {
 
   const lines = [sections.greeting, '']
 
-  lines.push(`## ${L.news}`)
-  if (sections.headlines.length) {
-    for (const h of sections.headlines) {
-      lines.push(`- [${h.title}](${h.url}) — *${h.source}*`)
-      if (h.snippet) lines.push(`  ${h.snippet}`)
+  if (sections.topicSections.length) {
+    for (const section of sections.topicSections) {
+      lines.push(`## ${section.topicLabel}`)
+      for (const h of section.headlines) {
+        lines.push(`- [${h.title}](${h.url}) — *${h.source}*`)
+        if (h.snippet) lines.push(`  ${h.snippet}`)
+      }
+      lines.push('')
     }
   } else {
-    lines.push(L.noNews)
+    lines.push(`## ${L.news}`)
+    if (sections.headlines.length) {
+      for (const h of sections.headlines) {
+        lines.push(`- [${h.title}](${h.url}) — *${h.source}*`)
+        if (h.snippet) lines.push(`  ${h.snippet}`)
+      }
+    } else {
+      lines.push(L.noNews)
+    }
+    lines.push('')
   }
 
-  lines.push('', `## ${L.events}`)
+  lines.push(`## ${L.events}`)
   if (sections.todayEvents.length) {
     for (const e of sections.todayEvents) {
       const time =
@@ -207,11 +231,11 @@ function formatJobPulse(
 }
 
 function defaultGreeting(locale: string, date: string): string {
-  if (locale === 'tr') return `Günaydın — işte ${date} günlük özetin.`
+  if (locale === 'tr') return `Günaydın — işte ${date} günlük dünya özeti.`
   if (locale === 'fr') return `Bonjour — voici votre brief du ${date}.`
   if (locale === 'es') return `Buenos días — tu resumen del ${date}.`
   if (locale === 'ar') return `صباح الخير — ملخصك ليوم ${date}.`
-  return `Good morning — here's your brief for ${date}.`
+  return `Good morning — here's your world brief for ${date}.`
 }
 
 function defaultClosing(locale: string, todos: number, events: number): string {

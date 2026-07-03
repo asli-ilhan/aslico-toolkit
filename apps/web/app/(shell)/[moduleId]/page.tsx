@@ -26,6 +26,7 @@ export function generateStaticParams() {
     { moduleId: 'voice-assistant' },
     { moduleId: 'newsletter' },
     { moduleId: 'culture-tracker' },
+    { moduleId: 'travel-scout' },
     { moduleId: 'language-tutor' },
   ]
 }

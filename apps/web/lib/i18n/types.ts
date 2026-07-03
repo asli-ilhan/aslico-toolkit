@@ -40,6 +40,16 @@ export type Messages = {
     newsletterReady: string
     generateNewsletter: string
     noEventsToday: string
+    languageLessonToday: string
+    languageRestDay: string
+    cultureScoutReady: string
+    openLanguageTutor: string
+    openCultureTracker: string
+    openTravelScout: string
+    todayTodos: string
+    upcomingTrip: string
+    yourInterests: string
+    generating: string
   }
   theme: {
     label: string
@@ -450,6 +460,111 @@ export type Messages = {
     }
     warnings: { tableMissing: string; v2Missing: string }
     errors: { generateFailed: string }
+  }
+  cultureTracker: {
+    title: string
+    subtitle: string
+    settingsTitle: string
+    homeCities: string
+    interests: string
+    spotifyArtists: string
+    favoriteAuthors: string
+    bookTopics: string
+    languages: string
+    saveSettings: string
+    runScout: string
+    scouting: string
+    calendarHint: string
+    booksTitle: string
+    yourBooks: string
+    empty: string
+    noEvents: string
+    addBook: string
+    bookTitle: string
+    bookAuthor: string
+    bookStatus: string
+    statuses: Record<string, string>
+    removeBook: string
+    warnings: { tableMissing: string }
+    errors: { scoutFailed: string }
+  }
+  travelScout: {
+    title: string
+    subtitle: string
+    planTrip: string
+    destinationPlaceholder: string
+    scoutTrip: string
+    randomPick: string
+    scouting: string
+    calendarHint: string
+    vibesTitle: string
+    vibes: Record<string, string>
+    avoidMass: string
+    interestsPlaceholder: string
+    saveSettings: string
+    insiderTips: string
+    empty: string
+    history: string
+    upcomingPlans: string
+    warnings: { tableMissing: string }
+    errors: { scoutFailed: string }
+  }
+  languageTutor: {
+    title: string
+    subtitle: string
+    day: string
+    streak: string
+    restDay: string
+    restDayHint: string
+    tabs: Record<string, string>
+    words: string
+    reading: string
+    speaking: string
+    writing: string
+    youtube: string
+    immersion: string
+    quiz: string
+    dialogues: string
+    readingQuestions: string
+    submitPractice: string
+    speakingPlaceholder: string
+    writingPlaceholder: string
+    grading: string
+    grammarBlocked: string
+    repeatUnit: string
+    rotation: string
+    filmsTitle: string
+    booksTitle: string
+    cultureBooks: string
+    srsAgain: string
+    srsHard: string
+    srsGood: string
+    srsEasy: string
+    mic: string
+    grammarGate: string
+    grammarPassed: string
+    grammarPending: string
+    generateLesson: string
+    generating: string
+    noLesson: string
+    markDone: string
+    modes: Record<string, string>
+    chatPlaceholder: string
+    send: string
+    showAnswer: string
+    hard: string
+    easy: string
+    noCards: string
+    genReport: string
+    topErrors: string
+    settings: string
+    programStart: string
+    saveSettings: string
+    nativeLanguage: string
+    sundayBreak: string
+    goalDays: string
+    warnings: { tableMissing: string }
+    errors: { lessonFailed: string; grammarBlocked: string; submitFailed: string }
   }
   voiceAssistant: {
     title: string

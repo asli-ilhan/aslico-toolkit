@@ -26,6 +26,32 @@ interface NewsletterPreview {
   sections?: { greeting?: string; focus?: string[] }
 }
 
+interface CulturePreview {
+  id: string
+  title: string
+}
+
+interface LanguagePreview {
+  isRestDay: boolean
+  languageLabel: string | null
+  topic: string | null
+  status: string | null
+  programDay: number
+}
+
+interface TodoItem {
+  id: string
+  title: string
+  done: boolean
+}
+
+interface TripPreview {
+  id: string
+  destination: string
+  start_date: string
+  end_date: string | null
+}
+
 export function DailyBriefing() {
   const { t, locale } = useLocale()
   const b = t.brief
@@ -35,6 +61,11 @@ export function DailyBriefing() {
   const [todayEvents, setTodayEvents] = useState<CalEvent[]>([])
   const [weekEvents, setWeekEvents] = useState<CalEvent[]>([])
   const [newsletter, setNewsletter] = useState<NewsletterPreview | null>(null)
+  const [cultureScout, setCultureScout] = useState<CulturePreview | null>(null)
+  const [languageTutor, setLanguageTutor] = useState<LanguagePreview | null>(null)
+  const [todayTodos, setTodayTodos] = useState<TodoItem[]>([])
+  const [upcomingTrip, setUpcomingTrip] = useState<TripPreview | null>(null)
+  const [interests, setInterests] = useState<string[] | null>(null)
   const [generating, setGenerating] = useState(false)
 
   function load() {
@@ -47,6 +78,11 @@ export function DailyBriefing() {
         setTodayEvents(data.todayEvents ?? [])
         setWeekEvents(data.weekEvents ?? [])
         setNewsletter(data.newsletter ?? null)
+        setCultureScout(data.cultureScout ?? null)
+        setLanguageTutor(data.languageTutor ?? null)
+        setTodayTodos(data.todayTodos ?? [])
+        setUpcomingTrip(data.upcomingTrip ?? null)
+        setInterests(data.interests ?? null)
       })
       .catch(() => {})
   }
@@ -72,7 +108,11 @@ export function DailyBriefing() {
     followUps.length > 0 ||
     todayEvents.length > 0 ||
     weekEvents.length > 0 ||
-    newsletter
+    newsletter ||
+    cultureScout ||
+    languageTutor ||
+    todayTodos.length > 0 ||
+    upcomingTrip
 
   return (
     <GlassPanel className="p-6">
@@ -93,6 +133,15 @@ export function DailyBriefing() {
           <Link href="/job-agent" className="text-[var(--accent)] hover:underline">
             {b.openJobAgent}
           </Link>
+          <Link href="/language-tutor" className="text-[var(--accent)] hover:underline">
+            {b.openLanguageTutor}
+          </Link>
+          <Link href="/culture-tracker" className="text-[var(--accent)] hover:underline">
+            {b.openCultureTracker}
+          </Link>
+          <Link href="/travel-scout" className="text-[var(--accent)] hover:underline">
+            {b.openTravelScout}
+          </Link>
         </div>
       </div>
 
@@ -105,10 +154,46 @@ export function DailyBriefing() {
         </p>
       : <div className="mt-3">
           <Button variant="outline" onClick={generateNewsletter} disabled={generating}>
-            {generating ? '…' : b.generateNewsletter}
+            {generating ? b.generating : b.generateNewsletter}
           </Button>
         </div>
       }
+
+      {languageTutor && (
+        <p className="mt-3 rounded-lg border border-[var(--surface-border)] px-3 py-2 text-sm text-[var(--text-muted)]">
+          {languageTutor.isRestDay ?
+            b.languageRestDay
+          : <>
+              {b.languageLessonToday}:{' '}
+              <span className="text-[var(--text)]">
+                {languageTutor.languageLabel}
+                {languageTutor.topic ? ` — ${languageTutor.topic}` : ''}
+                {languageTutor.status === 'done' ? ' ✓' : ''}
+              </span>
+            </>
+          }
+        </p>
+      )}
+
+      {cultureScout && (
+        <p className="mt-3 rounded-lg border border-[var(--surface-border)] px-3 py-2 text-sm text-[var(--text-muted)]">
+          {b.cultureScoutReady}{' '}
+          <span className="text-[var(--text)]">— {cultureScout.title}</span>
+        </p>
+      )}
+
+      {upcomingTrip && (
+        <p className="mt-3 rounded-lg border border-[var(--surface-border)] px-3 py-2 text-sm text-[var(--text-muted)]">
+          {b.upcomingTrip}:{' '}
+          <span className="text-[var(--text)]">
+            {upcomingTrip.destination} ({new Date(upcomingTrip.start_date).toLocaleDateString(locale)}
+            {upcomingTrip.end_date ?
+              ` → ${new Date(upcomingTrip.end_date).toLocaleDateString(locale)}`
+            : ''}
+            )
+          </span>
+        </p>
+      )}
 
       {hasReminders ?
         <div className="mt-4 space-y-3">
@@ -134,6 +219,21 @@ export function DailyBriefing() {
               </ul>
             : <p className="mt-1 text-sm text-[var(--text-muted)]">{b.noEventsToday}</p>}
           </div>
+
+          {todayTodos.length > 0 && (
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-[var(--accent)]">
+                {b.todayTodos}
+              </p>
+              <ul className="mt-1 space-y-1 text-sm text-[var(--text-muted)]">
+                {todayTodos.map((todo) => (
+                  <li key={todo.id} className={todo.done ? 'line-through opacity-60' : ''}>
+                    {todo.title}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {weekEvents.length > todayEvents.length && (
             <div>
@@ -185,7 +285,7 @@ export function DailyBriefing() {
         )}
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {b.tags.map((tag) => (
+        {(interests?.length ? interests : b.tags).map((tag) => (
           <span
             key={tag}
             className="rounded-full border border-[var(--surface-border)] bg-[var(--accent-soft)] px-3 py-1 text-xs text-[var(--accent)]"

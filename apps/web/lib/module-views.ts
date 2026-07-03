@@ -4,6 +4,9 @@ import { JobAgentView } from '@/components/modules/job-agent/JobAgentView'
 import { CalendarView } from '@/components/modules/CalendarView'
 import { NewsletterView } from '@/components/modules/NewsletterView'
 import { VoiceAssistantView } from '@/components/modules/VoiceAssistantView'
+import { CultureTrackerView } from '@/components/modules/CultureTrackerView'
+import { TravelScoutView } from '@/components/modules/TravelScoutView'
+import { LanguageTutorView } from '@/components/modules/LanguageTutorView'
 
 export const moduleViews: Record<string, ComponentType> = {
   transcription: TranscriptionView,
@@ -11,6 +14,9 @@ export const moduleViews: Record<string, ComponentType> = {
   calendar: CalendarView,
   newsletter: NewsletterView,
   'voice-assistant': VoiceAssistantView,
+  'culture-tracker': CultureTrackerView,
+  'travel-scout': TravelScoutView,
+  'language-tutor': LanguageTutorView,
 }
 
 export function getModuleView(moduleId: string): ComponentType | undefined {

@@ -4,9 +4,12 @@ import {
   fetchJobBrief,
   fetchNewsletterInterests,
   fetchTodayCalendar,
+  fetchTodayTodos,
 } from '@/lib/toolkit-context'
+import { fetchTutorSettings } from '@/lib/language-tutor/lesson'
+import { languageForDate, languageLabel, programDayIndex } from '@/lib/language-tutor/rotation'
 
-/** Unified dashboard brief: job agent + calendar + newsletter */
+/** Unified dashboard brief: job agent + calendar + newsletter + learning */
 export async function GET() {
   const supabase = await createClient()
   const {
@@ -17,14 +20,66 @@ export async function GET() {
   const today = new Date().toISOString().slice(0, 10)
   const jobBrief = await fetchJobBrief(supabase, user.id)
   const todayEvents = await fetchTodayCalendar(supabase, user.id)
+  const todayTodos = await fetchTodayTodos(supabase, user.id, today)
   const interests = await fetchNewsletterInterests(supabase, user.id)
 
-  const { data: newsletter } = await supabase
-    .from('newsletter_issues')
-    .select('id, title, issue_date, sections')
-    .eq('user_id', user.id)
-    .eq('issue_date', today)
-    .maybeSingle()
+  const [newsletterRes, cultureRes, languageRes, travelRes] = await Promise.all([
+    supabase
+      .from('newsletter_issues')
+      .select('id, title, issue_date, sections')
+      .eq('user_id', user.id)
+      .eq('issue_date', today)
+      .maybeSingle(),
+    supabase
+      .from('culture_tracker_scouts')
+      .select('id, title, scout_date, sections')
+      .eq('user_id', user.id)
+      .eq('scout_date', today)
+      .maybeSingle(),
+    supabase
+      .from('language_tutor_lessons')
+      .select('id, topic, language, status')
+      .eq('user_id', user.id)
+      .eq('lesson_date', today)
+      .maybeSingle(),
+    supabase
+      .from('travel_scout_plans')
+      .select('id, destination, start_date, end_date')
+      .eq('user_id', user.id)
+      .gte('start_date', today)
+      .order('start_date', { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+  ])
+
+  const newsletter = newsletterRes.data
+  const cultureScout = cultureRes.data
+
+  let languageTutor: {
+    isRestDay: boolean
+    language: string | null
+    languageLabel: string | null
+    topic: string | null
+    status: string | null
+    programDay: number
+  } | null = null
+
+  try {
+    const settings = await fetchTutorSettings(supabase, user.id)
+    const schedule = languageForDate(new Date(), settings.rotation, settings.sundayBreak)
+    const explainLocale = settings.nativeLanguage === 'tr' ? 'tr' : 'en'
+    languageTutor = {
+      isRestDay: schedule.isRestDay,
+      language: schedule.language,
+      languageLabel:
+        schedule.language ? languageLabel(schedule.language, explainLocale) : null,
+      topic: (languageRes.data?.topic as string | undefined) ?? null,
+      status: (languageRes.data?.status as string | undefined) ?? null,
+      programDay: programDayIndex(settings.programStartDate),
+    }
+  } catch {
+    languageTutor = null
+  }
 
   const weekEnd = new Date()
   weekEnd.setDate(weekEnd.getDate() + 7)
@@ -42,8 +97,12 @@ export async function GET() {
     deadlines: jobBrief.deadlines,
     followUps: jobBrief.followUps,
     todayEvents,
+    todayTodos,
     weekEvents: weekEvents ?? [],
     newsletter,
+    cultureScout,
+    languageTutor,
+    upcomingTrip: travelRes.data,
     interests: interests.length ? interests : null,
   })
 }

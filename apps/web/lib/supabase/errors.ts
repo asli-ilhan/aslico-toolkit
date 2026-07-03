@@ -59,3 +59,36 @@ export function isMissingNewsletterTable(error: { code?: string; message?: strin
 export function isMissingAssistantTable(error: { code?: string; message?: string }): boolean {
   return isMissingTable(error, 'assistant_messages')
 }
+
+export function isMissingCultureTrackerTable(error: {
+  code?: string
+  message?: string
+}): boolean {
+  return (
+    isMissingTable(error, 'culture_tracker_settings') ||
+    isMissingTable(error, 'culture_tracker_scouts') ||
+    isMissingTable(error, 'culture_tracker_books')
+  )
+}
+
+export function isMissingTravelScoutTable(error: {
+  code?: string
+  message?: string
+}): boolean {
+  return (
+    isMissingTable(error, 'travel_scout_settings') ||
+    isMissingTable(error, 'travel_scout_reports') ||
+    isMissingTable(error, 'travel_scout_plans')
+  )
+}
+
+export function isMissingLanguageTutorTable(error: {
+  code?: string
+  message?: string
+}): boolean {
+  return (
+    isMissingTable(error, 'language_tutor_settings') ||
+    isMissingTable(error, 'language_tutor_lessons') ||
+    isMissingTable(error, 'language_tutor_flashcards')
+  )
+}

@@ -35,6 +35,11 @@ interface Issue {
   sections?: {
     greeting?: string
     headlines?: NewsHeadline[]
+    topicSections?: Array<{
+      topicId: string
+      topicLabel: string
+      headlines: NewsHeadline[]
+    }>
     todayEvents?: DayEvent[]
     todayTodos?: DayTodo[]
     jobPulse?: string
@@ -204,29 +209,57 @@ export function NewsletterView() {
                 <p className="mt-4 text-sm text-[var(--text)]">{sections.greeting}</p>
               )}
 
-              <div className="mt-6">
-                <h3 className="text-sm font-semibold text-[var(--accent)]">{nl.sections.headlines}</h3>
-                {sections?.headlines?.length ?
-                  <ul className="mt-2 space-y-3">
-                    {sections.headlines.map((h) => (
-                      <li key={h.url} className="text-sm">
-                        <a
-                          href={h.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-medium text-[var(--text)] hover:text-[var(--accent)]"
-                        >
-                          {h.title}
-                        </a>
-                        <span className="text-xs text-[var(--text-muted)]"> — {h.source}</span>
-                        {h.snippet && (
-                          <p className="mt-0.5 text-xs text-[var(--text-muted)]">{h.snippet}</p>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                : <p className="mt-2 text-sm text-[var(--text-muted)]">{nl.noHeadlines}</p>}
-              </div>
+              {sections?.topicSections?.length ?
+                <div className="mt-6 space-y-6">
+                  {sections.topicSections.map((section) => (
+                    <div key={section.topicId}>
+                      <h3 className="text-sm font-semibold text-[var(--accent)]">
+                        {section.topicLabel}
+                      </h3>
+                      <ul className="mt-2 space-y-3">
+                        {section.headlines.map((h) => (
+                          <li key={h.url} className="text-sm">
+                            <a
+                              href={h.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-medium text-[var(--text)] hover:text-[var(--accent)]"
+                            >
+                              {h.title}
+                            </a>
+                            <span className="text-xs text-[var(--text-muted)]"> — {h.source}</span>
+                            {h.snippet && (
+                              <p className="mt-0.5 text-xs text-[var(--text-muted)]">{h.snippet}</p>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              : <div className="mt-6">
+                  <h3 className="text-sm font-semibold text-[var(--accent)]">{nl.sections.headlines}</h3>
+                  {sections?.headlines?.length ?
+                    <ul className="mt-2 space-y-3">
+                      {sections.headlines.map((h) => (
+                        <li key={h.url} className="text-sm">
+                          <a
+                            href={h.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-[var(--text)] hover:text-[var(--accent)]"
+                          >
+                            {h.title}
+                          </a>
+                          <span className="text-xs text-[var(--text-muted)]"> — {h.source}</span>
+                          {h.snippet && (
+                            <p className="mt-0.5 text-xs text-[var(--text-muted)]">{h.snippet}</p>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  : <p className="mt-2 text-sm text-[var(--text-muted)]">{nl.noHeadlines}</p>}
+                </div>}
 
               <div className="mt-6">
                 <h3 className="text-sm font-semibold text-[var(--accent)]">{nl.sections.events}</h3>

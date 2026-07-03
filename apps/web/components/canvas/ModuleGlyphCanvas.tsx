@@ -86,6 +86,13 @@ function GlyphMesh({ moduleId, primary, glow }: GlyphMeshProps) {
           <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.5} metalness={0.45} roughness={0.3} />
         </mesh>
       )
+    case 'travel-scout':
+      return (
+        <mesh ref={meshRef}>
+          <torusKnotGeometry args={[0.38, 0.12, 64, 12]} />
+          <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.45} metalness={0.5} roughness={0.25} />
+        </mesh>
+      )
     case 'language-tutor':
       return (
         <mesh ref={meshRef}>

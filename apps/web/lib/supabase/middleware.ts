@@ -74,6 +74,7 @@ const MODULE_IDS = [
   'voice-assistant',
   'newsletter',
   'culture-tracker',
+  'travel-scout',
   'language-tutor',
 ]
 

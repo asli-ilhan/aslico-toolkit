@@ -92,6 +92,21 @@ export const moduleRegistry: ModuleManifest[] = [
     href: '/newsletter',
   },
   {
+    id: 'travel-scout',
+    name: 'Travel Scout',
+    description: 'Offbeat & insider trips — unusual places, society events, random escapes.',
+    icon: 'travel-scout',
+    category: 'life',
+    accent: {
+      primary: '#38bdf8',
+      secondary: '#7dd3fc',
+      glow: '#0ea5e9',
+      canvasMode: 'particles',
+    },
+    status: 'beta',
+    href: '/travel-scout',
+  },
+  {
     id: 'culture-tracker',
     name: 'Culture Tracker',
     description: 'Track books, exhibitions, concerts, and events in your city.',
@@ -103,13 +118,13 @@ export const moduleRegistry: ModuleManifest[] = [
       glow: '#d946ef',
       canvasMode: 'constellation',
     },
-    status: 'coming-soon',
+    status: 'beta',
     href: '/culture-tracker',
   },
   {
     id: 'language-tutor',
     name: 'Language Tutor',
-    description: 'Your AI language teacher. Dialogue, grammar, and spaced repetition.',
+    description: '90-day FR/ES/AR rotation — daily lessons, speaking, flashcards, error tracking.',
     icon: 'language-tutor',
     category: 'learning',
     accent: {
@@ -118,7 +133,7 @@ export const moduleRegistry: ModuleManifest[] = [
       glow: '#22c55e',
       canvasMode: 'particles',
     },
-    status: 'coming-soon',
+    status: 'beta',
     href: '/language-tutor',
   },
 ]

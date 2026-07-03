@@ -12,6 +12,20 @@ export { transcribeAudio, type TranscribeOptions } from './transcribe'
 export { summarizeTranscript } from './summarize'
 export { chatWithAssistant, type ToolkitContext } from './assistant'
 export { generateNewsletterIssue, type NewsletterInput, type NewsletterSections } from './newsletter'
+export { generateCultureScout, type CultureScoutSections, type CultureScoutInput } from './culture-tracker'
+export { generateTravelScout, type TravelScoutSections, type TravelScoutInput } from './travel-scout'
+export {
+  generateDailyLesson,
+  languageTutorChat,
+  generateFlashcardsFromWords,
+  generateWeeklyReport,
+  parseErrorsFromFriendReply,
+  parseGrammarMastery,
+  gradeSpeakingWriting,
+  type TutorLanguage,
+  type ChatMode,
+  type DailyLessonSections,
+} from './language-tutor'
 export {
   JOB_APPLICATION_GUARDRAILS,
   coerceToString,
