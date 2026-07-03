@@ -194,15 +194,15 @@ export async function fetchJobicyJobs(options: {
   searchKeywords?: string
   searchRegion?: string
 }): Promise<JobCandidate[]> {
-  const params = new URLSearch('https://jobicy.com/api/v2/remote-jobs')
-  params.set('count', String(options.count ?? 40))
-  if (options.jobCategories) params.set('job_categories', options.jobCategories)
-  if (options.searchKeywords) params.set('search_keywords', options.searchKeywords)
-  if (options.searchRegion) params.set('search_region', options.searchRegion)
+  const url = new URL('https://jobicy.com/api/v2/remote-jobs')
+  url.searchParams.set('count', String(options.count ?? 40))
+  if (options.jobCategories) url.searchParams.set('job_categories', options.jobCategories)
+  if (options.searchKeywords) url.searchParams.set('search_keywords', options.searchKeywords)
+  if (options.searchRegion) url.searchParams.set('search_region', options.searchRegion)
 
-  const res = await fetch(params.toString(), {
+  const res = await fetch(url.toString(), {
     signal: AbortSignal.timeout(15000),
-    headers: { Accept: 'application/json', ...FETCH_HEADERS },
+    headers: { ...FETCH_HEADERS, Accept: 'application/json' },
   })
   if (!res.ok) throw new Error(`Jobicy API ${res.status}`)
 
@@ -229,7 +229,7 @@ interface ArbeitnowJob {
 export async function fetchArbeitnowJobs(): Promise<JobCandidate[]> {
   const res = await fetch('https://www.arbeitnow.com/api/job-board-api', {
     signal: AbortSignal.timeout(15000),
-    headers: { Accept: 'application/json', ...FETCH_HEADERS },
+    headers: { ...FETCH_HEADERS, Accept: 'application/json' },
   })
   if (!res.ok) throw new Error(`Arbeitnow API ${res.status}`)
 
