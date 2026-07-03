@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { ShellLayout } from '@/components/shell/ShellLayout'
@@ -20,7 +20,24 @@ import { GuideTab } from './GuideTab'
 
 type Tab = 'guide' | 'inbox' | 'new' | 'profile' | 'preferences' | 'watchlist' | 'analytics' | 'outreach' | 'history'
 
+function JobAgentLoading() {
+  const { t } = useLocale()
+  return (
+    <ShellLayout>
+      <p className="text-sm text-[var(--text-muted)]">{t.common.loading}</p>
+    </ShellLayout>
+  )
+}
+
 export function JobAgentView() {
+  return (
+    <Suspense fallback={<JobAgentLoading />}>
+      <JobAgentViewContent />
+    </Suspense>
+  )
+}
+
+function JobAgentViewContent() {
   const { t } = useLocale()
   const ja = t.jobAgent
   const searchParams = useSearchParams()
