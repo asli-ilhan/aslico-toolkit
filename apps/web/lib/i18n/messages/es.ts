@@ -1,0 +1,178 @@
+import type { Messages } from '../types'
+
+export const es: Messages = {
+  nav: {
+    dashboard: 'Panel',
+    passkeys: 'Passkeys',
+    signIn: 'Entrar',
+  },
+  shell: {
+    tagline: 'tu estudio digital',
+  },
+  dashboard: {
+    welcome: 'Bienvenida de nuevo',
+    subtitle: 'Tu estudio de IA personal — módulos, agentes y herramientas que crecen contigo.',
+    modules: 'Módulos',
+  },
+  brief: {
+    title: 'Resumen del día',
+    description:
+      'Tu newsletter personal aquí. Artículos, eventos, libros y práctica de idiomas según tus intereses.',
+    tags: ['Investigación HCI', 'Arte contemporáneo', 'Alemán B1', 'Búsqueda de empleo'],
+    pendingInbox: '{count} pack(s) en bandeja.',
+    deadlines: 'Plazos',
+    followUps: 'Seguimientos',
+    noReminders: 'Sin recordatorios ahora.',
+    openJobAgent: 'Job Agent →',
+  },
+  theme: {
+    label: 'Tema',
+    midnightGarden: 'Jardín de medianoche',
+    softDawn: 'Amanecer suave',
+  },
+  modules: {
+    transcription: {
+      name: 'Transcripción',
+      description: 'Convierte reuniones y notas de voz en texto, resúmenes y tareas.',
+    },
+    'doc-editor': {
+      name: 'Editor de docs',
+      description: 'Pulir tesis, artículos y documentos largos con IA.',
+    },
+    'job-agent': {
+      name: 'Agente de empleo',
+      description: 'Adapta CV, escribe cartas de presentación y sigue candidaturas.',
+    },
+    calendar: {
+      name: 'Calendario',
+      description: 'Sincroniza horarios, recordatorios y planifica con IA.',
+    },
+    'voice-assistant': {
+      name: 'Asistente de voz',
+      description: 'Habla con tu toolkit — notas rápidas, comandos y resúmenes.',
+    },
+    newsletter: {
+      name: 'Newsletter diaria',
+      description: 'Un digest personal de noticias, artículos y destacados para tus intereses.',
+    },
+    'culture-tracker': {
+      name: 'Rastreador cultural',
+      description: 'Sigue libros, exposiciones, conciertos y eventos en tu ciudad.',
+    },
+    'language-tutor': {
+      name: 'Tutor de idiomas',
+      description: 'Tu profesor IA — diálogo, gramática y repetición espaciada.',
+    },
+  },
+  categories: {
+    productivity: 'productividad',
+    learning: 'aprendizaje',
+    creative: 'creativo',
+    life: 'vida',
+  },
+  common: {
+    soon: 'Pronto',
+    beta: 'Beta',
+    backToDashboard: '← Volver al panel',
+    loading: 'Cargando…',
+    delete: 'Eliminar',
+    dashboard: 'Panel',
+  },
+  modulePage: {
+    statusTitle: 'Estado: Próximamente',
+    statusDescription:
+      'Este módulo está registrado en la arquitectura del toolkit. La implementación empieza en la próxima fase.',
+    launch: 'Iniciar módulo',
+  },
+  notFound: {
+    title: 'Módulo no encontrado',
+    description: 'Este módulo aún no existe en tu toolkit.',
+  },
+  assistant: {
+    title: 'Asistente de voz',
+    description: 'Próximamente — habla con tu toolkit, toma notas y recibe resúmenes.',
+    ariaLabel: 'Abrir asistente de voz',
+  },
+  login: {
+    title: 'Iniciar sesión',
+    subtitle: 'Entra con Touch ID, Face ID o Windows Hello mediante passkey.',
+    passkeyButton: 'Continuar con passkey',
+    passkeyWaiting: 'Esperando…',
+    touchIdButton: 'Touch ID',
+    touchIdWaiting: 'Touch ID…',
+    touchIdExplain: 'Usa Safari en localhost:3000.',
+    devSetup: 'Dev: entrar sin Touch ID',
+    hint: 'Usa Safari o Chrome. El navegador de Cursor no admite passkeys.',
+    platformHint: 'Touch ID: registra el passkey en Safari en este Mac (no por QR).',
+    errors: {
+      passkeyDisabled: 'Los passkeys no están activados en el Dashboard de Supabase.',
+      passkeyNotFound: 'No hay passkey en este dispositivo. Usa uno donde lo registraste.',
+    },
+  },
+  passkeys: {
+    title: 'Ajustes de passkey',
+    subtitle: 'Añade un passkey para entrar con huella / Face ID.',
+    empty: 'Sin passkeys. Añade uno abajo.',
+    add: 'Añadir passkey',
+    adding: 'Guardando…',
+    saved: 'Passkey guardado',
+    signOut: 'Cerrar sesión',
+    defaultName: 'Passkey',
+  },
+  transcription: {
+    dropzone: 'Suelta un archivo de audio aquí',
+    formats: 'MP3, WAV, M4A, WebM — hasta 25 MB',
+    upload: 'Elegir archivo de audio',
+    transcribing: 'Transcribiendo…',
+    history: 'Historial',
+    empty: 'Sin transcripciones aún.',
+    summary: 'Resumen',
+    transcript: 'Transcripción',
+    copy: 'Copiar',
+    selectOrUpload: 'Sube audio o elige una transcripción anterior.',
+    warnings: {
+      tableMissing:
+        'Transcripción creada pero no guardada — ejecuta packages/storage/sql/transcriptions.sql en Supabase.',
+    },
+    errors: {
+      loadFailed: 'No se pudieron cargar las transcripciones.',
+      uploadFailed: 'La transcripción falló.',
+      noAnthropicKey: 'Añade ANTHROPIC_API_KEY en apps/web/.env.local.',
+      noDeepgramKey:
+        'El audio requiere DEEPGRAM_API_KEY (Claude no lee audio). O pega el texto.',
+    },
+    paste: {
+      tab: 'Pegar texto',
+      placeholder: 'Pega notas o la transcripción aquí…',
+      titlePlaceholder: 'Notas de reunión',
+      submit: 'Resumir con Claude',
+      summarizing: 'Claude resume…',
+    },
+  },
+  jobAgent: {
+    subtitle: 'Preparación nocturna, aprobación matinal.',
+    company: 'Empresa',
+    role: 'Puesto',
+    jobDescription: 'Pega la oferta…',
+    cvProfile: 'Pega tu CV…',
+    generate: 'Generar con Claude',
+    generating: 'Claude escribe…',
+    coverLetter: 'Carta',
+    cvTips: 'CV adaptado',
+    copy: 'Copiar',
+    tabs: { guide: 'Guía', inbox: 'Bandeja', new: 'Añadir', profile: 'Perfil', preferences: 'Prefs', watchlist: 'Watchlist', analytics: 'Analytics', outreach: 'Outreach', history: 'Historial' },
+    inbox: { title: 'Pendiente', empty: 'Nada.', fit: 'Match', approve: 'Aprobar', skip: 'Omitir', markSubmitted: 'Enviado', saveEdits: 'Guardar', notes: 'Notas', deadline: 'Fecha límite', followUp: 'Seguimiento', emailDraft: 'Email', emailGenerate: 'Generar email', emailGenerating: '…', exportPdf: 'PDF', exportPrint: 'Imprimir', exportMd: 'MD', exportAutofill: 'JSON', exportIcs: 'Calendario', exportIcsDeadline: 'Plazo', exportIcsFollowup: 'Seguimiento', gigGuard: 'Gig: manual solo.' },
+    discovery: { hint: 'Indeed, Remotive, WWR.', runNow: 'Buscar empleos', running: '…' },
+    autofill: { run: 'Autocompletar formulario', running: '…', success: 'Revisa y envía.', daemonRequired: 'pnpm autofill:daemon', noUrl: 'Sin URL', blocked: 'Gig: manual.' },
+    new: { hint: 'Pega o scrape URL.', jobUrl: 'URL', scrape: 'Scrape', scraping: '…', variant: 'Variante', deadline: 'Fecha límite', remote: 'Remoto', hybrid: 'Híbrido', onsite: 'Presencial', ft: 'Tiempo completo', contract: 'Contrato', freelance: 'Freelance', gig: 'Gig', submit: 'Generar' },
+    profile: { upload: 'Documentos', uploadHint: 'CV y cartas.', paste: 'Pegar…', addDoc: 'Añadir', deleteDoc: 'Eliminar', build: 'Crear perfil', building: '…', master: 'Perfil maestro', variants: 'Variantes', variant: 'Variante', empty: 'Sube documentos.' },
+    preferences: { hint: 'Filtros.', domains: 'Dominios', remoteRequired: 'Remoto requerido', minFit: 'Fit mín', exclude: 'Bloquear', keywords: 'Palabras clave', rss: 'RSS', nightly: 'Noche activa', runNightly: 'Ejecutar noche', nightlyRunning: '…', save: 'Guardar' },
+    watchlist: { hint: 'Fuentes URL/RSS.', kind: 'Tipo', url: 'URL', rss: 'RSS', keyword: 'Palabra', label: 'Etiqueta', add: 'Añadir', empty: 'Vacío.' },
+    analytics: { title: 'Embudo', total: 'Total', submitted: 'Enviados', interviews: 'Entrevistas', offers: 'Ofertas', pending: 'Pendiente', avgFit: 'Fit prom.', conversion: 'Conversión', deadlines: 'Plazos', followUps: 'Seguimientos', empty: 'Sin datos.' },
+    history: { empty: 'Sin historial.', funnel: 'Etapa', funnelStages: { applied: 'Enviado', screening: 'Screening', interview: 'Entrevista', offer: 'Oferta', rejected: 'Rechazado' } },
+    outreach: { title: 'Outreach', hint: 'Tras enviar, el agente encuentra contactos y redacta el email.', tabHint: 'Borradores pendientes.', empty: 'Sin outreach.', goHistory: 'Historial', recipients: 'Destinatarios', subject: 'Asunto', body: 'Cuerpo', discovering: 'Buscando…', connectGmail: 'Conectar Gmail', reconnectGmail: 'Reconectar', gmailDisconnected: 'Conecta Gmail.', sendingFrom: 'Enviando desde', rediscover: 'Reintentar', saveDraft: 'Guardar', approveSend: 'Aprobar y enviar', sending: 'Enviando…', sent: 'enviado', sentSuccess: 'Enviado.', startOutreach: 'Iniciar', errors: { gmailRequired: 'Gmail requerido.', sendFailed: 'Error envío.', discoverFailed: 'Error descubrimiento.' }, gmailConnected: 'Gmail conectado.', gmailConnectFailed: 'Error Gmail', gmailEnvBackend: 'Gmail en servidor (.env).', gmailRedirectHint: 'Redirect URI Google:' },
+    guide: { title: 'Guía', subtitle: 'Pasos de configuración.', copy: 'Copiar', refresh: 'Actualizar', done: 'OK', pending: '…', progress: { db: 'DB', profile: 'Perfil', gmail: 'Gmail' }, dailyTitle: 'Ciclo', dailyBody: 'Noche → bandeja → autofill → outreach.', steps: { sql: { title: '1. SQL', body: 'Supabase SQL Editor.', files: 'job_agent_v2/v3/v4_outreach.sql' }, profile: { title: '2. Perfil', body: 'CV + cartas.', action: 'Perfil' }, prefs: { title: '3. Prefs', body: 'Opcional.', action: 'Prefs' }, discovery: { title: '4. Empleos', body: 'Escaneo auto.', cron: '02:00 UTC' }, inbox: { title: '5. Bandeja', body: 'Aprobar.', pending: 'Pendiente', action: 'Bandeja' }, gmail: { title: '6. Gmail', body: 'Outreach.', envOk: 'OK', action: 'Prefs', tokenLink: 'Token' }, autofill: { title: '7. Autofill', body: 'Mac local.', running: 'OK', stopped: 'Parado' }, deploy: { title: '8. Vercel', body: 'GitHub + Vercel.', s1: 'GitHub', s2: 'apps/web', s3: 'Env vars', s4: 'APP_URL', gitInit: 'git init…', envHint: 'Env:', envList: 'SUPABASE|ANTHROPIC|GMAIL|CRON', cronNote: 'Pro recomendado.' } } },
+    warnings: { tableMissing: 'No guardado.', v2Missing: 'job_agent_v2.sql', v3Missing: 'job_agent_v3.sql', v4Missing: 'job_agent_v4_outreach.sql' },
+    errors: { loadFailed: 'Error.', generateFailed: 'Falló.' },
+  },
+}

@@ -1,0 +1,32 @@
+{
+  "name": "@aslico/storage",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'no lint configured'",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push"
+  },
+  "dependencies": {
+    "@aslico/core": "workspace:*",
+    "drizzle-orm": "^0.43.1"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.1",
+    "typescript": "^5.8.3"
+  },
+  "peerDependencies": {
+    "postgres": "^3.4.5"
+  },
+  "peerDependenciesMeta": {
+    "postgres": {
+      "optional": true
+    }
+  }
+}

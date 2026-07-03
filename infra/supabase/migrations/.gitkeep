@@ -1,0 +1,5 @@
+-- asliCo Toolkit initial schema
+-- Run via: pnpm --filter @aslico/storage db:push
+
+-- Tables are defined in packages/storage/src/schema/index.ts
+-- users, passkeys, user_interests, module_settings, documents

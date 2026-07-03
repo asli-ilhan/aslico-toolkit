@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/modules/job-agent/nightly",
+      "schedule": "0 2 * * *"
+    }
+  ],
+  "functions": {
+    "app/api/modules/job-agent/nightly/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/modules/job-agent/packs/route.ts": {
+      "maxDuration": 120
+    }
+  }
+}

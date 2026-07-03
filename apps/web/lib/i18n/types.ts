@@ -1,0 +1,332 @@
+export type Locale = 'en' | 'tr' | 'fr' | 'es' | 'ar'
+
+export const LOCALES: { code: Locale; label: string }[] = [
+  { code: 'en', label: 'en' },
+  { code: 'tr', label: 'tr' },
+  { code: 'fr', label: 'fr' },
+  { code: 'es', label: 'es' },
+  { code: 'ar', label: 'ar' },
+]
+
+export const RTL_LOCALES: Locale[] = ['ar']
+
+export type Messages = {
+  nav: {
+    dashboard: string
+    passkeys: string
+    signIn: string
+  }
+  shell: {
+    tagline: string
+  }
+  dashboard: {
+    welcome: string
+    subtitle: string
+    modules: string
+  }
+  brief: {
+    title: string
+    description: string
+    tags: string[]
+    pendingInbox: string
+    deadlines: string
+    followUps: string
+    noReminders: string
+    openJobAgent: string
+  }
+  theme: {
+    label: string
+    midnightGarden: string
+    softDawn: string
+  }
+  modules: Record<
+    string,
+    {
+      name: string
+      description: string
+    }
+  >
+  categories: Record<string, string>
+  common: {
+    soon: string
+    beta: string
+    backToDashboard: string
+    loading: string
+    delete: string
+    dashboard: string
+  }
+  modulePage: {
+    statusTitle: string
+    statusDescription: string
+    launch: string
+  }
+  notFound: {
+    title: string
+    description: string
+  }
+  assistant: {
+    title: string
+    description: string
+    ariaLabel: string
+  }
+  login: {
+    title: string
+    subtitle: string
+    passkeyButton: string
+    passkeyWaiting: string
+    touchIdButton: string
+    touchIdWaiting: string
+    touchIdExplain: string
+    devSetup: string
+    hint: string
+    platformHint: string
+    errors: {
+      passkeyDisabled: string
+      passkeyNotFound: string
+    }
+  }
+  passkeys: {
+    title: string
+    subtitle: string
+    empty: string
+    add: string
+    adding: string
+    saved: string
+    signOut: string
+    defaultName: string
+  }
+  transcription: {
+    dropzone: string
+    formats: string
+    upload: string
+    transcribing: string
+    history: string
+    empty: string
+    summary: string
+    transcript: string
+    copy: string
+    selectOrUpload: string
+    warnings: {
+      tableMissing: string
+    }
+    errors: {
+      loadFailed: string
+      uploadFailed: string
+      noAnthropicKey: string
+      noDeepgramKey: string
+    }
+    paste: {
+      tab: string
+      placeholder: string
+      titlePlaceholder: string
+      submit: string
+      summarizing: string
+    }
+  }
+  jobAgent: {
+    subtitle: string
+    company: string
+    role: string
+    jobDescription: string
+    cvProfile: string
+    generate: string
+    generating: string
+    coverLetter: string
+    cvTips: string
+    copy: string
+    tabs: {
+      guide: string
+      inbox: string
+      new: string
+      profile: string
+      preferences: string
+      watchlist: string
+      analytics: string
+      outreach: string
+      history: string
+    }
+    inbox: {
+      title: string
+      empty: string
+      fit: string
+      approve: string
+      skip: string
+      markSubmitted: string
+      saveEdits: string
+      notes: string
+      deadline: string
+      followUp: string
+      emailDraft: string
+      emailGenerate: string
+      emailGenerating: string
+    exportPdf: string
+    exportPrint: string
+    exportMd: string
+    exportAutofill: string
+    exportIcs: string
+    exportIcsDeadline: string
+    exportIcsFollowup: string
+    gigGuard: string
+    }
+    discovery: {
+      hint: string
+      runNow: string
+      running: string
+    }
+    autofill: {
+      run: string
+      running: string
+      success: string
+      daemonRequired: string
+      noUrl: string
+      blocked: string
+    }
+    new: {
+      hint: string
+      jobUrl: string
+      scrape: string
+      scraping: string
+      variant: string
+      deadline: string
+      remote: string
+      hybrid: string
+      onsite: string
+      ft: string
+      contract: string
+      freelance: string
+      gig: string
+      submit: string
+    }
+    profile: {
+      upload: string
+      uploadHint: string
+      paste: string
+      addDoc: string
+      deleteDoc: string
+      build: string
+      building: string
+      master: string
+      variants: string
+      variant: string
+      empty: string
+    }
+    preferences: {
+      hint: string
+      domains: string
+      remoteRequired: string
+      minFit: string
+      exclude: string
+      keywords: string
+      rss: string
+      nightly: string
+      runNightly: string
+      nightlyRunning: string
+      save: string
+    }
+    watchlist: {
+      hint: string
+      kind: string
+      url: string
+      rss: string
+      keyword: string
+      label: string
+      add: string
+      empty: string
+    }
+    analytics: {
+      title: string
+      total: string
+      submitted: string
+      interviews: string
+      offers: string
+      pending: string
+      avgFit: string
+      conversion: string
+      deadlines: string
+      followUps: string
+      empty: string
+    }
+    history: {
+      empty: string
+      funnel: string
+      funnelStages: {
+        applied: string
+        screening: string
+        interview: string
+        offer: string
+        rejected: string
+      }
+    }
+    outreach: {
+      title: string
+      hint: string
+      tabHint: string
+      empty: string
+      goHistory: string
+      recipients: string
+      subject: string
+      body: string
+      discovering: string
+      connectGmail: string
+      reconnectGmail: string
+      gmailDisconnected: string
+      sendingFrom: string
+      rediscover: string
+      saveDraft: string
+      approveSend: string
+      sending: string
+      sent: string
+      sentSuccess: string
+      startOutreach: string
+      errors: {
+        gmailRequired: string
+        sendFailed: string
+        discoverFailed: string
+      }
+      gmailConnected: string
+      gmailConnectFailed: string
+      gmailEnvBackend: string
+      gmailRedirectHint: string
+    }
+    guide: {
+      title: string
+      subtitle: string
+      copy: string
+      refresh: string
+      done: string
+      pending: string
+      progress: { db: string; profile: string; gmail: string }
+      dailyTitle: string
+      dailyBody: string
+      steps: {
+        sql: { title: string; body: string; files: string }
+        profile: { title: string; body: string; action: string }
+        prefs: { title: string; body: string; action: string }
+        discovery: { title: string; body: string; cron: string }
+        inbox: { title: string; body: string; pending: string; action: string }
+        gmail: {
+          title: string
+          body: string
+          envOk: string
+          action: string
+          tokenLink: string
+        }
+        autofill: { title: string; body: string; running: string; stopped: string }
+        deploy: {
+          title: string
+          body: string
+          s1: string
+          s2: string
+          s3: string
+          s4: string
+          gitInit: string
+          envHint: string
+          envList: string
+          cronNote: string
+        }
+      }
+    }
+    warnings: { tableMissing: string; v2Missing: string; v3Missing: string; v4Missing: string }
+    errors: { loadFailed: string; generateFailed: string }
+  }
+}

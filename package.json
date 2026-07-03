@@ -1,0 +1,25 @@
+{
+  "name": "aslico-toolkit",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "job-agent:autofill": "node scripts/job-agent-autofill.mjs",
+    "autofill:daemon": "node scripts/autofill-daemon.mjs",
+    "gmail:token": "node scripts/gmail-refresh-token.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "playwright": "^1.52.0",
+    "prettier": "^3.5.3",
+    "turbo": "^2.5.4",
+    "typescript": "^5.8.3"
+  },
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20"
+  }
+}

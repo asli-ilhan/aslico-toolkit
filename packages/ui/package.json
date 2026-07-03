@@ -1,0 +1,27 @@
+{
+  "name": "@aslico/ui",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./themes": "./src/themes/index.ts",
+    "./tokens": "./src/tokens/index.ts",
+    "./components": "./src/components.tsx"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'no lint configured'"
+  },
+  "dependencies": {
+    "@aslico/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "react": "^19.1.0",
+    "typescript": "^5.8.3"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  }
+}

@@ -1,0 +1,128 @@
+import type { ModuleManifest } from '@aslico/core/module-sdk'
+
+export const moduleRegistry: ModuleManifest[] = [
+  {
+    id: 'transcription',
+    name: 'Transcription',
+    description: 'Turn meetings and voice notes into text, summaries, and action items.',
+    icon: 'transcription',
+    category: 'productivity',
+    accent: {
+      primary: '#fb923c',
+      secondary: '#fdba74',
+      glow: '#f97316',
+      canvasMode: 'flow-field',
+    },
+    status: 'beta',
+    href: '/transcription',
+  },
+  {
+    id: 'doc-editor',
+    name: 'Doc Editor',
+    description: 'Polish your thesis, papers, and long documents with AI assistance.',
+    icon: 'doc-editor',
+    category: 'productivity',
+    accent: {
+      primary: '#c4b5fd',
+      secondary: '#818cf8',
+      glow: '#a78bfa',
+      canvasMode: 'minimal',
+    },
+    status: 'coming-soon',
+    href: '/doc-editor',
+  },
+  {
+    id: 'job-agent',
+    name: 'Job Agent',
+    description: 'Tailor CVs, write cover letters, and track applications.',
+    icon: 'job-agent',
+    category: 'productivity',
+    accent: {
+      primary: '#f97316',
+      secondary: '#fb923c',
+      glow: '#ea580c',
+      canvasMode: 'constellation',
+    },
+    status: 'beta',
+    href: '/job-agent',
+  },
+  {
+    id: 'calendar',
+    name: 'Calendar',
+    description: 'Sync schedules, set reminders, and let AI help you plan.',
+    icon: 'calendar',
+    category: 'life',
+    accent: {
+      primary: '#f472b6',
+      secondary: '#fb7185',
+      glow: '#ec4899',
+      canvasMode: 'particles',
+    },
+    status: 'coming-soon',
+    href: '/calendar',
+  },
+  {
+    id: 'voice-assistant',
+    name: 'Voice Assistant',
+    description: 'Talk to your toolkit. Quick notes, commands, and briefings.',
+    icon: 'voice-assistant',
+    category: 'creative',
+    accent: {
+      primary: '#fbbf24',
+      secondary: '#f59e0b',
+      glow: '#fcd34d',
+      canvasMode: 'flow-field',
+    },
+    status: 'coming-soon',
+    href: '/voice-assistant',
+  },
+  {
+    id: 'newsletter',
+    name: 'Daily Newsletter',
+    description: 'A personal digest of news, articles, and highlights for your interests.',
+    icon: 'newsletter',
+    category: 'learning',
+    accent: {
+      primary: '#fb923c',
+      secondary: '#fdba74',
+      glow: '#f97316',
+      canvasMode: 'particles',
+    },
+    status: 'coming-soon',
+    href: '/newsletter',
+  },
+  {
+    id: 'culture-tracker',
+    name: 'Culture Tracker',
+    description: 'Track books, exhibitions, concerts, and events in your city.',
+    icon: 'culture-tracker',
+    category: 'life',
+    accent: {
+      primary: '#e879f9',
+      secondary: '#c084fc',
+      glow: '#d946ef',
+      canvasMode: 'constellation',
+    },
+    status: 'coming-soon',
+    href: '/culture-tracker',
+  },
+  {
+    id: 'language-tutor',
+    name: 'Language Tutor',
+    description: 'Your AI language teacher. Dialogue, grammar, and spaced repetition.',
+    icon: 'language-tutor',
+    category: 'learning',
+    accent: {
+      primary: '#4ade80',
+      secondary: '#86efac',
+      glow: '#22c55e',
+      canvasMode: 'particles',
+    },
+    status: 'coming-soon',
+    href: '/language-tutor',
+  },
+]
+
+export function getModuleById(id: string): ModuleManifest | undefined {
+  return moduleRegistry.find((m) => m.id === id)
+}

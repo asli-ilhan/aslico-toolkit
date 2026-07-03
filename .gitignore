@@ -1,0 +1,29 @@
+# dependencies
+node_modules
+.pnpm-store
+
+# build
+dist
+.next
+.turbo
+out
+
+# env
+.env
+.env.local
+.env.*.local
+
+# debug
+npm-debug.log*
+pnpm-debug.log*
+
+# os
+.DS_Store
+Thumbs.db
+
+# ide
+.idea
+.vscode
+
+# test artifacts
+scripts/.test-cookies.txt
