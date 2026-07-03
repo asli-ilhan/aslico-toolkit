@@ -15,8 +15,8 @@ export function isEmailAllowed(email: string | null | undefined): boolean {
 
 export function mapAuthError(message: string): string {
   const lower = message.toLowerCase()
-  if (lower.includes('rate limit')) {
-    return 'Supabase e-posta limiti doldu. ~1 saat bekle veya passkey ile gir.'
+  if (lower.includes('rate limit') || lower.includes('over_email_send_rate_limit')) {
+    return 'email_rate_limit'
   }
   if (message === 'unauthorized' || lower.includes('not authorized')) {
     return 'Bu toolkit yalnızca yetkili hesap için.'

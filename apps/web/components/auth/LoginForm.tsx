@@ -10,18 +10,26 @@ import { isEmailAllowed, mapAuthError } from '@/lib/auth/allowlist'
 import { isPasskeyAuthEnabled } from '@/lib/auth/config'
 import { PasskeyLoginSection } from '@/components/auth/PasskeyLoginSection'
 
+function resolveLoginError(message: string, t: ReturnType<typeof useLocale>['t']): string {
+  const mapped = mapAuthError(message)
+  if (mapped === 'email_rate_limit') return t.login.errors.emailRateLimit
+  return mapped
+}
+
 export function LoginForm() {
   const searchParams = useSearchParams()
   const next = searchParams.get('next') || '/dashboard'
   const { t } = useLocale()
 
   const [emailLoading, setEmailLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
   const allowedEmail = process.env.NEXT_PUBLIC_ALLOWED_EMAIL ?? ''
   const passkeyEnabled = isPasskeyAuthEnabled()
-  const [error, setError] = useState<string | null>(
-    searchParams.get('error') ? mapAuthError(searchParams.get('error')!) : null,
-  )
+  const [error, setError] = useState<string | null>(() => {
+    const err = searchParams.get('error')
+    return err ? resolveLoginError(err, t) : null
+  })
 
   const supabase = createClient()
 
@@ -35,6 +43,27 @@ export function LoginForm() {
       return false
     }
     return true
+  }
+
+  async function handleGoogleSignIn() {
+    setGoogleLoading(true)
+    setError(null)
+
+    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`
+
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo,
+        queryParams: allowedEmail ? { login_hint: allowedEmail } : undefined,
+      },
+    })
+
+    setGoogleLoading(false)
+
+    if (oauthError) {
+      setError(oauthError.message || t.login.errors.emailFailed)
+    }
   }
 
   async function handleEmailSignIn() {
@@ -65,7 +94,7 @@ export function LoginForm() {
     setEmailLoading(false)
 
     if (otpError) {
-      setError(mapAuthError(otpError.message) || t.login.errors.emailFailed)
+      setError(resolveLoginError(otpError.message, t) || t.login.errors.emailFailed)
       return
     }
 
@@ -86,19 +115,40 @@ export function LoginForm() {
 
         <div className="mt-8 space-y-3">
           {allowedEmail ? (
-            emailSent ? (
-              <p className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
-                {t.login.emailSent}
-              </p>
-            ) : (
-              <>
-                <p className="text-center font-mono text-sm text-[var(--text)]">{allowedEmail}</p>
-                <Button className="w-full" onClick={handleEmailSignIn} disabled={emailLoading}>
-                  {emailLoading ? t.login.emailSending : t.login.emailSend}
-                </Button>
-                <p className="text-center text-xs text-[var(--text-muted)]">{t.login.emailHint}</p>
-              </>
-            )
+            <>
+              <Button className="w-full" onClick={handleGoogleSignIn} disabled={googleLoading || emailLoading}>
+                {googleLoading ? t.login.googleSigningIn : t.login.googleSignIn}
+              </Button>
+              <p className="text-center text-xs text-[var(--text-muted)]">{t.login.googleHint}</p>
+
+              <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-[var(--border)]" />
+                </div>
+                <p className="relative mx-auto w-fit bg-[var(--surface)] px-2 text-xs text-[var(--text-muted)]">
+                  {t.login.orDivider}
+                </p>
+              </div>
+
+              {emailSent ? (
+                <p className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+                  {t.login.emailSent}
+                </p>
+              ) : (
+                <>
+                  <p className="text-center font-mono text-sm text-[var(--text)]">{allowedEmail}</p>
+                  <Button
+                    variant="ghost"
+                    className="w-full"
+                    onClick={handleEmailSignIn}
+                    disabled={emailLoading || googleLoading}
+                  >
+                    {emailLoading ? t.login.emailSending : t.login.emailSend}
+                  </Button>
+                  <p className="text-center text-xs text-[var(--text-muted)]">{t.login.emailHint}</p>
+                </>
+              )}
+            </>
           ) : (
             <p className="text-sm text-red-700">{t.login.errors.emailNotConfigured}</p>
           )}

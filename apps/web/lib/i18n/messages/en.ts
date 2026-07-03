@@ -113,12 +113,18 @@ export const en: Messages = {
     emailSending: 'Sending…',
     emailSent: 'Check your email. Click the link to sign in.',
     emailHint: 'Only the authorized email address works.',
+    googleSignIn: 'Sign in with Google',
+    googleSigningIn: 'Redirecting to Google…',
+    googleHint: 'No email rate limit — use this if magic link fails.',
+    orDivider: 'or',
     errors: {
       passkeyDisabled: 'Passkeys are disabled in Supabase.',
       passkeyNotFound: 'No passkey on this domain. Use magic link.',
       emailNotAllowed: 'This email address is not authorized.',
       emailFailed: 'Could not send magic link. Add redirect URL in Supabase URL Configuration.',
       emailNotConfigured: 'ALLOWED_EMAIL and NEXT_PUBLIC_ALLOWED_EMAIL are not set.',
+      emailRateLimit:
+        'Email rate limit hit (Supabase ~4/hour). Sign in with Google or wait ~1 hour.',
     },
   },
   passkeys: {

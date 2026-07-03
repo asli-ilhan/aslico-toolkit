@@ -111,12 +111,17 @@ export const ar: Messages = {
     emailSending: 'جارٍ الإرسال…',
     emailSent: 'تحقق من بريدك واضغط الرابط.',
     emailHint: 'البريد المصرّح به فقط.',
+    googleSignIn: 'تسجيل الدخول بـ Google',
+    googleSigningIn: 'جارٍ التحويل…',
+    googleHint: 'بدون حد بريد — إن فشل الرابط السحري.',
+    orDivider: 'أو',
     errors: {
       passkeyDisabled: 'Passkeys معطّلة في Supabase.',
       passkeyNotFound: 'لا passkey هنا. استخدم الرابط السحري.',
       emailNotAllowed: 'هذا البريد غير مصرّح.',
       emailFailed: 'فشل الإرسال. تحقق من redirect URLs.',
       emailNotConfigured: 'ALLOWED_EMAIL غير معرّف.',
+      emailRateLimit: 'حد البريد. استخدم Google أو انتظر ~1 ساعة.',
     },
   },
   passkeys: {

@@ -114,12 +114,18 @@ export const tr: Messages = {
     emailSending: 'Gönderiliyor…',
     emailSent: 'E-postanı kontrol et. Linke tıklayınca giriş yaparsın.',
     emailHint: 'Sadece yetkili e-posta adresi çalışır.',
+    googleSignIn: 'Google ile giriş',
+    googleSigningIn: 'Google’a yönlendiriliyor…',
+    googleHint: 'E-posta limiti yok — magic link çalışmazsa bunu kullan.',
+    orDivider: 'veya',
     errors: {
       passkeyDisabled: 'Passkey Supabase’de kapalı.',
       passkeyNotFound: 'Bu domain’de passkey yok. Magic link kullan.',
       emailNotAllowed: 'Bu e-posta adresi yetkili değil.',
       emailFailed: 'Magic link gönderilemedi. Supabase → URL Configuration → redirect URL ekle.',
       emailNotConfigured: 'ALLOWED_EMAIL ve NEXT_PUBLIC_ALLOWED_EMAIL tanımlı değil.',
+      emailRateLimit:
+        'E-posta limiti doldu (Supabase ~4/saat). Google ile giriş yap veya ~1 saat bekle.',
     },
   },
   passkeys: {

@@ -89,12 +89,17 @@ export type Messages = {
     emailSending: string
     emailSent: string
     emailHint: string
+    googleSignIn: string
+    googleSigningIn: string
+    googleHint: string
+    orDivider: string
     errors: {
       passkeyDisabled: string
       passkeyNotFound: string
       emailNotAllowed: string
       emailFailed: string
       emailNotConfigured: string
+      emailRateLimit: string
     }
   }
   passkeys: {

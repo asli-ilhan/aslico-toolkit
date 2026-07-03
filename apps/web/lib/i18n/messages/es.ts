@@ -113,12 +113,17 @@ export const es: Messages = {
     emailSending: 'Enviando…',
     emailSent: 'Revisa tu email y haz clic en el enlace.',
     emailHint: 'Solo funciona el email autorizado.',
+    googleSignIn: 'Entrar con Google',
+    googleSigningIn: 'Redirigiendo…',
+    googleHint: 'Sin límite de email — si falla el magic link.',
+    orDivider: 'o',
     errors: {
       passkeyDisabled: 'Passkeys desactivados en Supabase.',
       passkeyNotFound: 'Sin passkey aquí. Usa magic link.',
       emailNotAllowed: 'Este email no está autorizado.',
       emailFailed: 'Error de envío. Revisa redirect URLs.',
       emailNotConfigured: 'ALLOWED_EMAIL no definido.',
+      emailRateLimit: 'Límite de email. Usa Google o espera ~1 h.',
     },
   },
   passkeys: {

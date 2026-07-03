@@ -1,38 +1,43 @@
 # Giriş (Auth)
 
-## Önerilen: Magic link
+## Önerilen: Google ile giriş
 
-**Local ve production aynı şekilde çalışır.** Supabase RP ID değiştirmene gerek yok.
+**E-posta limitine takılmaz** (magic link Supabase free tier’da ~4/saat).
 
-### Supabase ayarı (bir kez)
+### Google kurulumu (bir kez)
 
-1. [Supabase Dashboard](https://supabase.com/dashboard) → **Authentication** → **Providers** → **Email** → **Enabled**
-2. **Authentication** → **URL Configuration** → **Redirect URLs** listesine ekle:
-   - `http://localhost:3000/auth/callback**`
-   - `https://aslico-toolkit-web-indol.vercel.app/auth/callback**` (production URL’in)
+1. [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → OAuth client (Gmail ile aynı olabilir)
+2. **Authorized redirect URIs** ekle:
+   - `https://uhepdwjqkyjdiaugtjln.supabase.co/auth/v1/callback`
+3. [Supabase → Providers → Google](https://supabase.com/dashboard/project/uhepdwjqkyjdiaugtjln/auth/providers) → **Enable**
+4. Client ID + Secret yapıştır → Save
 
-### Giriş akışı
+### URL Configuration
 
-1. `/login` → **Magic link gönder**
-2. E-postadaki linke tıkla → dashboard
+**Redirect URLs:**
+- `http://localhost:3000/auth/callback**`
+- `https://aslico-toolkit-web-indol.vercel.app/auth/callback**`
 
-Acil bypass (UI’da yok): yalnızca `ALLOW_SETUP=true` + `SUPABASE_SERVICE_ROLE_KEY` ile `/api/auth/setup` — production’da açma.
+### Giriş
 
-Vercel env: `ALLOWED_EMAIL`, `NEXT_PUBLIC_ALLOWED_EMAIL`, Supabase keys, `NEXT_PUBLIC_APP_URL`
+1. `/login` → **Google ile giriş** (önerilen)
+2. veya **Magic link gönder** (limit dolunca ~1 saat bekle)
+
+---
+
+## Magic link
+
+**Authentication** → **Providers** → **Email** → Enabled
 
 ---
 
 ## İsteğe bağlı: Passkey / Touch ID
 
-> **Uyarı:** WebAuthn passkey’ler **tek bir domain**e bağlıdır. Supabase’de yalnızca **bir RP ID** olur. Local (`localhost`) ve production (Vercel) **aynı anda çalışmaz** — RP ID’yi sürekli değiştirmek gerekir. Bu yüzden varsayılan olarak **kapalıdır**.
-
-Açmak için `.env.local` / Vercel:
+Tek domain — local + production birlikte çalışmaz. Varsayılan: kapalı.
 
 ```env
 NEXT_PUBLIC_PASSKEY_ENABLED=true
 ```
-
-Sonra Supabase → Passkeys → RP ID ve Origin’i **o an kullandığın domain** ile eşleştir.
 
 ---
 
@@ -40,7 +45,6 @@ Sonra Supabase → Passkeys → RP ID ve Origin’i **o an kullandığın domain
 
 | Değişken | Açıklama |
 |----------|----------|
-| `ALLOWED_EMAIL` | Tek kullanıcı e-postası (sunucu) |
-| `NEXT_PUBLIC_ALLOWED_EMAIL` | Login ekranında gösterilir |
-| `SUPABASE_SERVICE_ROLE_KEY` | Dev setup linki için |
-| `NEXT_PUBLIC_PASSKEY_ENABLED` | `true` ise Touch ID seçeneği görünür |
+| `ALLOWED_EMAIL` | Tek kullanıcı e-postası |
+| `NEXT_PUBLIC_ALLOWED_EMAIL` | Login ekranı |
+| `NEXT_PUBLIC_PASSKEY_ENABLED` | Passkey (opsiyonel) |
