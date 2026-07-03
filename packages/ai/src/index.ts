@@ -10,6 +10,16 @@ export interface LLMClient {
 export { createClaudeMessage, type ClaudeMessage } from './claude'
 export { transcribeAudio, type TranscribeOptions } from './transcribe'
 export { summarizeTranscript } from './summarize'
+export { chatWithAssistant, type ToolkitContext } from './assistant'
+export { generateNewsletterIssue, type NewsletterInput, type NewsletterSections } from './newsletter'
+export {
+  JOB_APPLICATION_GUARDRAILS,
+  coerceToString,
+  sanitizeApplicationText,
+  sanitizeMasterProfile,
+  profileNeedsAsherivSanitizeSave,
+  profileForApplications,
+} from './profile-guard'
 export {
   buildMasterProfile,
   buildProfileVariants,

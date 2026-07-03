@@ -65,8 +65,7 @@ export function WatchlistTab({ onWarning }: WatchlistTabProps) {
   return (
     <GlassPanel className="space-y-4 p-6">
       <p className="text-xs text-[var(--text-muted)]">
-        {ja.watchlist.hint} Indeed RSS example:{' '}
-        <code className="text-[var(--accent)]">https://rss.indeed.com/rss?q=remote+data+scientist&amp;l=remote</code>
+        {ja.watchlist.hint}
       </p>
       <div className="grid gap-3 sm:grid-cols-3">
         <select
@@ -75,6 +74,7 @@ export function WatchlistTab({ onWarning }: WatchlistTabProps) {
           className="rounded-xl border border-[var(--surface-border)] bg-[var(--background-alt)]/50 px-3 py-2 text-sm"
         >
           <option value="url">{ja.watchlist.url}</option>
+          <option value="careers">{ja.watchlist.careers}</option>
           <option value="rss">{ja.watchlist.rss}</option>
           <option value="keyword">{ja.watchlist.keyword}</option>
         </select>

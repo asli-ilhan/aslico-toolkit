@@ -58,7 +58,7 @@ export const moduleRegistry: ModuleManifest[] = [
       glow: '#ec4899',
       canvasMode: 'particles',
     },
-    status: 'coming-soon',
+    status: 'beta',
     href: '/calendar',
   },
   {
@@ -73,7 +73,7 @@ export const moduleRegistry: ModuleManifest[] = [
       glow: '#fcd34d',
       canvasMode: 'flow-field',
     },
-    status: 'coming-soon',
+    status: 'beta',
     href: '/voice-assistant',
   },
   {
@@ -88,7 +88,7 @@ export const moduleRegistry: ModuleManifest[] = [
       glow: '#f97316',
       canvasMode: 'particles',
     },
-    status: 'coming-soon',
+    status: 'beta',
     href: '/newsletter',
   },
   {

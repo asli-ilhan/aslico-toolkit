@@ -46,6 +46,10 @@ Copy from `apps/web/.env.local` into Vercel → Settings → Environment Variabl
 | `GMAIL_REFRESH_TOKEN` | outreach |
 | `GMAIL_SENDER_EMAIL` | outreach |
 | `HUNTER_API_KEY` | optional |
+| `ADZUNA_APP_ID` | job discovery (Indeed/Glassdoor agg.) |
+| `ADZUNA_APP_KEY` | job discovery |
+| `JOOBLE_API_KEY` | job discovery (LinkedIn/Indeed agg.) |
+| `FINDWORK_API_KEY` | optional dev jobs |
 | `CRON_SECRET` | ✓ for cron (random string) |
 | `NEXT_PUBLIC_APP_URL` | `https://your-app.vercel.app` |
 

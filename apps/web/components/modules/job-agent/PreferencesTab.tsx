@@ -16,6 +16,12 @@ export function PreferencesTab({ onWarning }: PreferencesTabProps) {
   const [remoteRequired, setRemoteRequired] = useState(true)
   const [minFit, setMinFit] = useState(55)
   const [exclude, setExclude] = useState('')
+  const [excludeRoles, setExcludeRoles] = useState('')
+  const [avoidSenior, setAvoidSenior] = useState(true)
+  const [requireDomain, setRequireDomain] = useState(true)
+  const [experienceLevel, setExperienceLevel] = useState<'junior' | 'mid' | 'senior' | 'any'>('mid')
+  const [experienceYears, setExperienceYears] = useState('')
+  const [targetCompanies, setTargetCompanies] = useState('')
   const [keywords, setKeywords] = useState('')
   const [rss, setRss] = useState('')
   const [nightlyEnabled, setNightlyEnabled] = useState(true)
@@ -46,6 +52,12 @@ export function PreferencesTab({ onWarning }: PreferencesTabProps) {
     setRemoteRequired(p.remoteRequired ?? true)
     setMinFit(p.minFitScore ?? 55)
     setExclude((p.excludeCompanies ?? []).join(', '))
+    setExcludeRoles((p.excludeRoles ?? []).join(', '))
+    setAvoidSenior(p.avoidSeniorTitles ?? true)
+    setRequireDomain(p.requireCompanyDomainMatch ?? true)
+    setExperienceLevel(p.experienceLevel ?? 'mid')
+    setExperienceYears(p.experienceYears ? String(p.experienceYears) : '')
+    setTargetCompanies((p.targetCompanies ?? []).join(', '))
     setKeywords((p.keywords ?? []).join(', '))
     setRss((p.rssFeeds ?? []).join(', '))
     setNightlyEnabled(p.nightlyEnabled ?? true)
@@ -72,6 +84,12 @@ export function PreferencesTab({ onWarning }: PreferencesTabProps) {
           remoteRequired,
           minFitScore: minFit,
           excludeCompanies: exclude.split(',').map((s) => s.trim()).filter(Boolean),
+          excludeRoles: excludeRoles.split(',').map((s) => s.trim()).filter(Boolean),
+          avoidSeniorTitles: avoidSenior,
+          requireCompanyDomainMatch: requireDomain,
+          experienceLevel,
+          experienceYears: experienceYears ? Number(experienceYears) : undefined,
+          targetCompanies: targetCompanies.split(',').map((s) => s.trim()).filter(Boolean),
           keywords: keywords.split(',').map((s) => s.trim()).filter(Boolean),
           rssFeeds,
           nightlyEnabled,
@@ -160,9 +178,32 @@ export function PreferencesTab({ onWarning }: PreferencesTabProps) {
         <input value={exclude} onChange={(e) => setExclude(e.target.value)} className={fieldClass} />
       </label>
       <label className="block text-sm text-[var(--text)]">
+        {ja.preferences.excludeRoles}
+        <input value={excludeRoles} onChange={(e) => setExcludeRoles(e.target.value)} placeholder="senior, manager, director, vp" className={fieldClass} />
+      </label>
+      <label className="block text-sm text-[var(--text)]">
+        {ja.preferences.targetCompanies}
+        <input value={targetCompanies} onChange={(e) => setTargetCompanies(e.target.value)} placeholder="https://company.com/careers" className={fieldClass} />
+      </label>
+      <label className="block text-sm text-[var(--text)]">
         {ja.preferences.keywords}
         <input value={keywords} onChange={(e) => setKeywords(e.target.value)} className={fieldClass} />
       </label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block text-sm text-[var(--text)]">
+          {ja.preferences.experienceLevel}
+          <select value={experienceLevel} onChange={(e) => setExperienceLevel(e.target.value as 'junior' | 'mid' | 'senior' | 'any')} className={fieldClass}>
+            <option value="junior">Junior</option>
+            <option value="mid">Mid (not senior)</option>
+            <option value="senior">Senior</option>
+            <option value="any">Any</option>
+          </select>
+        </label>
+        <label className="block text-sm text-[var(--text)]">
+          {ja.preferences.experienceYears}
+          <input type="number" min={0} max={40} value={experienceYears} onChange={(e) => setExperienceYears(e.target.value)} className={fieldClass} />
+        </label>
+      </div>
       <label className="block text-sm text-[var(--text)]">
         {ja.preferences.minFit}
         <input
@@ -177,6 +218,14 @@ export function PreferencesTab({ onWarning }: PreferencesTabProps) {
       <label className="block text-sm text-[var(--text)]">
         {ja.preferences.rss}
         <input value={rss} onChange={(e) => setRss(e.target.value)} className={fieldClass} />
+      </label>
+      <label className="flex items-center gap-2 text-sm text-[var(--text)]">
+        <input type="checkbox" checked={avoidSenior} onChange={(e) => setAvoidSenior(e.target.checked)} />
+        {ja.preferences.avoidSenior}
+      </label>
+      <label className="flex items-center gap-2 text-sm text-[var(--text)]">
+        <input type="checkbox" checked={requireDomain} onChange={(e) => setRequireDomain(e.target.checked)} />
+        {ja.preferences.requireDomain}
       </label>
       <label className="flex items-center gap-2 text-sm text-[var(--text)]">
         <input

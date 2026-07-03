@@ -37,3 +37,25 @@ export function isMissingJobAgentV4(error: { code?: string; message?: string }):
     isMissingTable(error, 'gmail_connections')
   )
 }
+
+export function isMissingCalendarTable(error: { code?: string; message?: string }): boolean {
+  return isMissingTable(error, 'calendar_events')
+}
+
+export function isMissingCalendarV2(error: { code?: string; message?: string }): boolean {
+  return (
+    isMissingTable(error, 'calendar_connections') ||
+    isMissingTable(error, 'calendar_todos')
+  )
+}
+
+export function isMissingNewsletterTable(error: { code?: string; message?: string }): boolean {
+  return (
+    isMissingTable(error, 'newsletter_issues') ||
+    isMissingTable(error, 'newsletter_settings')
+  )
+}
+
+export function isMissingAssistantTable(error: { code?: string; message?: string }): boolean {
+  return isMissingTable(error, 'assistant_messages')
+}

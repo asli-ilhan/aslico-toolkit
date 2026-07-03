@@ -33,6 +33,13 @@ export type Messages = {
     followUps: string
     noReminders: string
     openJobAgent: string
+    todayCalendar: string
+    weekAhead: string
+    openCalendar: string
+    openNewsletter: string
+    newsletterReady: string
+    generateNewsletter: string
+    noEventsToday: string
   }
   theme: {
     label: string
@@ -68,6 +75,14 @@ export type Messages = {
     title: string
     description: string
     ariaLabel: string
+    openFull: string
+    placeholder: string
+    send: string
+    sending: string
+    mic: string
+    listening: string
+    speakReplies: string
+    thinking: string
   }
   login: {
     title: string
@@ -236,6 +251,12 @@ export type Messages = {
       remoteRequired: string
       minFit: string
       exclude: string
+      excludeRoles: string
+      avoidSenior: string
+      requireDomain: string
+      experienceLevel: string
+      experienceYears: string
+      targetCompanies: string
       keywords: string
       rss: string
       nightly: string
@@ -248,6 +269,7 @@ export type Messages = {
       kind: string
       url: string
       rss: string
+      careers: string
       keyword: string
       label: string
       add: string
@@ -315,38 +337,128 @@ export type Messages = {
       refresh: string
       done: string
       pending: string
-      progress: { db: string; profile: string; gmail: string }
+      progress: {
+        database: string
+        profile: string
+        gmail: string
+        autofill: string
+        inbox: string
+      }
       dailyTitle: string
       dailyBody: string
       steps: {
-        sql: { title: string; body: string; files: string }
+        database: {
+          title: string
+          body: string
+          supabaseHint: string
+          fileV2: string
+          fileV3: string
+          fileV4: string
+        }
         profile: { title: string; body: string; action: string }
         prefs: { title: string; body: string; action: string }
-        discovery: { title: string; body: string; cron: string }
+        discovery: { title: string; body: string; nightlyNote: string }
         inbox: { title: string; body: string; pending: string; action: string }
+        autofill: {
+          title: string
+          body: string
+          onceLabel: string
+          onceHint: string
+          sessionLabel: string
+          running: string
+          stopped: string
+        }
         gmail: {
           title: string
           body: string
-          envOk: string
           action: string
-          tokenLink: string
+          envDone: string
+          connected: string
+          pending: string
         }
-        autofill: { title: string; body: string; running: string; stopped: string }
-        deploy: {
-          title: string
-          body: string
-          s1: string
-          s2: string
-          s3: string
-          s4: string
-          gitInit: string
-          envHint: string
-          envList: string
-          cronNote: string
-        }
+        outreach: { title: string; body: string; action: string }
       }
     }
     warnings: { tableMissing: string; v2Missing: string; v3Missing: string; v4Missing: string }
     errors: { loadFailed: string; generateFailed: string }
+  }
+  calendar: {
+    title: string
+    subtitle: string
+    upcoming: string
+    empty: string
+    addEvent: string
+    eventTitle: string
+    startsAt: string
+    allDay: string
+    allDayLabel: string
+    save: string
+    syncJobAgent: string
+    syncing: string
+    fromJobAgent: string
+    fromGoogle: string
+    fromMicrosoft: string
+    connectionsTitle: string
+    connectGoogle: string
+    connectAnotherGoogle: string
+    connectMicrosoft: string
+    connectAnotherMicrosoft: string
+    syncExternal: string
+    disconnect: string
+    connectedAs: string
+    notConnected: string
+    todosTitle: string
+    addTodo: string
+    todoPlaceholder: string
+    done: string
+    todoDate: string
+    warnings: { tableMissing: string; v2Missing: string; v3Missing: string }
+    errors: {
+      googleNotConfigured: string
+      microsoftNotConfigured: string
+      syncFailed: string
+    }
+  }
+  newsletter: {
+    title: string
+    subtitle: string
+    interestsTitle: string
+    interestsHint: string
+    newsFeedsTitle: string
+    newsFeedsHint: string
+    saveInterests: string
+    generateToday: string
+    generating: string
+    empty: string
+    history: string
+    aiNote: string
+    noHeadlines: string
+    noEvents: string
+    noTodos: string
+    readArticle: string
+    sections: {
+      headlines: string
+      events: string
+      todos: string
+      job: string
+    }
+    warnings: { tableMissing: string; v2Missing: string }
+    errors: { generateFailed: string }
+  }
+  voiceAssistant: {
+    title: string
+    subtitle: string
+    empty: string
+    placeholder: string
+    send: string
+    sending: string
+    mic: string
+    listening: string
+    speakReplies: string
+    clear: string
+    thinking: string
+    quickPrompts: string[]
+    warnings: { tableMissing: string }
+    errors: { sendFailed: string; noMic: string }
   }
 }

@@ -13,28 +13,34 @@ import {
   matchesKeywords,
   type SearchPreferences,
 } from '@/lib/job-agent/types'
+import { collectAggregatorJobs } from '@/lib/job-agent/aggregators'
+import {
+  BUILTIN_DISCOVERY_KEYWORDS,
+  BUILTIN_RSS_FEEDS,
+  collectJobicyPool,
+  fetchArbeitnowJobs,
+  MAX_NIGHTLY_PACKS,
+  parseRssFeed,
+  RSS_ITEMS_PER_FEED,
+  uniqueFeedUrls,
+  type JobCandidate,
+} from '@/lib/job-agent/feeds'
+import {
+  dedupeCandidates,
+  loadJobDedupeIndex,
+} from '@/lib/job-agent/dedupe'
 import { scrapeJobUrl } from '@/lib/job-agent/scrape'
-
-/** Remote job boards scanned when watchlist has no RSS sources. */
-const BUILTIN_RSS_FEEDS = [
-  'https://remotive.com/remote-jobs/feed',
-  'https://weworkremotely.com/categories/remote-design-jobs.rss',
-  'https://weworkremotely.com/categories/remote-programming-jobs.rss',
-  'https://jobicy.com/?feed=job_listing',
-]
+import { scrapeCareersPage } from '@/lib/job-agent/careers'
+import {
+  boostFitWithAlignment,
+  evaluateJobRelevance,
+  experienceNoteForCv,
+} from '@/lib/job-agent/relevance'
 
 export interface NightlyResult {
   jobsScanned: number
   packsCreated: number
   log: { message: string; level?: 'info' | 'warn' | 'error' }[]
-}
-
-interface JobCandidate {
-  company: string
-  role: string
-  jobDescription: string
-  jobUrl?: string
-  source: string
 }
 
 export async function runNightlyForUser(
@@ -78,54 +84,60 @@ export async function runNightlyForUser(
     return { jobsScanned, packsCreated, log }
   }
 
+  const dedupeIndex = await loadJobDedupeIndex(supabase, userId)
+
   const { data: watchlist } = await supabase
     .from('job_watchlist')
     .select('*')
     .eq('user_id', userId)
     .eq('enabled', true)
 
-  const candidates: JobCandidate[] = []
-
   const keywordAlerts = (watchlist ?? [])
     .filter((w) => w.kind === 'keyword' && w.enabled)
     .map((w) => String(w.value).trim())
     .filter(Boolean)
 
-  const activeKeywords = [...new Set([...preferences.keywords, ...keywordAlerts])]
+  const userKeywords = [...new Set([...preferences.keywords, ...keywordAlerts])].filter(Boolean)
 
-  /** Use profile domains as search terms when no explicit keywords. */
-  const searchTerms =
-    activeKeywords.length > 0 ?
-      activeKeywords
-    : (masterProfile.domains ?? preferences.domains ?? [])
-        .slice(0, 4)
-        .map((d) => d.replace(/_/g, ' '))
+  const profileDomainTerms = (masterProfile.domains ?? preferences.domains ?? []).map((d) =>
+    d.replace(/_/g, ' '),
+  )
 
-  const hasWatchlistRss = (watchlist ?? []).some((w) => w.kind === 'rss' && w.enabled)
-  const rssSources = hasWatchlistRss ?
-    []
-  : [...(preferences.rssFeeds ?? []), ...BUILTIN_RSS_FEEDS].filter(Boolean)
+  const searchTerms = [
+    ...new Set([...userKeywords, ...BUILTIN_DISCOVERY_KEYWORDS, ...profileDomainTerms]),
+  ]
+
+  const watchlistRss = (watchlist ?? [])
+    .filter((w) => w.kind === 'rss' && w.enabled)
+    .map((w) => String(w.value).trim())
+
+  const rssSources = uniqueFeedUrls([
+    ...(preferences.rssFeeds ?? []),
+    ...watchlistRss,
+    ...BUILTIN_RSS_FEEDS,
+  ])
+
+  const rawCandidates: JobCandidate[] = []
 
   for (const item of watchlist ?? []) {
     try {
       if (item.kind === 'url') {
         const scraped = await scrapeJobUrl(item.value)
-        const company = scraped.company ?? item.label ?? 'Unknown company'
-        const role = scraped.title ?? item.label ?? 'Role'
-        candidates.push({
-          company,
-          role,
+        rawCandidates.push({
+          company: scraped.company ?? item.label ?? 'Unknown company',
+          role: scraped.title ?? item.label ?? 'Role',
           jobDescription: scraped.description.slice(0, 12000),
           jobUrl: item.value,
           source: 'watchlist_url',
         })
         jobsScanned++
-      } else if (item.kind === 'rss') {
-        const rssJobs = await parseRssFeed(item.value)
-        for (const j of rssJobs.slice(0, 10)) {
-          candidates.push({ ...j, source: 'watchlist_rss' })
-          jobsScanned++
-        }
+      } else if (item.kind === 'careers') {
+        const careersJobs = await scrapeCareersPage(item.value, item.label ?? undefined)
+        rawCandidates.push(...careersJobs)
+        jobsScanned += careersJobs.length
+        log.push({
+          message: `Careers ${item.label ?? item.value}: ${careersJobs.length} opportunities`,
+        })
       }
     } catch (err) {
       log.push({
@@ -135,14 +147,28 @@ export async function runNightlyForUser(
     }
   }
 
+  for (const entry of preferences.targetCompanies ?? []) {
+    if (!entry.startsWith('http')) continue
+    try {
+      const careersJobs = await scrapeCareersPage(entry)
+      rawCandidates.push(...careersJobs)
+      jobsScanned += careersJobs.length
+      log.push({ message: `Target careers ${entry}: ${careersJobs.length} opportunities` })
+    } catch (err) {
+      log.push({
+        message: `Target careers failed ${entry}: ${err instanceof Error ? err.message : 'error'}`,
+        level: 'warn',
+      })
+    }
+  }
+
   for (const feedUrl of rssSources) {
     try {
-      const rssJobs = await parseRssFeed(feedUrl)
-      for (const j of rssJobs.slice(0, 8)) {
-        candidates.push({ ...j, source: 'builtin_rss' })
-        jobsScanned++
-      }
-      log.push({ message: `RSS ${feedUrl}: ${rssJobs.length} listings` })
+      const rssJobs = await parseRssFeed(feedUrl, 'rss')
+      const slice = rssJobs.slice(0, RSS_ITEMS_PER_FEED)
+      rawCandidates.push(...slice.map((j) => ({ ...j, source: 'builtin_rss' })))
+      jobsScanned += slice.length
+      log.push({ message: `RSS ${feedUrl}: ${rssJobs.length} listings (${slice.length} sampled)` })
     } catch (err) {
       log.push({
         message: `RSS failed ${feedUrl}: ${err instanceof Error ? err.message : 'error'}`,
@@ -151,75 +177,137 @@ export async function runNightlyForUser(
     }
   }
 
-  if (searchTerms.length) {
-    const q = encodeURIComponent(`${searchTerms.slice(0, 4).join(' ')} remote`)
-    const indeedUrl = `https://rss.indeed.com/rss?q=${q}&l=remote`
-    try {
-      const indeedJobs = await parseRssFeed(indeedUrl)
-      for (const j of indeedJobs.slice(0, 12)) {
-        candidates.push({ ...j, source: 'indeed_rss' })
-        jobsScanned++
-      }
-      log.push({
-        message: `Indeed RSS: ${indeedJobs.length} jobs for [${searchTerms.slice(0, 4).join(', ')}]`,
-      })
-    } catch (err) {
-      log.push({
-        message: `Indeed RSS failed: ${err instanceof Error ? err.message : 'error'}`,
-        level: 'warn',
-      })
-    }
+  try {
+    const jobicyJobs = await collectJobicyPool(searchTerms)
+    rawCandidates.push(...jobicyJobs)
+    jobsScanned += jobicyJobs.length
+    log.push({ message: `Jobicy API: ${jobicyJobs.length} jobs` })
+  } catch (err) {
+    log.push({
+      message: `Jobicy API failed: ${err instanceof Error ? err.message : 'error'}`,
+      level: 'warn',
+    })
   }
 
-  if (!candidates.length) {
+  try {
+    const arbeitnowJobs = await fetchArbeitnowJobs()
+    rawCandidates.push(...arbeitnowJobs)
+    jobsScanned += arbeitnowJobs.length
+    log.push({ message: `Arbeitnow API: ${arbeitnowJobs.length} remote jobs` })
+  } catch (err) {
     log.push({
-      message: 'No jobs found. Check profile domains or add keywords in Preferences.',
+      message: `Arbeitnow API failed: ${err instanceof Error ? err.message : 'error'}`,
+      level: 'warn',
     })
+  }
+
+  const agg = await collectAggregatorJobs(searchTerms)
+  rawCandidates.push(...agg.jobs)
+  jobsScanned += agg.jobs.length
+  for (const line of agg.logs) {
+    log.push({ message: line })
+  }
+  for (const w of agg.warnings) {
+    log.push({ message: w, level: 'warn' })
+  }
+
+  let candidates = dedupeCandidates(rawCandidates)
+  log.push({ message: `Unique candidates after dedupe: ${candidates.length}` })
+
+  if (!candidates.length) {
+    log.push({ message: 'No jobs found from feeds. Add watchlist URLs or check network.' })
     return { jobsScanned, packsCreated, log }
   }
 
-  const maxPacks = 5
-  for (const job of candidates.slice(0, maxPacks * 2)) {
+  let skippedDupes = 0
+  let skippedKeywords = 0
+  let skippedRemote = 0
+  let skippedRelevance = 0
+  let skippedFit = 0
+
+  const profileDomains = masterProfile.domains ?? preferences.domains ?? []
+  const expNote = experienceNoteForCv(preferences)
+
+  const maxPacks = MAX_NIGHTLY_PACKS
+
+  for (const job of candidates) {
     if (packsCreated >= maxPacks) break
+
+    const dupe = dedupeIndex.check(job)
+    if (dupe.duplicate) {
+      skippedDupes++
+      continue
+    }
 
     if (isCompanyExcluded(job.company, preferences.excludeCompanies)) {
       log.push({ message: `Skipped excluded company: ${job.company}` })
       continue
     }
 
-    if (searchTerms.length && !matchesKeywords(`${job.jobDescription} ${job.role}`, searchTerms)) {
+    const relevance = evaluateJobRelevance(job, preferences, profileDomains)
+    if (!relevance.pass) {
+      skippedRelevance++
+      if (skippedRelevance <= 10) {
+        log.push({ message: `Skipped: ${relevance.reason}` })
+      }
       continue
     }
 
-    if (preferences.remoteRequired) {
-      const hay = job.jobDescription.toLowerCase()
-      const remoteish = ['remote', 'hybrid', 'work from home', 'distributed'].some((w) =>
-        hay.includes(w),
+    if (userKeywords.length && !matchesKeywords(`${job.jobDescription} ${job.role}`, userKeywords)) {
+      skippedKeywords++
+      continue
+    }
+
+    if (preferences.remoteRequired && job.source !== 'careers_open') {
+      const hay = `${job.jobDescription} ${job.role} ${job.jobUrl ?? ''}`.toLowerCase()
+      const remoteish = ['remote', 'hybrid', 'work from home', 'distributed', 'worldwide', 'anywhere'].some(
+        (w) => hay.includes(w),
       )
-      if (!remoteish && !job.jobUrl?.includes('remote')) {
-        log.push({ message: `Skipped non-remote: ${job.company} · ${job.role}` })
+      if (!remoteish) {
+        skippedRemote++
         continue
       }
     }
 
     const domainFit = computeDomainFit(
-      job.jobDescription,
-      masterProfile.domains ?? preferences.domains,
+      `${job.company} ${job.role} ${job.jobDescription}`,
+      profileDomains,
       preferences.domainWeights,
     )
 
-    let fit = await scoreJobFit(masterProfile, job)
+    let fit = await scoreJobFit(masterProfile, {
+      company: job.company,
+      role: job.role,
+      jobDescription: job.jobDescription,
+      jobUrl: job.jobUrl,
+      experienceNote: expNote,
+    })
     fit.score = adjustFitScore(fit.score, domainFit, preferences)
+    fit.score = boostFitWithAlignment(fit.score, relevance.alignment, preferences)
 
     if (fit.score < preferences.minFitScore) {
-      log.push({ message: `Below min fit (${fit.score}%): ${job.company}` })
+      skippedFit++
+      if (skippedFit <= 12) {
+        log.push({ message: `Below min fit (${fit.score}%): ${job.company} · ${job.role}` })
+      }
       continue
     }
 
     const risk = detectAiRisk(job.company, job.jobUrl)
 
     try {
-      const pack = await generateApplicationPack(masterProfile, job, preferences)
+      const pack = await generateApplicationPack(
+        masterProfile,
+        {
+          company: job.company,
+          role: job.role,
+          jobDescription: job.jobDescription,
+          jobUrl: job.jobUrl,
+          experienceNote: expNote,
+          applicationType: job.source === 'careers_open' ? 'open_application' : 'job_posting',
+        },
+        preferences,
+      )
       const { error } = await supabase.from('application_packs').insert({
         user_id: userId,
         company: job.company,
@@ -244,6 +332,7 @@ export async function runNightlyForUser(
         log.push({ message: `Save failed: ${error.message}`, level: 'error' })
       } else {
         packsCreated++
+        dedupeIndex.remember(job)
         log.push({ message: `Pack created: ${job.company} · ${job.role} (${fit.score}%)` })
       }
     } catch (err) {
@@ -254,28 +343,28 @@ export async function runNightlyForUser(
     }
   }
 
-  return { jobsScanned, packsCreated, log }
-}
+  if (skippedRelevance) {
+    log.push({ message: `Skipped ${skippedRelevance} irrelevant roles / domain mismatches` })
+  }
+  if (skippedDupes) {
+    log.push({ message: `Skipped ${skippedDupes} already seen / applied / in inbox` })
+  }
+  if (skippedKeywords) {
+    log.push({ message: `Skipped ${skippedKeywords} (no user keyword match)` })
+  }
+  if (skippedRemote) {
+    log.push({ message: `Skipped ${skippedRemote} non-remote listings` })
+  }
+  if (skippedFit > 12) {
+    log.push({ message: `Skipped ${skippedFit} total below min fit (${preferences.minFitScore}%)` })
+  }
 
-async function parseRssFeed(url: string): Promise<JobCandidate[]> {
-  const res = await fetch(url, { signal: AbortSignal.timeout(12000) })
-  if (!res.ok) throw new Error(`RSS fetch ${res.status}`)
-  const xml = await res.text()
-  const items: JobCandidate[] = []
-  const itemBlocks = xml.match(/<item[\s\S]*?<\/item>/gi) ?? []
-  for (const block of itemBlocks) {
-    const title = block.match(/<title[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i)?.[1]?.trim()
-    const link = block.match(/<link[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/link>/i)?.[1]?.trim()
-    const desc =
-      block.match(/<description[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/i)?.[1]?.trim() ?? ''
-    if (!title) continue
-    items.push({
-      company: title.split(' at ')[1]?.trim() ?? 'RSS listing',
-      role: title.split(' at ')[0]?.trim() ?? title,
-      jobDescription: desc.replace(/<[^>]+>/g, ' ').slice(0, 8000),
-      jobUrl: link,
-      source: 'rss',
+  if (packsCreated === 0) {
+    log.push({
+      message: `No new packs. Try lowering min fit (now ${preferences.minFitScore}%) or add keywords in Preferences.`,
+      level: 'warn',
     })
   }
-  return items
+
+  return { jobsScanned, packsCreated, log }
 }

@@ -15,7 +15,9 @@ export type ProfileVariant = 'default' | 'research' | 'industry' | 'gig'
 
 export type AiRiskLevel = 'low' | 'medium' | 'high'
 
-export type WatchlistKind = 'url' | 'rss' | 'keyword'
+export type WatchlistKind = 'url' | 'rss' | 'keyword' | 'careers'
+
+export type ExperienceLevel = 'junior' | 'mid' | 'senior' | 'any'
 
 export interface EvidenceItem {
   id: string
@@ -59,6 +61,12 @@ export interface SearchPreferences {
   gigPlatforms: string[]
   keywords: string[]
   excludeCompanies: string[]
+  excludeRoles: string[]
+  avoidSeniorTitles: boolean
+  requireCompanyDomainMatch: boolean
+  experienceLevel: ExperienceLevel
+  experienceYears?: number
+  targetCompanies: string[]
   rssFeeds: string[]
   nightlyEnabled: boolean
 }
@@ -97,6 +105,11 @@ export const DEFAULT_PREFERENCES: SearchPreferences = {
   gigPlatforms: ['outlier', 'alignerr', 'remotasks', 'dataannotation'],
   keywords: [],
   excludeCompanies: [],
+  excludeRoles: [],
+  avoidSeniorTitles: true,
+  requireCompanyDomainMatch: true,
+  experienceLevel: 'mid',
+  targetCompanies: [],
   rssFeeds: [],
   nightlyEnabled: true,
 }

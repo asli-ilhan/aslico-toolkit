@@ -28,7 +28,19 @@ curl -X POST https://your-app.vercel.app/api/modules/job-agent/nightly \
   -H "Authorization: Bearer $CRON_SECRET"
 ```
 
-Scans enabled watchlist URLs and RSS feeds, filters by preferences, creates up to 5 packs per run.
+Scans **30+ sources** (RemoteOK, Remotive, Jobicy, WWR, Built In, Himalayas, The Muse, Working Nomads, SkipTheDrive, Landing.jobs, Arbeitnow, …) plus your watchlist. Skips duplicates and jobs already submitted or in inbox. Creates up to **10 packs** per run.
+
+### Indeed / LinkedIn / Glassdoor
+
+These sites **block direct RSS** from cloud servers (403/429). Use official aggregators (free tiers):
+
+| Env | Covers | Sign up |
+|-----|--------|---------|
+| `ADZUNA_APP_ID` + `ADZUNA_APP_KEY` | Indeed, Glassdoor, Monster (US/UK/DE/CA/AU) | [developer.adzuna.com](https://developer.adzuna.com) |
+| `JOOBLE_API_KEY` | LinkedIn, Indeed, Glassdoor + 70 boards | [jooble.org/api/about](https://jooble.org/api/about) |
+| `FINDWORK_API_KEY` | Developer jobs | [findwork.dev/developers](https://findwork.dev/developers) |
+
+Add keys to Vercel → Environment Variables and redeploy.
 
 ## Exports
 
@@ -40,11 +52,9 @@ From inbox/history pack detail:
 - **Autofill JSON** — for Playwright script (`docs/AUTOFILL.md`)
 - **Add to calendar** — `.ics` for deadline or follow-up (Apple/Google Calendar)
 
-## Indeed RSS (nightly)
+## Manual job URLs
 
-If you set keywords in Preferences or keyword alerts in Watchlist, nightly run also queries Indeed remote RSS automatically.
-
-LinkedIn has no public RSS/API; use URL scrape or paste listings manually.
+LinkedIn has no public API; paste listing URLs in **Watchlist** or use Jooble/Adzuna keys above.
 
 ## Cold outreach (v4)
 

@@ -23,14 +23,30 @@ export function ProfileTab({ onWarning }: ProfileTabProps) {
   const load = useCallback(async () => {
     setLoading(true)
     onWarning(null)
-    const res = await fetch('/api/modules/job-agent/profile')
-    const data = await res.json()
-    if (data.warning === 'job_agent_v2_missing') onWarning(ja.warnings.v2Missing)
-    setDocuments(data.documents ?? [])
-    setProfile(data.profile)
-    setVariants(data.profileVariants ?? null)
-    setLoading(false)
-  }, [ja.warnings.v2Missing, onWarning])
+    try {
+      const res = await fetch('/api/modules/job-agent/profile')
+      const text = await res.text()
+      const data = text ? (JSON.parse(text) as Record<string, unknown>) : {}
+      if (!res.ok) {
+        onWarning(typeof data.error === 'string' ? data.error : ja.errors.generateFailed)
+        setDocuments([])
+        setProfile(null)
+        setVariants(null)
+        return
+      }
+      if (data.warning === 'job_agent_v2_missing') onWarning(ja.warnings.v2Missing)
+      setDocuments((data.documents as typeof documents) ?? [])
+      setProfile((data.profile as Record<string, unknown> | null) ?? null)
+      setVariants((data.profileVariants as typeof variants) ?? null)
+    } catch {
+      onWarning(ja.errors.generateFailed)
+      setDocuments([])
+      setProfile(null)
+      setVariants(null)
+    } finally {
+      setLoading(false)
+    }
+  }, [ja.errors.generateFailed, ja.warnings.v2Missing, onWarning])
 
   useEffect(() => {
     void (async () => {
@@ -57,14 +73,20 @@ export function ProfileTab({ onWarning }: ProfileTabProps) {
 
   async function buildProfile() {
     setBuilding(true)
-    const res = await fetch('/api/modules/job-agent/profile', { method: 'POST' })
-    const data = await res.json()
-    setBuilding(false)
-    if (res.ok) {
-      setProfile(data.profile)
-      setVariants(data.profileVariants ?? null)
-    } else {
-      onWarning(data.error ?? ja.errors.generateFailed)
+    try {
+      const res = await fetch('/api/modules/job-agent/profile', { method: 'POST' })
+      const text = await res.text()
+      const data = text ? (JSON.parse(text) as Record<string, unknown>) : {}
+      if (res.ok) {
+        setProfile((data.profile as Record<string, unknown>) ?? null)
+        setVariants((data.profileVariants as typeof variants) ?? null)
+      } else {
+        onWarning(typeof data.error === 'string' ? data.error : ja.errors.generateFailed)
+      }
+    } catch {
+      onWarning(ja.errors.generateFailed)
+    } finally {
+      setBuilding(false)
     }
   }
 

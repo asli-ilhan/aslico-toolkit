@@ -6,6 +6,9 @@ import { useLocale } from '@/components/shell/LocaleProvider'
 import { isAutofillDaemonRunning } from '@/lib/job-agent/autofill-client'
 import { DiscoveryPanel } from './DiscoveryPanel'
 
+const ONCE_SETUP = 'pnpm install\nnpx playwright install chromium'
+const DAEMON_CMD = 'pnpm autofill:daemon'
+
 interface SetupStatus {
   sqlV2: boolean
   sqlV3: boolean
@@ -14,9 +17,6 @@ interface SetupStatus {
   gmail: boolean
   gmailMode: 'env' | 'oauth' | null
   inboxCount: number
-  isProduction: boolean
-  isDev: boolean
-  appUrl: string
 }
 
 interface GuideTabProps {
@@ -97,7 +97,17 @@ export function GuideTab({ onWarning, onNavigate }: GuideTabProps) {
       isAutofillDaemonRunning(),
     ])
     const data = await statusRes.json()
-    if (statusRes.ok) setStatus(data)
+    if (statusRes.ok) {
+      setStatus({
+        sqlV2: !!data.sqlV2,
+        sqlV3: !!data.sqlV3,
+        sqlV4: !!data.sqlV4,
+        profile: !!data.profile,
+        gmail: !!data.gmail,
+        gmailMode: data.gmailMode ?? null,
+        inboxCount: data.inboxCount ?? 0,
+      })
+    }
     setDaemonOk(daemon)
     setLoading(false)
   }, [onWarning])
@@ -110,7 +120,9 @@ export function GuideTab({ onWarning, onNavigate }: GuideTabProps) {
     return <p className="text-sm text-[var(--text-muted)]">{t.common.loading}</p>
   }
 
-  const sqlDone = status.sqlV2 && status.sqlV3 && status.sqlV4
+  const dbReady = status.sqlV2 && status.sqlV3 && status.sqlV4
+  const gmailDone = status.gmail
+  const gmailNeedsUser = status.gmailMode !== 'env'
 
   return (
     <div className="space-y-6">
@@ -119,10 +131,10 @@ export function GuideTab({ onWarning, onNavigate }: GuideTabProps) {
         <p className="mt-1 text-sm text-[var(--text-muted)]">{g.subtitle}</p>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-5">
         <div className="rounded-xl border border-[var(--surface-border)] px-3 py-2 text-center text-xs">
-          <span className={sqlDone ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}>
-            {g.progress.db}: {sqlDone ? g.done : g.pending}
+          <span className={dbReady ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}>
+            {g.progress.database}: {dbReady ? g.done : g.pending}
           </span>
         </div>
         <div className="rounded-xl border border-[var(--surface-border)] px-3 py-2 text-center text-xs">
@@ -131,22 +143,44 @@ export function GuideTab({ onWarning, onNavigate }: GuideTabProps) {
           </span>
         </div>
         <div className="rounded-xl border border-[var(--surface-border)] px-3 py-2 text-center text-xs">
-          <span className={status.gmail ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}>
-            {g.progress.gmail}: {status.gmail ? g.done : g.pending}
+          <span className={gmailDone ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}>
+            {g.progress.gmail}: {gmailDone ? g.done : g.pending}
+          </span>
+        </div>
+        <div className="rounded-xl border border-[var(--surface-border)] px-3 py-2 text-center text-xs">
+          <span className={daemonOk === true ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}>
+            {g.progress.autofill}: {daemonOk === true ? g.done : g.pending}
+          </span>
+        </div>
+        <div className="rounded-xl border border-[var(--surface-border)] px-3 py-2 text-center text-xs sm:col-span-3 lg:col-span-1">
+          <span className={status.inboxCount > 0 ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}>
+            {g.progress.inbox}: {status.inboxCount > 0 ? status.inboxCount : g.pending}
           </span>
         </div>
       </div>
 
       <ol className="space-y-4">
         <li>
-          <StepCard done={sqlDone} title={g.steps.sql.title}>
-            <p className="text-sm text-[var(--text-muted)]">{g.steps.sql.body}</p>
+          <StepCard done={dbReady} title={g.steps.database.title}>
+            <p className="text-sm text-[var(--text-muted)]">{g.steps.database.body}</p>
+            <p className="text-xs text-[var(--text-muted)]">{g.steps.database.supabaseHint}</p>
             <ul className="list-inside list-disc text-xs text-[var(--text-muted)]">
-              <li className={status.sqlV2 ? 'text-[var(--accent)]' : ''}>job_agent_v2.sql {status.sqlV2 ? '✓' : ''}</li>
-              <li className={status.sqlV3 ? 'text-[var(--accent)]' : ''}>job_agent_v3.sql {status.sqlV3 ? '✓' : ''}</li>
-              <li className={status.sqlV4 ? 'text-[var(--accent)]' : ''}>job_agent_v4_outreach.sql {status.sqlV4 ? '✓' : ''}</li>
+              <li>
+                {g.steps.database.fileV2}
+                {!status.sqlV2 ? ` — ${g.pending}` : ` — ${g.done}`}
+              </li>
+              <li>
+                {g.steps.database.fileV3}
+                {!status.sqlV3 ? ` — ${g.pending}` : ` — ${g.done}`}
+              </li>
+              <li>
+                {g.steps.database.fileV4}
+                {!status.sqlV4 ? ` — ${g.pending}` : ` — ${g.done}`}
+              </li>
             </ul>
-            <CopyBlock text={g.steps.sql.files} />
+            <Button variant="outline" className="mt-2" onClick={load}>
+              {g.refresh}
+            </Button>
           </StepCard>
         </li>
 
@@ -171,10 +205,8 @@ export function GuideTab({ onWarning, onNavigate }: GuideTabProps) {
         <li>
           <StepCard done={status.inboxCount > 0} title={g.steps.discovery.title}>
             <p className="text-sm text-[var(--text-muted)]">{g.steps.discovery.body}</p>
+            <p className="text-xs text-[var(--text-muted)]">{g.steps.discovery.nightlyNote}</p>
             <DiscoveryPanel onComplete={load} onWarning={onWarning} compact />
-            {status.isProduction && (
-              <p className="text-xs text-[var(--accent)]">{g.steps.discovery.cron}</p>
-            )}
           </StepCard>
         </li>
 
@@ -191,36 +223,21 @@ export function GuideTab({ onWarning, onNavigate }: GuideTabProps) {
         </li>
 
         <li>
-          <StepCard done={status.gmail} title={g.steps.gmail.title}>
-            <p className="text-sm text-[var(--text-muted)]">{g.steps.gmail.body}</p>
-            {status.gmail && status.gmailMode === 'env' && (
-              <p className="text-xs text-[var(--accent)]">{g.steps.gmail.envOk}</p>
-            )}
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => onNavigate('preferences')}>
-                {g.steps.gmail.action}
-              </Button>
-              {!status.gmail && status.isDev && (
-                <a
-                  href="/api/dev/gmail-token"
-                  className="inline-flex items-center rounded-xl border border-[var(--surface-border)] px-3 py-2 text-sm text-[var(--accent)] hover:bg-[var(--accent-soft)]"
-                >
-                  {g.steps.gmail.tokenLink}
-                </a>
-              )}
-            </div>
-          </StepCard>
-        </li>
-
-        <li>
           <StepCard done={daemonOk === true} title={g.steps.autofill.title}>
             <p className="text-sm text-[var(--text-muted)]">{g.steps.autofill.body}</p>
+            <p className="text-xs font-medium text-[var(--text)]">{g.steps.autofill.onceLabel}</p>
+            <p className="text-xs text-[var(--text-muted)]">{g.steps.autofill.onceHint}</p>
+            <CopyBlock text={ONCE_SETUP} />
+            <p className="text-xs font-medium text-[var(--text)]">{g.steps.autofill.sessionLabel}</p>
             <p className="text-xs">
               {daemonOk === true ?
                 <span className="text-[var(--accent)]">{g.steps.autofill.running}</span>
               : <span className="text-[var(--text-muted)]">{g.steps.autofill.stopped}</span>}
             </p>
-            <CopyBlock text="pnpm autofill:daemon" />
+            <CopyBlock text={DAEMON_CMD} />
+            <p className="text-xs text-[var(--text-muted)]">
+              {t.jobAgent.autofill.run} — {t.jobAgent.inbox.title}
+            </p>
             <Button variant="outline" className="mt-2" onClick={load}>
               {g.refresh}
             </Button>
@@ -228,23 +245,30 @@ export function GuideTab({ onWarning, onNavigate }: GuideTabProps) {
         </li>
 
         <li>
-          <StepCard title={g.steps.deploy.title}>
-            <p className="text-sm text-[var(--text-muted)]">{g.steps.deploy.body}</p>
-            <ol className="list-decimal space-y-3 pl-4 text-sm text-[var(--text-muted)]">
-              <li>{g.steps.deploy.s1}</li>
-              <li>{g.steps.deploy.s2}</li>
-              <li>{g.steps.deploy.s3}</li>
-              <li>{g.steps.deploy.s4}</li>
-            </ol>
-            <CopyBlock text={g.steps.deploy.gitInit} />
-            <CopyBlock text={`cd apps/web && npx vercel --prod`} />
-            <p className="text-xs text-[var(--text-muted)]">{g.steps.deploy.envHint}</p>
-            <ul className="list-inside list-disc text-xs text-[var(--text-muted)]">
-              {g.steps.deploy.envList.split('|').map((item) => (
-                <li key={item}>{item.trim()}</li>
-              ))}
-            </ul>
-            <p className="text-xs text-[var(--text-muted)]">{g.steps.deploy.cronNote}</p>
+          <StepCard done={gmailDone} title={g.steps.gmail.title}>
+            <p className="text-sm text-[var(--text-muted)]">{g.steps.gmail.body}</p>
+            {status.gmailMode === 'env' ?
+              <p className="text-xs text-[var(--accent)]">{g.steps.gmail.envDone}</p>
+            : <p className="text-xs">
+                {gmailDone ?
+                  <span className="text-[var(--accent)]">{g.steps.gmail.connected}</span>
+                : <span className="text-[var(--text-muted)]">{g.steps.gmail.pending}</span>}
+              </p>
+            }
+            {gmailNeedsUser && (
+              <Button variant="outline" onClick={() => onNavigate('preferences')}>
+                {g.steps.gmail.action}
+              </Button>
+            )}
+          </StepCard>
+        </li>
+
+        <li>
+          <StepCard title={g.steps.outreach.title}>
+            <p className="text-sm text-[var(--text-muted)]">{g.steps.outreach.body}</p>
+            <Button variant="outline" onClick={() => onNavigate('outreach')}>
+              {g.steps.outreach.action}
+            </Button>
           </StepCard>
         </li>
       </ol>
