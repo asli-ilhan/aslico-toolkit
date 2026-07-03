@@ -195,6 +195,9 @@ export type Messages = {
       emailGenerate: string
       emailGenerating: string
     exportPdf: string
+    exportPdfLetter: string
+    exportPdfCv: string
+    exportPdfBundle: string
     exportPrint: string
     exportMd: string
     exportAutofill: string
@@ -240,6 +243,9 @@ export type Messages = {
       deleteDoc: string
       build: string
       building: string
+      importSeed: string
+      importing: string
+      importDone: string
       master: string
       variants: string
       variant: string

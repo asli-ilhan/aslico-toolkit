@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { packToPdf, packToIcs } from '@/lib/job-agent/pdf'
+import { packToPdf, packToCoverLetterPdf, packToCvPdf, packToIcs } from '@/lib/job-agent/pdf'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -29,12 +29,32 @@ export async function GET(request: NextRequest, context: RouteContext) {
   )
   const safeName = `${data.company}-${data.role}`.replace(/[^a-z0-9-_]/gi, '_').slice(0, 60)
 
-  if (format === 'pdf') {
+  if (format === 'pdf' || format === 'pdf_bundle') {
     const bytes = await packToPdf(data)
     return new NextResponse(Buffer.from(bytes), {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${safeName}.pdf"`,
+        'Content-Disposition': `attachment; filename="${safeName}-application.pdf"`,
+      },
+    })
+  }
+
+  if (format === 'pdf_letter' || format === 'cover-pdf') {
+    const bytes = await packToCoverLetterPdf(data)
+    return new NextResponse(Buffer.from(bytes), {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="${safeName}-cover-letter.pdf"`,
+      },
+    })
+  }
+
+  if (format === 'pdf_cv' || format === 'cv-pdf') {
+    const bytes = await packToCvPdf(data)
+    return new NextResponse(Buffer.from(bytes), {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="${safeName}-cv.pdf"`,
       },
     })
   }

@@ -50,7 +50,7 @@ export function PackDetailPanel({ pack, editable = false, onUpdate, onRemove }: 
     setEmailLoading(false)
   }
 
-  function openExport(format: 'html' | 'md' | 'autofill' | 'pdf' | 'ics', icsKind?: 'deadline' | 'followup') {
+  function openExport(format: 'html' | 'md' | 'autofill' | 'pdf' | 'pdf_letter' | 'pdf_cv' | 'ics', icsKind?: 'deadline' | 'followup') {
     if (format === 'autofill') {
       window.open(`/api/modules/job-agent/packs/${pack.id}/export?format=autofill`, '_blank')
       return
@@ -209,8 +209,14 @@ export function PackDetailPanel({ pack, editable = false, onUpdate, onRemove }: 
         <Button variant="ghost" onClick={() => navigator.clipboard.writeText(tailoredCv)}>
           {ja.copy} ({ja.cvTips})
         </Button>
+        <Button variant="ghost" onClick={() => openExport('pdf_letter')}>
+          {ja.inbox.exportPdfLetter}
+        </Button>
+        <Button variant="ghost" onClick={() => openExport('pdf_cv')}>
+          {ja.inbox.exportPdfCv}
+        </Button>
         <Button variant="ghost" onClick={() => openExport('pdf')}>
-          {ja.inbox.exportPdf}
+          {ja.inbox.exportPdfBundle}
         </Button>
         <Button variant="ghost" onClick={() => openExport('html')}>
           {ja.inbox.exportPrint}

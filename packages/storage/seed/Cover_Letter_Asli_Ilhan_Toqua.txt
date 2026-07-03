@@ -1,0 +1,31 @@
+a.ilhan@arts.ac.uk  ·  +44 7493 789149  ·  linkedin.com/in/ayseasliilhan  ·  London / Istanbul
+Dear Toqua team, 
+Toqua builds, at producEon scale and across real ﬂeets, the kind of ship-performance modelling I have come 
+to care about most: predicEng how a vessel actually performs; speed, power, fuel, emissions across all real 
+operaEng condiEons, and keeping that model honest as the hull fouls and the vessel ages. 
+I have spent the past year deliberately moving toward this domain. While preparing for my PhD, I built a 
+mariEme digital-twin prototype modelling vessel dynamics with a physics-informed neural network rather 
+than a black box, working with real-Eme sensor streams, and experimenEng with degradaEon tracking 
+through remaining-useful-life predicEon and voyage opEmisaEon. My data and ML foundaEon was already 
+there; what I wanted was real depth in ship-performance and mariEme systems speciﬁcally, so I went and 
+built it. Toqua is doing exactly that with real ﬂeet data, at producEon scale and your focus lines up almost 
+perfectly with where I want to specialise. The team you’ve built and what you’ve achieved as a company are a 
+big part of why I’m wriEng. 
+The mariEme focus is not a pivot for me. Alongside an MSc in AI & Data Science (DisEncEon, top graduate), I 
+hold three Lloyd’s MariEme InsEtute cerEﬁcaEons in MariEme AI & Data AnalyEcs, Industry 4.0, and 
+Cybersecurity & Compliance and a PhD oﬀer in the Shipbuilding and Ocean Engineering doctoral programme, 
+researching AI-driven mariEme systems, beginning this September. 
+That PhD places me right at the industry–academia intersecEon where I most want to work. Doctoral 
+programmes in this ﬁeld o_en come with research support and funding for collaboraEon with companies 
+whose problems align with the research, and Toqua’s plainly do. I’d be happy to contribute wherever the 
+team needs depth model development, the data and Eme-series engineering behind it, or joint research and 
+I’m more interested in being useful on real problems alongside your team than in any parEcular Etle. I’d 
+genuinely welcome a conversaEon about the arrangement and terms that would make sense for both sides. 
+I’m currently based between London and Istanbul, set up to work remotely with occasional travel whenever 
+it’s useful. With the PhD starEng in September, there are a few pracEcal details around the setup that would 
+be worth talking through and I’d really like to hear how your team works day to day and what arrangements 
+suit you best. I’d welcome the chance to talk. 
+Best regards,
+Asli Ilhan
+Asli Ilhan 
+Application  ·  Ship Performance Modelling & Maritime ML

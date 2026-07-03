@@ -1,0 +1,72 @@
+a.ilhan@arts.ac.uk  ·  +447493789149  ·  linkedin.com/in/ayseasliilhan  ·  London / Istanbul
+AI engineer specialising in mariCme data and machine learning; vessel performance modelling, Cme-series sensor fusion, 
+physics-informed simulaCon, and voyage opCmisaCon. While preparing for doctoral research, I have been developing a 
+mariCme digital-twin prototype to ground it, working hands-on with PINN-based vessel modelling, real-Cme sensor data, 
+and voyage opCmisaCon. MSc AI & Data Science (DisCncCon, Top Graduate, UAL) and three Lloyd’s MariCme InsCtute 
+cerCﬁcaCons. PhD oﬀer holder in Shipbuilding & Ocean Engineering, researching AI-driven mariCme systems (September 
+2026 start). Open to contribuCng across modelling, data engineering, and applied research.
+Vessel Performance Modelling  ·  Time-Series & Sensor Fusion  ·  Physics-Informed ML (PINN)  ·  Predic@ve Maintenance / RUL  
+·  Voyage Op@misa@on  ·  Produc@on ML Pipelines & MLOps 
+EXPERIENCE
+Mari@me Digital Twin: Research Prototype (PhD prepara@on) 2025 – Present
+Independent research
+›Building a mariCme digital-twin prototype to ground PhD research: PINN-based modelling of vessel dynamics across 
+operaCng condiCons, real-Cme sensor streams, and AI anomaly detec@on (LSTM Autoencoder + IsolaCon Forest) 
+›ExperimenCng with engine/fuel modelling (FMU), remaining-useful-life predic@on (Weibull + Monte Carlo) for hull 
+and propeller degradaCon, and voyage op@misa@on 
+AI Research Engineer: Mul@modal Genera@ve & ML Systems  2026 – Present 
+ArtEC × Fashion Innova5on Agency, London College of Fashion 
+›ProducCon-scale ML pipelines: GPU-accelerated generaCve rendering, model validaCon and performance 
+benchmarking 
+›Custom Python compute nodes and API-driven automaCon across mulCmodal (image / video / 3D) data streams 
+AI Consultant: Genera@ve & 3D ML Systems  2025 – Mar 2026 
+Roblox × Fashion Innova5on Agency, London College of Fashion 
+›Image-to-3D and model-orchestraCon workﬂows at pladorm scale; translaCng research prototypes into deployable, 
+opCmised pipelines 
+Associate Lecturer: Machine Learning & Big Data  2025 – Mar 2026 
+University of the Arts London, MA Internet Equali5es 
+›Postgraduate teaching in ML, data science and AI ethics; technical workshops for 20+ students 
+R&D AI Engineer: Computer Vision & 3D Reconstruc@on  2025 
+Fashion Innova5on Agency, London College of Fashion 
+›End-to-end ML pipeline from mulC-view image generaCon through 3D mesh reconstrucCon (NVIDIA PartPacker) to 
+real-Cme AR 
+›Built a LoRA-training pladorm for model training on bespoke datasets; mulC-model generaCve pipeline research 
+(Runway, ComfyUI, Fireﬂy) 
+Full-Stack Developer & Data Engineer  2024 – 2025 
+Flair Fashion; Digital Product Passport PlaForm 
+›MongoDB / FastAPI / React supply-chain traceability pladorm with real-Cme data ingesCon — producCon deployment 
+Junior Python Developer: Genera@ve AI Pipelines  2024 
+Jack Morton / Intel Campaign 
+›GPU-accelerated generaCve pipelines (ComfyUI, Intel Gaudi ML); GAN-based visuals at campaign scale 
+RESEARCH & RECOGNITION 
+›NVIDIA ALIGN-FASHION: research proposal accepted through NVIDIA’s industry–university collaboraCon programme; 
+supercompuCng infrastructure access granted for generaCve-AI R&D 
+›Text-to-3D Pipeline with NVIDIA PartPacker: presented at NVIDIA Industry Showcase, France, 2025 
+›UCL/UAL Research Collabora@on: 3D mesh outputs integrated into live performance research (Jessica Buck & Alex 
+Whitley, UCL/UAL) 
+Asli Ilhan 
+Maritime AI Engineer  ·  Vessel Performance Modelling  ·  Time-Series & Physics-
+Informed ML  ·  Voyage Optimisation
+EDUCATION 
+MSc Ar@ﬁcial Intelligence & Data Science  2023 – 2024 
+University of the Arts London 
+›DisCncCon · Top-ranked graduate · 1st Place Thesis: Project of the Year 
+Crea@ve Compu@ng Graduate Diploma  2022 – 2023 
+University of the Arts London 
+BA Architecture  2016 – 2022 
+Bilkent University, Turkey 
+›Parametric & computaConal design (Rhino + Grasshopper) · BIM (Revit / IFC) · AutoCAD 
+MARITIME CERTIFICATIONS — LLOYD’S MARITIME INSTITUTE  
+MariCme AI & Data AnalyCcs  ·  MariCme Industry 4.0  ·  Advanced MariCme Cybersecurity & Compliance 
+TECHNICAL SKILLS 
+AI / ML  PyTorch · TensorFlow · PINN · LSTM · IsolaCon Forest · Time-Series ForecasCng · GANs · CNNs · Diﬀusion / 
+SDXL · LoRA · NLP · RAG · LLMs · MLOps 
+Data & Digital Twin  Sensor Fusion · Kaoa · Flink · TimescaleDB · FMU SimulaCon · RUL PredicCon · BIM / IFC · IEC 
+62443 · Docker 
+CV / 3D Vision  3D ReconstrucCon · Gaussian Splapng (SuGaR) · Point Clouds · MulC-view GeneraCon · NVIDIA 
+PartPacker · UV Mapping · AR/VR 
+Rendering & Infra  Blender · ThreeJS · WebGL · GPU Pipeline OpCmisaCon · FastAPI · React · MongoDB · GCP · AWS 
+· Git 
+Languages  Python · JavaScript · TypeScript · C++ · C# · SQL · R · Bash · MATLAB 
+LANGUAGES 
+Turkish: NaCve  ·  English: Fluent  ·  French: Basic

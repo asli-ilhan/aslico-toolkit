@@ -19,6 +19,8 @@ export function ProfileTab({ onWarning }: ProfileTabProps) {
   const [content, setContent] = useState('')
   const [loading, setLoading] = useState(true)
   const [building, setBuilding] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importMsg, setImportMsg] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -71,6 +73,25 @@ export function ProfileTab({ onWarning }: ProfileTabProps) {
     load()
   }
 
+  async function importSeed() {
+    setImporting(true)
+    setImportMsg(null)
+    try {
+      const res = await fetch('/api/modules/job-agent/seed', { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) {
+        setImportMsg(ja.profile.importDone)
+        await load()
+      } else {
+        onWarning(typeof data.error === 'string' ? data.error : ja.errors.generateFailed)
+      }
+    } catch {
+      onWarning(ja.errors.generateFailed)
+    } finally {
+      setImporting(false)
+    }
+  }
+
   async function buildProfile() {
     setBuilding(true)
     try {
@@ -99,6 +120,10 @@ export function ProfileTab({ onWarning }: ProfileTabProps) {
       <GlassPanel className="space-y-3 p-5">
         <h2 className="text-sm font-semibold text-[var(--text)]">{ja.profile.upload}</h2>
         <p className="text-xs text-[var(--text-muted)]">{ja.profile.uploadHint}</p>
+        <Button variant="outline" className="w-full" disabled={importing} onClick={importSeed}>
+          {importing ? ja.profile.importing : ja.profile.importSeed}
+        </Button>
+        {importMsg && <p className="text-xs text-[var(--accent)]">{importMsg}</p>}
         <div className="grid gap-2 sm:grid-cols-2">
           <input
             value={filename}

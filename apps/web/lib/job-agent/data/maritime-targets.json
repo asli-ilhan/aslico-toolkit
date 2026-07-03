@@ -1,0 +1,702 @@
+[
+  {
+    "company": "Windward",
+    "category": "Maritime AI / MDA",
+    "careersUrl": "https://windward.ai/company/careers",
+    "fit": "Direct maritime + ML core; data scientist roles",
+    "remote": "High"
+  },
+  {
+    "company": "Kpler",
+    "category": "Maritime AI / MDA",
+    "careersUrl": "https://kpler.com/careers",
+    "fit": "Data science on vessel/trade data",
+    "remote": "Medium"
+  },
+  {
+    "company": "MarineTraffic (Kpler)",
+    "category": "Maritime AI / MDA",
+    "careersUrl": "https://marinetraffic.com/careers",
+    "fit": "Geospatial ML on AIS",
+    "remote": "Medium"
+  },
+  {
+    "company": "Spire Maritime / Spire Global",
+    "category": "Maritime AI / MDA",
+    "careersUrl": "https://spire.com/careers",
+    "fit": "Sat-AIS data + ML",
+    "remote": "Medium-High"
+  },
+  {
+    "company": "Pole Star Global",
+    "category": "Maritime AI / MDA",
+    "careersUrl": "https://polestarglobal.com/careers",
+    "fit": "Maritime data + compliance",
+    "remote": "Medium"
+  },
+  {
+    "company": "Lloyd's List Intelligence",
+    "category": "Maritime AI / MDA",
+    "careersUrl": "https://lloydslistintelligence.com",
+    "fit": "Maritime data analytics",
+    "remote": "Medium"
+  },
+  {
+    "company": "Sinay",
+    "category": "Maritime AI / MDA",
+    "careersUrl": "https://sinay.ai/careers",
+    "fit": "Port/emissions analytics",
+    "remote": "Medium"
+  },
+  {
+    "company": "Searoutes",
+    "category": "Maritime AI / MDA",
+    "careersUrl": "https://searoutes.com",
+    "fit": "Routing + emissions modelling",
+    "remote": "Medium-High"
+  },
+  {
+    "company": "Greywing",
+    "category": "Maritime AI / MDA",
+    "careersUrl": "https://grey-wing.com",
+    "fit": "Remote-first; ops AI",
+    "remote": "High"
+  },
+  {
+    "company": "Sedna",
+    "category": "Maritime AI / MDA",
+    "careersUrl": "https://sedna.com/careers",
+    "fit": "Applied AI on ops comms",
+    "remote": "Medium"
+  },
+  {
+    "company": "Harbor Lab",
+    "category": "Maritime AI / MDA",
+    "careersUrl": "https://harborlab.com",
+    "fit": "Maritime data product",
+    "remote": "Medium"
+  },
+  {
+    "company": "Veson Nautical",
+    "category": "Maritime AI / MDA",
+    "careersUrl": "https://veson.com/careers",
+    "fit": "Maritime data analytics",
+    "remote": "Medium"
+  },
+  {
+    "company": "Shipnext",
+    "category": "Maritime AI / MDA",
+    "careersUrl": "https://shipnext.com",
+    "fit": "NLP + matching on shipping",
+    "remote": "Medium"
+  },
+  {
+    "company": "OneOcean / 90POE",
+    "category": "Maritime AI / MDA",
+    "careersUrl": "https://oneocean.com/careers",
+    "fit": "Maritime data platform",
+    "remote": "Medium"
+  },
+  {
+    "company": "Voyager Portal",
+    "category": "Maritime AI / MDA",
+    "careersUrl": "https://voyagerportal.com",
+    "fit": "Maritime ops data",
+    "remote": "Medium"
+  },
+  {
+    "company": "ZeroNorth",
+    "category": "Voyage optimization / decarb",
+    "careersUrl": "https://careers.zeronorth.com/careers",
+    "fit": "Optimization + maritime",
+    "remote": "Medium"
+  },
+  {
+    "company": "Nautilus Labs (Danelec)",
+    "category": "Voyage optimization / decarb",
+    "careersUrl": "https://nautiluslabs.com/careers",
+    "fit": "Performance ML",
+    "remote": "Medium"
+  },
+  {
+    "company": "Sofar Ocean",
+    "category": "Voyage optimization / decarb",
+    "careersUrl": "https://sofarocean.com/careers",
+    "fit": "Strong: Python/ML, remote routing roles",
+    "remote": "High"
+  },
+  {
+    "company": "Bearing AI",
+    "category": "Voyage optimization / decarb",
+    "careersUrl": "https://bearing.ai",
+    "fit": "Performance ML",
+    "remote": "Medium-High"
+  },
+  {
+    "company": "Toqua",
+    "category": "Voyage optimization / decarb",
+    "careersUrl": "https://toqua.ai",
+    "fit": "Digital twin + ML, your sweet spot",
+    "remote": "Medium-High"
+  },
+  {
+    "company": "We4Sea",
+    "category": "Voyage optimization / decarb",
+    "careersUrl": "https://we4sea.com",
+    "fit": "Digital twin monitoring",
+    "remote": "Medium"
+  },
+  {
+    "company": "DeepSea Technologies (Nabtesco)",
+    "category": "Voyage optimization / decarb",
+    "careersUrl": "https://deepsea.ai/careers",
+    "fit": "Deep learning on vessels",
+    "remote": "Medium"
+  },
+  {
+    "company": "StormGeo",
+    "category": "Voyage optimization / decarb",
+    "careersUrl": "https://stormgeo.com/careers",
+    "fit": "Routing + met data",
+    "remote": "Medium"
+  },
+  {
+    "company": "NAPA",
+    "category": "Voyage optimization / decarb",
+    "careersUrl": "https://napa.fi/careers",
+    "fit": "Naval architecture \u2014 aligns with your PhD",
+    "remote": "Medium"
+  },
+  {
+    "company": "NAVTOR",
+    "category": "Voyage optimization / decarb",
+    "careersUrl": "https://navtor.com",
+    "fit": "Smart shipping data",
+    "remote": "Medium"
+  },
+  {
+    "company": "OrbitMI",
+    "category": "Voyage optimization / decarb",
+    "careersUrl": "https://orbitmi.com",
+    "fit": "Maritime SaaS + data",
+    "remote": "Medium-High"
+  },
+  {
+    "company": "Signol",
+    "category": "Voyage optimization / decarb",
+    "careersUrl": "https://signol.io",
+    "fit": "Remote-first; data + behaviour",
+    "remote": "High"
+  },
+  {
+    "company": "Silverstream Technologies",
+    "category": "Voyage optimization / decarb",
+    "careersUrl": "https://silverstream-tech.com",
+    "fit": "Performance data analysis",
+    "remote": "Medium"
+  },
+  {
+    "company": "Norsepower",
+    "category": "Voyage optimization / decarb",
+    "careersUrl": "https://norsepower.com",
+    "fit": "Performance data",
+    "remote": "Low-Medium"
+  },
+  {
+    "company": "Marlink",
+    "category": "Voyage optimization / decarb",
+    "careersUrl": "https://marlink.com/careers",
+    "fit": "Maritime data services",
+    "remote": "Medium"
+  },
+  {
+    "company": "Orca AI",
+    "category": "Autonomy / CV at sea",
+    "careersUrl": "https://orca-ai.io/careers",
+    "fit": "CV on ships; international",
+    "remote": "Hybrid"
+  },
+  {
+    "company": "Sea Machines Robotics",
+    "category": "Autonomy / CV at sea",
+    "careersUrl": "https://sea-machines.com/careers",
+    "fit": "Applied AI; mostly office",
+    "remote": "Hybrid / Low"
+  },
+  {
+    "company": "Avikus (HD Hyundai)",
+    "category": "Autonomy / CV at sea",
+    "careersUrl": "https://avikus.ai",
+    "fit": "Autonomy R&D",
+    "remote": "Low"
+  },
+  {
+    "company": "Marine AI",
+    "category": "Autonomy / CV at sea",
+    "careersUrl": "https://marineai.co.uk",
+    "fit": "Office-only; flagged not remote",
+    "remote": "Low"
+  },
+  {
+    "company": "Saronic",
+    "category": "Autonomy / CV at sea",
+    "careersUrl": "https://saronic.com",
+    "fit": "Defense, US-only",
+    "remote": "Low"
+  },
+  {
+    "company": "ICEYE",
+    "category": "Ocean data / satellite",
+    "careersUrl": "https://iceye.com/careers",
+    "fit": "SAR + ML on maritime",
+    "remote": "Medium"
+  },
+  {
+    "company": "Unseenlabs",
+    "category": "Ocean data / satellite",
+    "careersUrl": "https://unseenlabs.space",
+    "fit": "Geospatial maritime ML",
+    "remote": "Medium"
+  },
+  {
+    "company": "HawkEye 360",
+    "category": "Ocean data / satellite",
+    "careersUrl": "https://he360.com",
+    "fit": "Geospatial ML (some clearance)",
+    "remote": "Low-Medium"
+  },
+  {
+    "company": "Capella Space",
+    "category": "Ocean data / satellite",
+    "careersUrl": "https://capellaspace.com",
+    "fit": "SAR ML",
+    "remote": "Medium"
+  },
+  {
+    "company": "Planet Labs",
+    "category": "Ocean data / satellite",
+    "careersUrl": "https://planet.com/careers",
+    "fit": "Geospatial ML",
+    "remote": "Medium"
+  },
+  {
+    "company": "Descartes Labs",
+    "category": "Ocean data / satellite",
+    "careersUrl": "https://descarteslabs.com",
+    "fit": "Geospatial ML",
+    "remote": "Medium"
+  },
+  {
+    "company": "Saildrone",
+    "category": "Ocean data / satellite",
+    "careersUrl": "https://saildrone.com",
+    "fit": "Ocean data + ML",
+    "remote": "Hybrid"
+  },
+  {
+    "company": "Ocean Infinity",
+    "category": "Ocean data / satellite",
+    "careersUrl": "https://oceaninfinity.com",
+    "fit": "Marine data + 3D/point clouds",
+    "remote": "Medium"
+  },
+  {
+    "company": "XOCEAN",
+    "category": "Ocean data / satellite",
+    "careersUrl": "https://xocean.com",
+    "fit": "Ocean data processing",
+    "remote": "Medium"
+  },
+  {
+    "company": "Fugro",
+    "category": "Ocean data / satellite",
+    "careersUrl": "https://fugro.com/careers",
+    "fit": "Geospatial / point cloud",
+    "remote": "Low-Medium"
+  },
+  {
+    "company": "Terradepth",
+    "category": "Ocean data / satellite",
+    "careersUrl": "https://terradepth.com",
+    "fit": "Ocean data + ML",
+    "remote": "Medium"
+  },
+  {
+    "company": "Bedrock Ocean",
+    "category": "Ocean data / satellite",
+    "careersUrl": "https://bedrockocean.com",
+    "fit": "3D seabed ML (your 3D skills)",
+    "remote": "Medium"
+  },
+  {
+    "company": "project44",
+    "category": "Supply chain visibility",
+    "careersUrl": "https://project44.com/careers",
+    "fit": "Large, multi-EU offices, remote-friendly",
+    "remote": "High"
+  },
+  {
+    "company": "FourKites",
+    "category": "Supply chain visibility",
+    "careersUrl": "https://fourkites.com/careers",
+    "fit": "Predictive ML on freight",
+    "remote": "Medium-High"
+  },
+  {
+    "company": "Shippeo",
+    "category": "Supply chain visibility",
+    "careersUrl": "https://shippeo.com/careers",
+    "fit": "Predictive ETA ML",
+    "remote": "Medium-High"
+  },
+  {
+    "company": "Transporeon (Trimble)",
+    "category": "Supply chain visibility",
+    "careersUrl": "https://transporeon.com/careers",
+    "fit": "Logistics data science",
+    "remote": "Medium"
+  },
+  {
+    "company": "Altana AI",
+    "category": "Supply chain visibility",
+    "careersUrl": "https://altana.ai/careers",
+    "fit": "Graph ML; remote-friendly",
+    "remote": "High"
+  },
+  {
+    "company": "Everstream Analytics",
+    "category": "Supply chain visibility",
+    "careersUrl": "https://everstream.ai/careers",
+    "fit": "Risk ML on supply chains",
+    "remote": "Medium-High"
+  },
+  {
+    "company": "Interos",
+    "category": "Supply chain visibility",
+    "careersUrl": "https://interos.ai",
+    "fit": "Risk graph ML",
+    "remote": "Medium"
+  },
+  {
+    "company": "Resilinc",
+    "category": "Supply chain visibility",
+    "careersUrl": "https://resilinc.com",
+    "fit": "NLP on supplier risk",
+    "remote": "Medium"
+  },
+  {
+    "company": "Tive",
+    "category": "Supply chain visibility",
+    "careersUrl": "https://tive.com/careers",
+    "fit": "Sensor data + ML",
+    "remote": "Medium"
+  },
+  {
+    "company": "Vizion",
+    "category": "Supply chain visibility",
+    "careersUrl": "https://vizionapi.com",
+    "fit": "Container data + API",
+    "remote": "Medium-High"
+  },
+  {
+    "company": "Terminal49",
+    "category": "Supply chain visibility",
+    "careersUrl": "https://terminal49.com",
+    "fit": "Remote; data automation",
+    "remote": "Medium-High"
+  },
+  {
+    "company": "Gnosis Freight",
+    "category": "Supply chain visibility",
+    "careersUrl": "https://gnosisfreight.com",
+    "fit": "Container ops data",
+    "remote": "Medium"
+  },
+  {
+    "company": "KlearNow.AI",
+    "category": "Supply chain visibility",
+    "careersUrl": "https://klearnow.com",
+    "fit": "Document AI / NLP",
+    "remote": "Medium"
+  },
+  {
+    "company": "Portcast",
+    "category": "Supply chain visibility",
+    "careersUrl": "https://portcast.io",
+    "fit": "Predictive ML",
+    "remote": "Medium"
+  },
+  {
+    "company": "GoComet",
+    "category": "Supply chain visibility",
+    "careersUrl": "https://gocomet.com",
+    "fit": "Optimization ML",
+    "remote": "Medium"
+  },
+  {
+    "company": "Xeneta",
+    "category": "Freight rate / forwarding",
+    "careersUrl": "https://xeneta.com/careers",
+    "fit": "Remote-friendly; data science on rates",
+    "remote": "High"
+  },
+  {
+    "company": "Freightos",
+    "category": "Freight rate / forwarding",
+    "careersUrl": "https://freightos.com/careers",
+    "fit": "Rate data + ML",
+    "remote": "Medium"
+  },
+  {
+    "company": "Beacon",
+    "category": "Freight rate / forwarding",
+    "careersUrl": "https://beacon.com/careers",
+    "fit": "Logistics data product",
+    "remote": "Medium-High"
+  },
+  {
+    "company": "Flexport",
+    "category": "Freight rate / forwarding",
+    "careersUrl": "https://flexport.com/careers",
+    "fit": "Logistics data science",
+    "remote": "Medium"
+  },
+  {
+    "company": "Sennder",
+    "category": "Freight rate / forwarding",
+    "careersUrl": "https://sennder.com/careers",
+    "fit": "Logistics ML",
+    "remote": "Medium"
+  },
+  {
+    "company": "Forto",
+    "category": "Freight rate / forwarding",
+    "careersUrl": "https://forto.com/careers",
+    "fit": "Logistics data",
+    "remote": "Medium"
+  },
+  {
+    "company": "Transmetrics",
+    "category": "Freight rate / forwarding",
+    "careersUrl": "https://transmetrics.eu/careers",
+    "fit": "Remote-friendly; forecasting ML",
+    "remote": "High"
+  },
+  {
+    "company": "Nuvocargo",
+    "category": "Freight rate / forwarding",
+    "careersUrl": "https://nuvocargo.com",
+    "fit": "Logistics data",
+    "remote": "Medium"
+  },
+  {
+    "company": "C.H. Robinson (Robinson Labs)",
+    "category": "Freight rate / forwarding",
+    "careersUrl": "https://chrobinson.com/careers",
+    "fit": "Applied ML on freight",
+    "remote": "Medium"
+  },
+  {
+    "company": "Optimal Dynamics",
+    "category": "Routing / decision AI",
+    "careersUrl": "https://optimaldynamics.com",
+    "fit": "Decision ML / optimization",
+    "remote": "Medium"
+  },
+  {
+    "company": "Wise Systems",
+    "category": "Routing / decision AI",
+    "careersUrl": "https://wisesystems.com",
+    "fit": "Routing ML",
+    "remote": "Medium"
+  },
+  {
+    "company": "Locus.sh",
+    "category": "Routing / decision AI",
+    "careersUrl": "https://locus.sh/careers",
+    "fit": "Optimization ML",
+    "remote": "Medium"
+  },
+  {
+    "company": "FarEye",
+    "category": "Routing / decision AI",
+    "careersUrl": "https://fareye.com/careers",
+    "fit": "Logistics ML",
+    "remote": "Medium"
+  },
+  {
+    "company": "Pando",
+    "category": "Routing / decision AI",
+    "careersUrl": "https://pando.ai",
+    "fit": "Supply chain ML",
+    "remote": "Medium"
+  },
+  {
+    "company": "Awake.AI",
+    "category": "Port / terminal tech",
+    "careersUrl": "https://awake.ai",
+    "fit": "Port digital twin + ML",
+    "remote": "Medium"
+  },
+  {
+    "company": "PortXchange",
+    "category": "Port / terminal tech",
+    "careersUrl": "https://port-xchange.com",
+    "fit": "Port optimization ML",
+    "remote": "Medium"
+  },
+  {
+    "company": "Portchain",
+    "category": "Port / terminal tech",
+    "careersUrl": "https://portchain.com",
+    "fit": "Optimization / scheduling ML",
+    "remote": "Medium-High"
+  },
+  {
+    "company": "Intelligent Cargo Systems",
+    "category": "Port / terminal tech",
+    "careersUrl": "https://intelligentcargosystems.com",
+    "fit": "Ops analytics",
+    "remote": "Medium"
+  },
+  {
+    "company": "A.P. Moller-Maersk",
+    "category": "Carrier / logistics group",
+    "careersUrl": "https://maersk.com/careers",
+    "fit": "Big ML org; remote-ish roles",
+    "remote": "Medium"
+  },
+  {
+    "company": "CMA CGM (Zephyr & Boree)",
+    "category": "Carrier / logistics group",
+    "careersUrl": "https://cma-cgm.com/careers",
+    "fit": "Maritime AI lab",
+    "remote": "Medium"
+  },
+  {
+    "company": "Hapag-Lloyd",
+    "category": "Carrier / logistics group",
+    "careersUrl": "https://hapag-lloyd.com/careers",
+    "fit": "Maritime data",
+    "remote": "Medium"
+  },
+  {
+    "company": "Kuehne+Nagel",
+    "category": "Carrier / logistics group",
+    "careersUrl": "https://kuehne-nagel.com/careers",
+    "fit": "Logistics ML",
+    "remote": "Medium"
+  },
+  {
+    "company": "DSV",
+    "category": "Carrier / logistics group",
+    "careersUrl": "https://dsv.com/careers",
+    "fit": "Logistics data",
+    "remote": "Medium"
+  },
+  {
+    "company": "DB Schenker",
+    "category": "Carrier / logistics group",
+    "careersUrl": "https://dbschenker.com/careers",
+    "fit": "Logistics AI",
+    "remote": "Medium"
+  },
+  {
+    "company": "DHL (Digital)",
+    "category": "Carrier / logistics group",
+    "careersUrl": "https://careers.dhl.com/careers",
+    "fit": "Logistics ML at scale",
+    "remote": "Medium"
+  },
+  {
+    "company": "Descartes Systems Group",
+    "category": "Carrier / logistics group",
+    "careersUrl": "https://descartes.com/careers",
+    "fit": "Logistics data SaaS",
+    "remote": "Medium"
+  },
+  {
+    "company": "DNV",
+    "category": "Classification / research",
+    "careersUrl": "https://dnv.com/careers",
+    "fit": "Research roles; aligns with certs",
+    "remote": "Medium"
+  },
+  {
+    "company": "Lloyd's Register",
+    "category": "Classification / research",
+    "careersUrl": "https://lr.org/careers",
+    "fit": "Ties to your LMI certifications",
+    "remote": "Medium"
+  },
+  {
+    "company": "ABS (American Bureau of Shipping)",
+    "category": "Classification / research",
+    "careersUrl": "https://ww2.eagle.org/careers",
+    "fit": "Maritime research",
+    "remote": "Low-Medium"
+  },
+  {
+    "company": "Bureau Veritas Marine",
+    "category": "Classification / research",
+    "careersUrl": "https://bureauveritas.com/careers",
+    "fit": "Maritime assurance + data",
+    "remote": "Medium"
+  },
+  {
+    "company": "MARIN",
+    "category": "Classification / research",
+    "careersUrl": "https://marin.nl",
+    "fit": "Naval architecture \u2014 PhD-aligned",
+    "remote": "Low-Medium"
+  },
+  {
+    "company": "SINTEF Ocean",
+    "category": "Classification / research",
+    "careersUrl": "https://sintef.no",
+    "fit": "Research; PhD-aligned",
+    "remote": "Low-Medium"
+  },
+  {
+    "company": "Fraunhofer CML",
+    "category": "Classification / research",
+    "careersUrl": "https://cml.fraunhofer.de",
+    "fit": "Maritime logistics research",
+    "remote": "Low-Medium"
+  },
+  {
+    "company": "Alan Turing Institute",
+    "category": "Classification / research",
+    "careersUrl": "https://turing.ac.uk/careers",
+    "fit": "Research; data science",
+    "remote": "Low-Medium"
+  },
+  {
+    "company": "Navlungo",
+    "category": "Turkey",
+    "careersUrl": "https://navlungo.com/kariyer",
+    "fit": "TR-based; AI freight platform",
+    "remote": "Medium"
+  },
+  {
+    "company": "TIRPORT",
+    "category": "Turkey",
+    "careersUrl": "https://tirport.com",
+    "fit": "TR logistics data",
+    "remote": "Medium"
+  },
+  {
+    "company": "Arkas Line / Arkas Holding",
+    "category": "Turkey",
+    "careersUrl": "https://arkas.com.tr",
+    "fit": "Maritime group; data teams",
+    "remote": "Low-Medium"
+  },
+  {
+    "company": "D-Marin",
+    "category": "Turkey",
+    "careersUrl": "https://d-marin.com/careers",
+    "fit": "Marina digital",
+    "remote": "Low"
+  }
+]
