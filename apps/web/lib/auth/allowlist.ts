@@ -15,6 +15,9 @@ export function isEmailAllowed(email: string | null | undefined): boolean {
 
 export function mapAuthError(message: string): string {
   const lower = message.toLowerCase()
+  if (lower.includes('provider is not enabled') || lower.includes('unsupported provider')) {
+    return 'google_not_enabled'
+  }
   if (lower.includes('rate limit') || lower.includes('over_email_send_rate_limit')) {
     return 'email_rate_limit'
   }

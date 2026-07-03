@@ -126,6 +126,8 @@ export const tr: Messages = {
       emailNotConfigured: 'ALLOWED_EMAIL ve NEXT_PUBLIC_ALLOWED_EMAIL tanımlı değil.',
       emailRateLimit:
         'E-posta limiti doldu (Supabase ~4/saat). Google ile giriş yap veya ~1 saat bekle.',
+      googleNotEnabled:
+        'Google girişi Supabase’de kapalı. Dashboard → Authentication → Providers → Google → Enable + Client ID/Secret kaydet.',
     },
   },
   passkeys: {

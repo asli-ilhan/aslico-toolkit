@@ -10,9 +10,13 @@ import { isEmailAllowed, mapAuthError } from '@/lib/auth/allowlist'
 import { isPasskeyAuthEnabled } from '@/lib/auth/config'
 import { PasskeyLoginSection } from '@/components/auth/PasskeyLoginSection'
 
+const SUPABASE_GOOGLE_PROVIDER_URL =
+  'https://supabase.com/dashboard/project/uhepdwjqkyjdiaugtjln/auth/providers?provider=Google'
+
 function resolveLoginError(message: string, t: ReturnType<typeof useLocale>['t']): string {
   const mapped = mapAuthError(message)
   if (mapped === 'email_rate_limit') return t.login.errors.emailRateLimit
+  if (mapped === 'google_not_enabled') return t.login.errors.googleNotEnabled
   return mapped
 }
 
@@ -62,7 +66,7 @@ export function LoginForm() {
     setGoogleLoading(false)
 
     if (oauthError) {
-      setError(oauthError.message || t.login.errors.emailFailed)
+      setError(resolveLoginError(oauthError.message, t) || t.login.errors.emailFailed)
     }
   }
 
@@ -165,9 +169,19 @@ export function LoginForm() {
           <p className="text-center text-xs text-[var(--text-muted)]">{t.login.hint}</p>
 
           {error && (
-            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {error}
-            </p>
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <p>{error}</p>
+              {error === t.login.errors.googleNotEnabled && (
+                <a
+                  href={SUPABASE_GOOGLE_PROVIDER_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 block text-xs font-medium text-red-900 underline"
+                >
+                  Supabase Google ayarını aç →
+                </a>
+              )}
+            </div>
           )}
         </div>
       </GlassPanel>

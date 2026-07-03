@@ -125,6 +125,8 @@ export const en: Messages = {
       emailNotConfigured: 'ALLOWED_EMAIL and NEXT_PUBLIC_ALLOWED_EMAIL are not set.',
       emailRateLimit:
         'Email rate limit hit (Supabase ~4/hour). Sign in with Google or wait ~1 hour.',
+      googleNotEnabled:
+        'Google sign-in is disabled in Supabase. Dashboard → Authentication → Providers → Google → Enable.',
     },
   },
   passkeys: {

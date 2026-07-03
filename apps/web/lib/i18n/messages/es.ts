@@ -124,6 +124,7 @@ export const es: Messages = {
       emailFailed: 'Error de envío. Revisa redirect URLs.',
       emailNotConfigured: 'ALLOWED_EMAIL no definido.',
       emailRateLimit: 'Límite de email. Usa Google o espera ~1 h.',
+      googleNotEnabled: 'Google desactivado en Supabase. Providers → Google → Enable.',
     },
   },
   passkeys: {

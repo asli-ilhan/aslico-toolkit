@@ -100,6 +100,7 @@ export type Messages = {
       emailFailed: string
       emailNotConfigured: string
       emailRateLimit: string
+      googleNotEnabled: string
     }
   }
   passkeys: {

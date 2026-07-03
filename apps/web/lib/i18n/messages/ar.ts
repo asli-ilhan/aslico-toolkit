@@ -122,6 +122,7 @@ export const ar: Messages = {
       emailFailed: 'فشل الإرسال. تحقق من redirect URLs.',
       emailNotConfigured: 'ALLOWED_EMAIL غير معرّف.',
       emailRateLimit: 'حد البريد. استخدم Google أو انتظر ~1 ساعة.',
+      googleNotEnabled: 'Google معطّل في Supabase. Providers → Google → Enable.',
     },
   },
   passkeys: {
