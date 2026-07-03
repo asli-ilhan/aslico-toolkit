@@ -5,7 +5,9 @@
     "NEXT_PUBLIC_APP_URL",
     "NEXT_PUBLIC_SUPABASE_URL",
     "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
-    "NEXT_PUBLIC_ALLOWED_EMAIL",
+    "NEXT_PUBLIC_ALLOWED_EMAIL"
+  ],
+  "globalPassThroughEnv": [
     "ALLOWED_EMAIL",
     "SUPABASE_SERVICE_ROLE_KEY",
     "ANTHROPIC_API_KEY",
@@ -16,12 +18,47 @@
     "GOOGLE_REDIRECT_URI",
     "GMAIL_SENDER_EMAIL",
     "GMAIL_REFRESH_TOKEN",
-    "CRON_SECRET"
+    "CRON_SECRET",
+    "DATABASE_URL",
+    "DEEPGRAM_API_KEY"
   ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "env": [
+        "NEXT_PUBLIC_APP_NAME",
+        "NEXT_PUBLIC_APP_URL",
+        "NEXT_PUBLIC_SUPABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+        "NEXT_PUBLIC_ALLOWED_EMAIL",
+        "ALLOWED_EMAIL",
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "ANTHROPIC_API_KEY",
+        "ANTHROPIC_MODEL",
+        "HUNTER_API_KEY",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "GOOGLE_REDIRECT_URI",
+        "GMAIL_SENDER_EMAIL",
+        "GMAIL_REFRESH_TOKEN",
+        "CRON_SECRET"
+      ],
+      "passThroughEnv": [
+        "ALLOWED_EMAIL",
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "ANTHROPIC_API_KEY",
+        "ANTHROPIC_MODEL",
+        "HUNTER_API_KEY",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "GOOGLE_REDIRECT_URI",
+        "GMAIL_SENDER_EMAIL",
+        "GMAIL_REFRESH_TOKEN",
+        "CRON_SECRET",
+        "DATABASE_URL",
+        "DEEPGRAM_API_KEY"
+      ]
     },
     "dev": {
       "cache": false,
