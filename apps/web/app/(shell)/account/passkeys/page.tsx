@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ShellLayout } from '@/components/shell/ShellLayout'
 import { GlassPanel, Button } from '@aslico/ui'
 import { createClient } from '@/lib/supabase/client'
 import { useLocale } from '@/components/shell/LocaleProvider'
+import { isPasskeyAuthEnabled } from '@/lib/auth/config'
 import {
   formatAuthApiError,
   formatPasskeyError,
@@ -13,7 +14,18 @@ import {
   isLikelyEmbeddedBrowser,
   embeddedBrowserPasskeyMessage,
 } from '@/lib/auth/passkey-errors'
-import { registerPlatformPasskey } from '@/lib/auth/passkey-platform'
+import { clearLocalPasskeyId, loadLocalPasskeyId, needsTouchIdConfirmStep } from '@/lib/auth/passkey-device'
+import type { RpDiagnosis } from '@/lib/auth/passkey-rp-check'
+import { checkCreationRpId } from '@/lib/auth/passkey-rp-check'
+import {
+  completePasskeyRegistration,
+  preparePasskeyRegistration,
+  registerPlatformPasskey,
+  type PreparedPasskeyRegistration,
+} from '@/lib/auth/passkey-platform'
+
+const SUPABASE_PASSKEYS_URL =
+  'https://supabase.com/dashboard/project/uhepdwjqkyjdiaugtjln/auth/passkeys'
 
 interface PasskeyItem {
   id: string
@@ -26,6 +38,7 @@ export default function PasskeysPage() {
   const router = useRouter()
   const supabase = createClient()
   const { t, locale } = useLocale()
+  const passkeyEnabled = isPasskeyAuthEnabled()
 
   const [passkeys, setPasskeys] = useState<PasskeyItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -34,6 +47,16 @@ export default function PasskeysPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [setupHint, setSetupHint] = useState(false)
   const [embeddedBrowser, setEmbeddedBrowser] = useState(false)
+  const [touchIdReady, setTouchIdReady] = useState(false)
+  const [needsRelink, setNeedsRelink] = useState(false)
+  const [rpDiagnosis, setRpDiagnosis] = useState<RpDiagnosis | null>(null)
+  const preparedRegistrationRef = useRef<PreparedPasskeyRegistration | null>(null)
+
+  useEffect(() => {
+    if (!passkeyEnabled) {
+      router.replace('/dashboard')
+    }
+  }, [router, passkeyEnabled])
 
   useEffect(() => {
     setEmbeddedBrowser(isLikelyEmbeddedBrowser())
@@ -51,6 +74,8 @@ export default function PasskeysPage() {
             : 'en-US'
 
   useEffect(() => {
+    if (!passkeyEnabled) return
+
     async function load() {
       const {
         data: { user },
@@ -66,57 +91,125 @@ export default function PasskeysPage() {
         if (listError.message?.includes('passkey_disabled')) setSetupHint(true)
       } else {
         setPasskeys(data ?? [])
+        setNeedsRelink((data?.length ?? 0) > 0 && !loadLocalPasskeyId())
       }
+
+      const { data: prepared, error: prepError } = await preparePasskeyRegistration(supabase)
+      if (prepError) {
+        if (prepError.message?.includes('passkey_disabled')) {
+          setSetupHint(true)
+          setError(formatPasskeyError(prepError))
+        } else if (
+          prepError.message.includes('RP ID') ||
+          prepError.message.includes('localhost')
+        ) {
+          setSetupHint(true)
+          setError(prepError.message)
+        }
+      } else if (prepared) {
+        const diagnosis = checkCreationRpId(prepared.publicKey)
+        setRpDiagnosis(diagnosis)
+        if (!diagnosis.matches) {
+          setSetupHint(true)
+          setError(diagnosis.fixMessage)
+        }
+      }
+
       setLoading(false)
     }
     load()
-  }, [router, supabase.auth])
+  }, [router, supabase.auth, passkeyEnabled])
+
+  if (!passkeyEnabled) {
+    return null
+  }
 
   async function handleRegister() {
-    setRegistering(true)
     setError(null)
     setSuccess(null)
     setSetupHint(false)
 
     if (!isWebAuthnSupported()) {
       setError('Tarayıcı WebAuthn desteklemiyor. Safari veya Chrome kullan.')
-      setRegistering(false)
       return
     }
 
     if (isLikelyEmbeddedBrowser()) {
       setError(embeddedBrowserPasskeyMessage())
-      setRegistering(false)
       return
     }
 
     if (window.location.hostname === '127.0.0.1') {
       setError('Passkey için http://localhost:3000 kullan (127.0.0.1 değil).')
-      setRegistering(false)
       return
     }
 
+    if (touchIdReady && preparedRegistrationRef.current) {
+      setRegistering(true)
+      try {
+        const { data, error: regError } = await completePasskeyRegistration(
+          supabase,
+          preparedRegistrationRef.current,
+        )
+        preparedRegistrationRef.current = null
+        setTouchIdReady(false)
+
+        if (regError) {
+          console.error('registerPasskey error:', regError)
+          setError(formatPasskeyError(regError))
+          setSetupHint(true)
+          return
+        }
+
+        setSuccess(`${t.passkeys.saved}: ${data?.friendly_name ?? data?.id}`)
+        const { data: updated } = await supabase.auth.passkey.list()
+        setPasskeys(updated ?? [])
+        setNeedsRelink(false)
+      } catch (err) {
+        console.error('registerPasskey exception:', err)
+        setError(formatPasskeyError(err))
+        setSetupHint(true)
+      } finally {
+        setRegistering(false)
+      }
+      return
+    }
+
+    setRegistering(true)
+
     try {
+      if (needsTouchIdConfirmStep()) {
+        const { data: prepared, error: prepError } = await preparePasskeyRegistration(supabase)
+        if (prepError || !prepared) {
+          setError(formatPasskeyError(prepError ?? new Error('Hazırlık başarısız')))
+          setSetupHint(true)
+          return
+        }
+        preparedRegistrationRef.current = prepared
+        setTouchIdReady(true)
+        return
+      }
+
       const { data, error: regError } = await registerPlatformPasskey(supabase)
 
       if (regError) {
         console.error('registerPasskey error:', regError)
         setError(formatPasskeyError(regError))
         setSetupHint(true)
-        setRegistering(false)
         return
       }
 
       setSuccess(`${t.passkeys.saved}: ${data?.friendly_name ?? data?.id}`)
       const { data: updated } = await supabase.auth.passkey.list()
       setPasskeys(updated ?? [])
+      setNeedsRelink(false)
     } catch (err) {
       console.error('registerPasskey exception:', err)
       setError(formatPasskeyError(err))
       setSetupHint(true)
+    } finally {
+      setRegistering(false)
     }
-
-    setRegistering(false)
   }
 
   async function handleDelete(id: string) {
@@ -125,6 +218,7 @@ export default function PasskeysPage() {
       setError(delError.message)
       return
     }
+    clearLocalPasskeyId()
     setPasskeys((prev) => prev.filter((p) => p.id !== id))
   }
 
@@ -150,6 +244,37 @@ export default function PasskeysPage() {
             <div className="mb-4 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent-soft)] px-3 py-2 text-sm text-[var(--text)]">
               {embeddedBrowserPasskeyMessage()}
             </div>
+          )}
+
+          {rpDiagnosis && !rpDiagnosis.matches && (
+            <div className="mb-4 rounded-lg border border-red-300 bg-red-50 px-3 py-3 text-sm text-red-900">
+              <p className="font-medium">Supabase ayarı uyuşmuyor</p>
+              <p className="mt-1 text-xs">
+                Supabase RP ID: <strong>{rpDiagnosis.serverRpId ?? '?'}</strong> → olması gereken:{' '}
+                <strong>{rpDiagnosis.hostname}</strong>
+              </p>
+              <p className="mt-2 text-xs">{rpDiagnosis.fixMessage}</p>
+              <a
+                href={SUPABASE_PASSKEYS_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-block text-xs font-medium text-red-800 underline"
+              >
+                Supabase Passkeys ayarını aç →
+              </a>
+            </div>
+          )}
+
+          {needsRelink && (
+            <p className="mb-4 rounded-lg border border-amber-300/40 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              {t.passkeys.relinkHint}
+            </p>
+          )}
+
+          {passkeys.length > 0 && (
+            <p className="mb-4 rounded-lg border border-[var(--accent)]/20 bg-[var(--accent-soft)]/40 px-3 py-2 text-xs text-[var(--text-muted)]">
+              {t.passkeys.deleteQrHint}
+            </p>
           )}
 
           {loading ? (
@@ -184,10 +309,19 @@ export default function PasskeysPage() {
               <Button
                 className="mt-4 w-full"
                 onClick={handleRegister}
-                disabled={registering || embeddedBrowser}
+                disabled={registering || embeddedBrowser || (rpDiagnosis !== null && !rpDiagnosis.matches)}
               >
-                {registering ? t.passkeys.adding : t.passkeys.add}
+                {touchIdReady
+                  ? t.login.touchIdConfirm
+                  : registering
+                    ? t.passkeys.adding
+                    : t.passkeys.add}
               </Button>
+              {touchIdReady && (
+                <p className="mt-2 text-center text-xs text-[var(--text-muted)]">
+                  {t.login.touchIdConfirmHint}
+                </p>
+              )}
             </>
           )}
 
@@ -199,13 +333,29 @@ export default function PasskeysPage() {
 
           {setupHint && (
             <div className="mt-4 rounded-lg border border-[var(--surface-border)] bg-[var(--background-alt)]/50 p-3 text-xs text-[var(--text-muted)]">
-              <p className="font-medium text-[var(--text)]">Supabase Passkeys ayarı</p>
-              <ul className="mt-2 list-inside list-disc space-y-1">
-                <li>Authentication → Passkeys → <strong>Enable</strong></li>
-                <li>Relying Party ID: <code className="text-[var(--accent)]">{host}</code></li>
-                <li>Origin: <code className="text-[var(--accent)]">{origin}</code></li>
-                <li>URL: <code className="text-[var(--accent)]">localhost</code> kullan (127.0.0.1 değil)</li>
-              </ul>
+              <p className="font-medium text-[var(--text)]">Supabase Passkeys — adım adım</p>
+              <ol className="mt-2 list-inside list-decimal space-y-1">
+                <li>
+                  <a href={SUPABASE_PASSKEYS_URL} target="_blank" rel="noreferrer" className="text-[var(--accent)] underline">
+                    Passkeys sayfasını aç
+                  </a>
+                </li>
+                <li>
+                  <strong>Enable Passkey authentication</strong> → AÇ
+                </li>
+                <li>
+                  Relying Party ID: <code className="text-[var(--accent)]">{host}</code>
+                </li>
+                <li>
+                  Relying Party Origins: <code className="text-[var(--accent)]">{origin}</code>
+                </li>
+                <li>Kaydet → bu sayfayı yenile (Safari, localhost:3000)</li>
+              </ol>
+              {rpDiagnosis?.serverRpId && rpDiagnosis.serverRpId !== host && (
+                <p className="mt-2 text-amber-800">
+                  Şu an Supabase’de: <code>{rpDiagnosis.serverRpId}</code> — değiştirmen lazım.
+                </p>
+              )}
             </div>
           )}
 
@@ -216,7 +366,7 @@ export default function PasskeysPage() {
           )}
         </GlassPanel>
 
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <Button variant="outline" onClick={() => router.push('/dashboard')}>
             {t.common.dashboard}
           </Button>

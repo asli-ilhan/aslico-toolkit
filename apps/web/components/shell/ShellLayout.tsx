@@ -5,9 +5,11 @@ import { BackgroundCanvas } from '@/components/canvas/BackgroundCanvas'
 import { AssistantOrb } from '@/components/shell/AssistantOrb'
 import { AuthNav } from '@/components/shell/AuthNav'
 import { useLocale } from '@/components/shell/LocaleProvider'
+import { isPasskeyAuthEnabled } from '@/lib/auth/config'
 
 export function ShellLayout({ children }: { children: React.ReactNode }) {
   const { t } = useLocale()
+  const passkeyEnabled = isPasskeyAuthEnabled()
 
   return (
     <div className="relative min-h-screen">
@@ -29,9 +31,11 @@ export function ShellLayout({ children }: { children: React.ReactNode }) {
             <Link href="/dashboard" className="transition-colors hover:text-[var(--accent)]">
               {t.nav.dashboard}
             </Link>
-            <Link href="/account/passkeys" className="transition-colors hover:text-[var(--accent)]">
-              {t.nav.passkeys}
-            </Link>
+            {passkeyEnabled && (
+              <Link href="/account/passkeys" className="transition-colors hover:text-[var(--accent)]">
+                {t.nav.passkeys}
+              </Link>
+            )}
             <AuthNav />
           </nav>
         </div>

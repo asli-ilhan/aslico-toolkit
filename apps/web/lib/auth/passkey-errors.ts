@@ -35,7 +35,7 @@ export function formatPasskeyError(err: unknown): string {
   }
 
   if (causeName === 'NotAllowedError') {
-    return 'Touch ID / Face ID iptal edildi veya zaman aşımı. Tekrar dene.'
+    return 'Touch ID / Face ID iptal edildi veya zaman aşımı. QR görüyorsan /account/passkeys sayfasından eski passkey’leri sil ve yeniden parmak izi kaydet.'
   }
 
   if (
@@ -82,5 +82,14 @@ export function isLikelyEmbeddedBrowser(): boolean {
 }
 
 export function embeddedBrowserPasskeyMessage(): string {
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    return `Touch ID / parmak izi Cursor’un dahili tarayıcısında çalışmaz. Safari’de ${window.location.origin}/login adresini aç.`
+  }
   return 'Touch ID / parmak izi Cursor’un dahili tarayıcısında çalışmaz. Safari’de http://localhost:3000/login adresini aç.'
+}
+
+export function isProductionHost(): boolean {
+  if (typeof window === 'undefined') return false
+  const host = window.location.hostname
+  return host !== 'localhost' && host !== '127.0.0.1'
 }

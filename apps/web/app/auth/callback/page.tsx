@@ -16,8 +16,8 @@ function AuthCallbackHandler() {
       const code = searchParams.get('code')
       const tokenHash = searchParams.get('token_hash')
       const type = searchParams.get('type')
-      const next = searchParams.get('next') ?? '/account/passkeys'
-      const safeNext = next.startsWith('/') ? next : '/account/passkeys'
+      const next = searchParams.get('next') ?? '/dashboard'
+      const safeNext = next.startsWith('/') ? next : '/dashboard'
 
       try {
         if (code) {

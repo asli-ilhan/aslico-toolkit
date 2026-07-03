@@ -1,36 +1,27 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { BackgroundCanvas } from '@/components/canvas/BackgroundCanvas'
 import { GlassPanel, Button } from '@aslico/ui'
 import { createClient } from '@/lib/supabase/client'
 import { useLocale } from '@/components/shell/LocaleProvider'
 import { isEmailAllowed, mapAuthError } from '@/lib/auth/allowlist'
-import {
-  embeddedBrowserPasskeyMessage,
-  formatPasskeyError,
-  isLikelyEmbeddedBrowser,
-  isWebAuthnSupported,
-} from '@/lib/auth/passkey-errors'
-import { signInWithFingerprint } from '@/lib/auth/passkey-platform'
+import { isPasskeyAuthEnabled } from '@/lib/auth/config'
+import { PasskeyLoginSection } from '@/components/auth/PasskeyLoginSection'
 
 export function LoginForm() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const next = searchParams.get('next') || '/dashboard'
   const { t } = useLocale()
 
-  const [loading, setLoading] = useState(false)
-  const [embeddedBrowser, setEmbeddedBrowser] = useState(false)
-  const isDev = process.env.NODE_ENV === 'development'
+  const [emailLoading, setEmailLoading] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
+  const allowedEmail = process.env.NEXT_PUBLIC_ALLOWED_EMAIL ?? ''
+  const passkeyEnabled = isPasskeyAuthEnabled()
   const [error, setError] = useState<string | null>(
     searchParams.get('error') ? mapAuthError(searchParams.get('error')!) : null,
   )
-
-  useEffect(() => {
-    setEmbeddedBrowser(isLikelyEmbeddedBrowser())
-  }, [])
 
   const supabase = createClient()
 
@@ -46,53 +37,39 @@ export function LoginForm() {
     return true
   }
 
-  async function handlePasskeySignIn() {
-    setLoading(true)
+  async function handleEmailSignIn() {
+    setEmailLoading(true)
     setError(null)
+    setEmailSent(false)
 
-    if (!isWebAuthnSupported()) {
-      setError('Tarayıcı WebAuthn desteklemiyor. Safari veya Chrome kullan.')
-      setLoading(false)
+    const email = allowedEmail.trim().toLowerCase()
+    if (!email) {
+      setError('NEXT_PUBLIC_ALLOWED_EMAIL tanımlı değil (.env / Vercel).')
+      setEmailLoading(false)
       return
     }
 
-    if (isLikelyEmbeddedBrowser()) {
-      setError(embeddedBrowserPasskeyMessage())
-      setLoading(false)
+    if (!isEmailAllowed(email)) {
+      setError(t.login.errors.emailNotAllowed)
+      setEmailLoading(false)
       return
     }
 
-    if (window.location.hostname === '127.0.0.1') {
-      setError('Passkey için http://localhost:3000 kullan (127.0.0.1 değil).')
-      setLoading(false)
+    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`
+
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: redirectTo },
+    })
+
+    setEmailLoading(false)
+
+    if (otpError) {
+      setError(mapAuthError(otpError.message) || t.login.errors.emailFailed)
       return
     }
 
-    const { data, error: signInError } = await signInWithFingerprint(supabase)
-
-    if (signInError) {
-      setLoading(false)
-      const msg = formatPasskeyError(signInError)
-      if (signInError.message?.includes('passkey_disabled')) {
-        setError(t.login.errors.passkeyDisabled)
-      } else if (signInError.message?.includes('webauthn_credential_not_found')) {
-        setError(t.login.errors.passkeyNotFound)
-      } else {
-        setError(msg)
-      }
-      return
-    }
-
-    if (data.session) {
-      const ok = await ensureAllowedSession()
-      setLoading(false)
-      if (ok) {
-        router.push(next)
-        router.refresh()
-      }
-    } else {
-      setLoading(false)
-    }
+    setEmailSent(true)
   }
 
   return (
@@ -108,24 +85,34 @@ export function LoginForm() {
         </div>
 
         <div className="mt-8 space-y-3">
-          {embeddedBrowser && (
-            <div className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent-soft)] px-3 py-2 text-xs text-[var(--text)]">
-              {embeddedBrowserPasskeyMessage()}
-            </div>
+          {allowedEmail ? (
+            emailSent ? (
+              <p className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+                {t.login.emailSent}
+              </p>
+            ) : (
+              <>
+                <p className="text-center font-mono text-sm text-[var(--text)]">{allowedEmail}</p>
+                <Button className="w-full" onClick={handleEmailSignIn} disabled={emailLoading}>
+                  {emailLoading ? t.login.emailSending : t.login.emailSend}
+                </Button>
+                <p className="text-center text-xs text-[var(--text-muted)]">{t.login.emailHint}</p>
+              </>
+            )
+          ) : (
+            <p className="text-sm text-red-700">{t.login.errors.emailNotConfigured}</p>
           )}
-          <Button className="w-full" onClick={handlePasskeySignIn} disabled={loading || embeddedBrowser}>
-            {loading ? t.login.touchIdWaiting : t.login.touchIdButton}
-          </Button>
-          {isDev && (
-            <a
-              href="/api/auth/setup"
-              className="block text-center text-xs text-[var(--accent)] hover:underline"
-            >
-              {t.login.devSetup}
-            </a>
+
+          {passkeyEnabled && allowedEmail && (
+            <PasskeyLoginSection
+              supabase={supabase}
+              next={next}
+              onError={setError}
+              ensureAllowedSession={ensureAllowedSession}
+            />
           )}
+
           <p className="text-center text-xs text-[var(--text-muted)]">{t.login.hint}</p>
-          <p className="text-center text-xs text-[var(--text-muted)]">{t.login.touchIdExplain}</p>
 
           {error && (
             <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">

@@ -80,9 +80,21 @@ export type Messages = {
     devSetup: string
     hint: string
     platformHint: string
+    productionHint: string
+    touchIdConfirm: string
+    touchIdConfirmHint: string
+    passkeyOptional: string
+    passkeyDomainWarning: string
+    emailSend: string
+    emailSending: string
+    emailSent: string
+    emailHint: string
     errors: {
       passkeyDisabled: string
       passkeyNotFound: string
+      emailNotAllowed: string
+      emailFailed: string
+      emailNotConfigured: string
     }
   }
   passkeys: {
@@ -94,6 +106,8 @@ export type Messages = {
     saved: string
     signOut: string
     defaultName: string
+    deleteQrHint: string
+    relinkHint: string
   }
   transcription: {
     dropzone: string

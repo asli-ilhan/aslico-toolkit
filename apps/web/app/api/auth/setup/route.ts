@@ -6,14 +6,10 @@ import { createAdminClient } from '@/lib/supabase/admin'
 type CookieToSet = { name: string; value: string; options: CookieOptions }
 
 /**
- * Dev-only: signs in allowed user without sending email.
- * Uses admin generateLink + server-side verifyOtp + session cookies.
+ * Emergency bypass — disabled unless ALLOW_SETUP=true in env. Not linked from UI.
  */
 export async function GET(request: NextRequest) {
-  const isDev = process.env.NODE_ENV === 'development'
-  const setupEnabled = process.env.ALLOW_SETUP === 'true'
-
-  if (!isDev && !setupEnabled) {
+  if (process.env.ALLOW_SETUP !== 'true') {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
@@ -32,8 +28,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'ALLOWED_EMAIL tanımlı değil' }, { status: 500 })
   }
 
-  const redirectPath = '/account/passkeys'
-  let response = NextResponse.redirect(new URL(redirectPath, request.url))
+  const next = request.nextUrl.searchParams.get('next') ?? '/dashboard'
+  const safeRedirect = next.startsWith('/') ? next : '/dashboard'
+  let response = NextResponse.redirect(new URL(safeRedirect, request.url))
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -45,7 +42,7 @@ export async function GET(request: NextRequest) {
         },
         setAll(cookiesToSet: CookieToSet[]) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          response = NextResponse.redirect(new URL(redirectPath, request.url))
+          response = NextResponse.redirect(new URL(safeRedirect, request.url))
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options),
           )
