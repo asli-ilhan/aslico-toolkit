@@ -46,7 +46,7 @@ export function scoreFundingRelevance(opp: FundingCandidate, settings: FundingSe
 
 export function passesFundingRelevance(opp: FundingCandidate, settings: FundingSettings) {
   const relevance = scoreFundingRelevance(opp, settings)
-  if (opp.priorityTier === 'turkey_national' || opp.priorityTier === 'home_university') {
+  if (opp.listingKind === 'live_opening') {
     return { pass: true as const, relevance }
   }
   if (relevance.relatedFunder) return { pass: true as const, relevance }
@@ -73,7 +73,7 @@ export function rankFundingCandidates(candidates: FundingCandidate[], settings: 
         relevance: v.relevance,
         eligibility,
         priority:
-          (opp.priorityTier === 'turkey_national' ? 80 : opp.priorityTier === 'home_university' ? 70 : 0) +
+          (opp.listingKind === 'live_opening' ? 50 : 0) +
           v.relevance.score +
           (v.relevance.relatedFunder ? 30 : 0) +
           eligibility.score * 0.6,

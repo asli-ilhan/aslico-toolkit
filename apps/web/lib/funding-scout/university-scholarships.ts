@@ -11,6 +11,7 @@ const ITU_SCHOLARSHIPS: FundingCandidate[] = [
     source: 'curated:itu',
     fullFunding: true,
     priorityTier: 'home_university',
+    listingKind: 'program_catalog',
   },
   {
     funder: 'İTÜ BAP',
@@ -21,6 +22,7 @@ const ITU_SCHOLARSHIPS: FundingCandidate[] = [
     opportunityUrl: 'https://bap.itu.edu.tr/',
     source: 'curated:itu',
     priorityTier: 'home_university',
+    listingKind: 'program_catalog',
   },
   {
     funder: 'İTÜ',
@@ -32,6 +34,7 @@ const ITU_SCHOLARSHIPS: FundingCandidate[] = [
     source: 'curated:itu',
     fullFunding: true,
     priorityTier: 'home_university',
+    listingKind: 'program_catalog',
   },
   {
     funder: 'İTÜ',
@@ -43,6 +46,7 @@ const ITU_SCHOLARSHIPS: FundingCandidate[] = [
     source: 'curated:itu',
     fullFunding: true,
     priorityTier: 'home_university',
+    listingKind: 'program_catalog',
   },
   {
     funder: 'İTÜ Denizcilik Fakültesi',
@@ -53,6 +57,7 @@ const ITU_SCHOLARSHIPS: FundingCandidate[] = [
     opportunityUrl: 'https://denizcilik.itu.edu.tr/',
     source: 'curated:itu',
     priorityTier: 'home_university',
+    listingKind: 'program_catalog',
   },
 ]
 
@@ -78,5 +83,6 @@ export function universityOpportunitiesFor(homeUniversity: string): FundingCandi
     opportunityUrl: undefined,
     source: 'curated:home-university',
     priorityTier: 'home_university',
+    listingKind: 'program_catalog',
   }]
 }

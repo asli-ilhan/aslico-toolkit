@@ -61,6 +61,7 @@ export interface FundingCandidate {
   source: string
   fullFunding?: boolean
   priorityTier?: 'turkey_national' | 'home_university' | 'global'
+  listingKind?: 'live_opening' | 'program_catalog'
 }
 
 export const DEFAULT_FUNDING_SETTINGS: FundingSettings = {

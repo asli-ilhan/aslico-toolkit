@@ -1,18 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateFundingPack, scoreFundingFit, type MasterProfileData } from '@aslico/ai'
-import {
-  buildCuratedBatch,
-  fetchPortalListings,
-  parseFundingRss,
-  sourcesForRegions,
-} from '@/lib/funding-scout/sources'
-import { isTurkishCandidate } from '@/lib/funding-scout/turkey-priority'
+import { discoverLiveOpenings } from '@/lib/funding-scout/sources'
 import { fundingScanLimits } from '@/lib/funding-scout/scan-limits'
 import { rankFundingCandidates } from '@/lib/funding-scout/relevance'
 import { settingsFromDbRow, type FundingCandidate } from '@/lib/funding-scout/types'
 import { parseDeadlineFromText } from '@/lib/funding-scout/deadline'
 import { upsertFundingDeadlineEvent } from '@/lib/funding-scout/calendar-sync'
 import { passesEligibilityGate } from '@/lib/funding-scout/eligibility'
+import { filterLiveOpenings } from '@/lib/funding-scout/opening-quality'
 
 export interface FundingScanResult {
   opportunitiesScanned: number
@@ -47,7 +42,7 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
   const limits = fundingScanLimits(settings)
   const regionsScanned = settings.regions
   log.push({
-    message: `Manual scan (${settings.scanDepth}) — eligibility: ${settings.strictEligibility ? 'strict' : 'relaxed'} · PhD ${settings.phdStartMonth} · partners: ${settings.partnerCountries.join(', ')}`,
+    message: `Live-opening scan (${settings.scanDepth}) — max ${limits.maxPacks} packs · eligibility ${settings.strictEligibility ? 'strict' : 'relaxed'}`,
   })
 
   const { data: profileRow } = await supabase.from('candidate_profiles').select('master_profile').eq('user_id', userId).maybeSingle()
@@ -60,36 +55,29 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
   const { data: existing } = await supabase.from('funding_applications').select('funder, title, opportunity_url').eq('user_id', userId)
   const seen = new Set((existing ?? []).map((r) => `${r.funder}::${r.title}::${r.opportunity_url ?? ''}`.toLowerCase()))
 
-  const raw: FundingCandidate[] = buildCuratedBatch(settings, limits.curatedAll)
-  if (isTurkishCandidate(settings)) {
-    log.push({ message: `TR priority: TÜBİTAK, YÖK, KYK + ${settings.homeUniversity.trim() ? 'home university' : 'set home university for ITU bursları'} — always scanned` })
-  }
-  const sources = sourcesForRegions(settings.regions, limits.sourceBatch)
+  const discovered = await discoverLiveOpenings(settings, limits)
+  for (const line of discovered.log) log.push({ message: line })
 
-  for (const source of sources) {
-    try {
-      if (source.rssUrl) {
-        const rss = await parseFundingRss(source.rssUrl, source.region, source.label, limits.rssPerFeed)
-        raw.push(...rss)
-        opportunitiesScanned += rss.length
-        log.push({ message: `RSS ${source.label}: ${rss.length}` })
-      }
-      const portal = await fetchPortalListings(source)
-      raw.push(...portal)
-      opportunitiesScanned += portal.length
-    } catch (err) {
-      log.push({ message: `${source.label}: ${err instanceof Error ? err.message : 'error'}`, level: 'warn' })
-    }
+  opportunitiesScanned = discovered.items.length
+  const liveOnly = filterLiveOpenings(discovered.items)
+  log.push({
+    message: `Specific openings: ${liveOnly.length} kept · ${discovered.items.length - liveOnly.length} generic/catalog entries dropped`,
+    level: liveOnly.length ? 'info' : 'warn',
+  })
+
+  if (!liveOnly.length) {
+    log.push({ message: 'No live calls found this run. Try Deep scan or check again later — we only create packs for open postings with apply links.', level: 'warn' })
+    return { opportunitiesScanned, packsCreated, regionsScanned, log }
   }
 
   const unique = new Map<string, FundingCandidate>()
-  for (const opp of raw) {
+  for (const opp of liveOnly) {
     const key = dedupeKey(opp)
     if (!seen.has(key) && !unique.has(key)) unique.set(key, opp)
   }
 
   const ranked = rankFundingCandidates([...unique.values()], settings)
-  log.push({ message: `Eligible + relevant: ${ranked.length} / ${unique.size} unique` })
+  log.push({ message: `Eligible openings: ${ranked.length} / ${unique.size} unique` })
 
   let skippedIneligible = 0
 
@@ -98,17 +86,17 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
     try {
       if (!passesEligibilityGate(ruleElig, settings)) {
         skippedIneligible++
-        log.push({ message: `Skip: ${opp.funder} — ${ruleElig.reasons[0] ?? 'ineligible'}`, level: 'info' })
+        log.push({ message: `Skip: ${opp.title.slice(0, 60)} — ${ruleElig.reasons[0] ?? 'ineligible'}`, level: 'info' })
         continue
       }
 
       const fit = await scoreFundingFit(masterProfile, opp, settings)
       if (settings.strictEligibility && !fit.eligible) {
         skippedIneligible++
-        log.push({ message: `Skip: ${opp.funder} — ${fit.eligibilityReason}`, level: 'info' })
+        log.push({ message: `Skip: ${opp.title.slice(0, 60)} — ${fit.eligibilityReason}`, level: 'info' })
         continue
       }
-      if (fit.score < 45) continue
+      if (fit.score < 50) continue
 
       const pack = await generateFundingPack(masterProfile, opp, settings)
       const deadline = resolveDeadline(opp, fit.deadline)
@@ -139,7 +127,7 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
       if (!error && inserted) {
         packsCreated++
         const deadlineNote = deadline ? ` · deadline ${deadline}` : ''
-        log.push({ message: `✓ ${opp.funder} · ${opp.title} (${fit.score}%) — ${eligibilityReason.slice(0, 80)}${deadlineNote}` })
+        log.push({ message: `✓ ${opp.funder}: ${opp.title.slice(0, 70)} (${fit.score}%)${deadlineNote}` })
         if (deadline) {
           try {
             await upsertFundingDeadlineEvent(supabase, userId, inserted.id, opp.funder, opp.title, deadline)
@@ -149,12 +137,12 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
         }
       }
     } catch (err) {
-      log.push({ message: `Failed ${opp.funder}: ${err instanceof Error ? err.message : 'error'}`, level: 'error' })
+      log.push({ message: `Failed ${opp.title.slice(0, 40)}: ${err instanceof Error ? err.message : 'error'}`, level: 'error' })
     }
   }
 
   if (skippedIneligible > 0) {
-    log.push({ message: `Skipped ${skippedIneligible} ineligible / poor-fit programmes`, level: 'info' })
+    log.push({ message: `Skipped ${skippedIneligible} ineligible / poor-fit openings`, level: 'info' })
   }
 
   return { opportunitiesScanned, packsCreated, regionsScanned, log }

@@ -12,6 +12,7 @@ export const TURKEY_PRIORITY_OPPORTUNITIES: FundingCandidate[] = [
     source: 'curated:turkey-priority',
     fullFunding: true,
     priorityTier: 'turkey_national',
+    listingKind: 'program_catalog',
   },
   {
     funder: 'TÜBİTAK',
@@ -23,6 +24,7 @@ export const TURKEY_PRIORITY_OPPORTUNITIES: FundingCandidate[] = [
     source: 'curated:turkey-priority',
     fullFunding: true,
     priorityTier: 'turkey_national',
+    listingKind: 'program_catalog',
   },
   {
     funder: 'TÜBİTAK',
@@ -34,6 +36,7 @@ export const TURKEY_PRIORITY_OPPORTUNITIES: FundingCandidate[] = [
     source: 'curated:turkey-priority',
     fullFunding: true,
     priorityTier: 'turkey_national',
+    listingKind: 'program_catalog',
   },
   {
     funder: 'TÜBİTAK',
@@ -44,6 +47,7 @@ export const TURKEY_PRIORITY_OPPORTUNITIES: FundingCandidate[] = [
     opportunityUrl: 'https://www.tubitak.gov.tr/tr/burslar/lisansustu-burs-programlari',
     source: 'curated:turkey-priority',
     priorityTier: 'turkey_national',
+    listingKind: 'program_catalog',
   },
   {
     funder: 'TÜBİTAK',
@@ -54,6 +58,7 @@ export const TURKEY_PRIORITY_OPPORTUNITIES: FundingCandidate[] = [
     opportunityUrl: 'https://www.tubitak.gov.tr/tr/destekler/akademik/1001-bilimsel-ve-teknolojik-arastirma-projeleri-destekleme-programi',
     source: 'curated:turkey-priority',
     priorityTier: 'turkey_national',
+    listingKind: 'program_catalog',
   },
   {
     funder: 'YÖK',
@@ -65,6 +70,7 @@ export const TURKEY_PRIORITY_OPPORTUNITIES: FundingCandidate[] = [
     source: 'curated:turkey-priority',
     fullFunding: true,
     priorityTier: 'turkey_national',
+    listingKind: 'program_catalog',
   },
   {
     funder: 'YÖK',
@@ -76,6 +82,7 @@ export const TURKEY_PRIORITY_OPPORTUNITIES: FundingCandidate[] = [
     source: 'curated:turkey-priority',
     fullFunding: true,
     priorityTier: 'turkey_national',
+    listingKind: 'program_catalog',
   },
   {
     funder: 'YÖK',
@@ -86,6 +93,7 @@ export const TURKEY_PRIORITY_OPPORTUNITIES: FundingCandidate[] = [
     opportunityUrl: 'https://www.yok.gov.tr/',
     source: 'curated:turkey-priority',
     priorityTier: 'turkey_national',
+    listingKind: 'program_catalog',
   },
   {
     funder: 'KYK',
@@ -96,6 +104,7 @@ export const TURKEY_PRIORITY_OPPORTUNITIES: FundingCandidate[] = [
     opportunityUrl: 'https://www.kyk.gov.tr/',
     source: 'curated:turkey-priority',
     priorityTier: 'turkey_national',
+    listingKind: 'program_catalog',
   },
   {
     funder: 'KYK',
@@ -106,6 +115,7 @@ export const TURKEY_PRIORITY_OPPORTUNITIES: FundingCandidate[] = [
     opportunityUrl: 'https://www.tyk.gov.tr/kyk/ogrenci/burslar',
     source: 'curated:turkey-priority',
     priorityTier: 'turkey_national',
+    listingKind: 'program_catalog',
   },
   {
     funder: 'Fulbright Turkey',
@@ -117,6 +127,7 @@ export const TURKEY_PRIORITY_OPPORTUNITIES: FundingCandidate[] = [
     source: 'curated:turkey-priority',
     fullFunding: true,
     priorityTier: 'turkey_national',
+    listingKind: 'program_catalog',
   },
   {
     funder: 'Mevlana',
@@ -127,6 +138,7 @@ export const TURKEY_PRIORITY_OPPORTUNITIES: FundingCandidate[] = [
     opportunityUrl: 'https://mevlana.yok.gov.tr/',
     source: 'curated:turkey-priority',
     priorityTier: 'turkey_national',
+    listingKind: 'program_catalog',
   },
 ]
 
