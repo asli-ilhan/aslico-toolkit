@@ -14,6 +14,8 @@ import { isWebSearchAvailable, webSearchProvider } from '@/lib/funding-scout/web
 export interface FundingScanResult {
   opportunitiesScanned: number
   packsCreated: number
+  candidatesNew: number
+  candidatesDuplicate: number
   regionsScanned: string[]
   log: { message: string; level?: 'info' | 'warn' | 'error' }[]
 }
@@ -44,14 +46,30 @@ function dedupeKey(opp: FundingCandidate): string {
   return `${opp.funder}::${opp.title}::${opp.opportunityUrl ?? ''}`.toLowerCase()
 }
 
+function minFitScore(opp: FundingCandidate): number {
+  if (opp.listingKind === 'live_opening' || opp.source.startsWith('search:')) return 40
+  return 50
+}
+
 export async function runFundingScan(supabase: SupabaseClient, userId: string): Promise<FundingScanResult> {
   const log: FundingScanResult['log'] = []
   let opportunitiesScanned = 0
   let packsCreated = 0
+  let candidatesNew = 0
+  let candidatesDuplicate = 0
+
+  const empty = {
+    opportunitiesScanned,
+    packsCreated,
+    candidatesNew,
+    candidatesDuplicate,
+    regionsScanned: [] as string[],
+    log,
+  }
 
   if (!process.env.ANTHROPIC_API_KEY) {
     log.push({ message: 'ANTHROPIC_API_KEY missing.', level: 'warn' })
-    return { opportunitiesScanned, packsCreated, regionsScanned: [], log }
+    return empty
   }
 
   const { data: settingsRow } = await supabase.from('funding_scout_settings').select('*').eq('user_id', userId).maybeSingle()
@@ -61,7 +79,7 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
   const limits = fundingScanLimits(settings)
   const regionsScanned = settings.regions
   log.push({
-    message: `Live-opening scan (${settings.scanDepth}) — AI scout + primary verify · max ${limits.maxPacks} packs`,
+    message: `Live-opening scan (${settings.scanDepth}) — AI scout + primary verify · max ${limits.maxPacks} packs/run`,
   })
   if (isWebSearchAvailable()) {
     log.push({ message: `Web search: ${webSearchProvider()} enabled` })
@@ -71,11 +89,15 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
   const masterProfile = profileRow?.master_profile as MasterProfileData | null
   if (!masterProfile?.summary && !masterProfile?.evidence?.length) {
     log.push({ message: 'Build master profile in Job Agent first.', level: 'warn' })
-    return { opportunitiesScanned, packsCreated, regionsScanned, log }
+    return { ...empty, regionsScanned, log }
   }
 
-  const { data: existing } = await supabase.from('funding_applications').select('funder, title, opportunity_url').eq('user_id', userId)
+  const { data: existing } = await supabase
+    .from('funding_applications')
+    .select('funder, title, opportunity_url')
+    .eq('user_id', userId)
   const seen = new Set((existing ?? []).map((r) => `${r.funder}::${r.title}::${r.opportunity_url ?? ''}`.toLowerCase()))
+  log.push({ message: `Already in your list: ${seen.size} funding applications` })
 
   const discovered = await discoverLiveOpenings(settings, limits)
   for (const line of discovered.log) log.push({ message: line })
@@ -89,17 +111,40 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
 
   if (!liveOnly.length) {
     log.push({ message: 'No live calls found. Try Deep scan later.', level: 'warn' })
-    return { opportunitiesScanned, packsCreated, regionsScanned, log }
+    return { opportunitiesScanned, packsCreated, candidatesNew, candidatesDuplicate, regionsScanned, log }
   }
 
   const unique = new Map<string, FundingCandidate>()
   for (const opp of liveOnly) {
     const key = dedupeKey(opp)
-    if (!seen.has(key) && !unique.has(key)) unique.set(key, opp)
+    if (seen.has(key)) {
+      candidatesDuplicate++
+      continue
+    }
+    if (!unique.has(key)) unique.set(key, opp)
+  }
+
+  candidatesNew = unique.size
+  log.push({
+    message: `New vs list: ${candidatesNew} new · ${candidatesDuplicate} already saved (skipped)`,
+    level: candidatesNew ? 'info' : 'warn',
+  })
+
+  if (!candidatesNew) {
+    log.push({
+      message: 'Nothing new to add — same openings as your saved list. Try Deep scan or wait for new announcements.',
+      level: 'warn',
+    })
+    return { opportunitiesScanned, packsCreated, candidatesNew, candidatesDuplicate, regionsScanned, log }
   }
 
   const ranked = rankFundingCandidates([...unique.values()], settings)
-  log.push({ message: `Rule-filtered: ${ranked.length} / ${unique.size} unique` })
+  log.push({ message: `Rule-filtered: ${ranked.length} / ${unique.size} new candidates pass relevance` })
+
+  if (!ranked.length) {
+    log.push({ message: 'New openings found but none passed relevance/eligibility rules.', level: 'warn' })
+    return { opportunitiesScanned, packsCreated, candidatesNew, candidatesDuplicate, regionsScanned, log }
+  }
 
   const evaluateBatch = ranked.slice(0, Math.min(ranked.length, limits.maxPacks * 3))
   const toEnrich = evaluateBatch.map(({ opp }) => opp)
@@ -127,42 +172,53 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
   }))
 
   const fitMap = await scoreFundingFitBatch(masterProfile, aiSettings, openings)
-  log.push({ message: `AI evaluated ${fitMap.size} openings (research-funding scout prompt)` })
+  log.push({ message: `AI evaluated ${fitMap.size} / ${openings.length} openings` })
+  if (fitMap.size < openings.length) {
+    log.push({
+      message: `Warning: ${openings.length - fitMap.size} openings missing AI scores — batch may have truncated`,
+      level: 'warn',
+    })
+  }
 
   let skippedIneligible = 0
+  let skippedLowScore = 0
+  let skippedNoFit = 0
 
   for (let i = 0; i < evaluateBatch.length; i++) {
     if (packsCreated >= limits.maxPacks) break
     const { opp, eligibility: ruleElig } = evaluateBatch[i]
     const enrichedOpp = enriched[i] ?? opp
     const fit = fitMap.get(i)
-    if (!fit) continue
+    if (!fit) {
+      skippedNoFit++
+      continue
+    }
 
     try {
       if (!passesEligibilityGate(ruleElig, settings)) {
         skippedIneligible++
+        log.push({ message: `Skip (rules): ${opp.title.slice(0, 50)}`, level: 'info' })
         continue
       }
 
       if (fit.disqualifiers?.length) {
         skippedIneligible++
-        log.push({ message: `Skip: ${opp.title.slice(0, 50)} — ${fit.disqualifiers.join('; ')}`, level: 'info' })
+        log.push({ message: `Skip (disqualifier): ${opp.title.slice(0, 50)} — ${fit.disqualifiers.join('; ')}`, level: 'info' })
         continue
       }
 
-      if (settings.strictEligibility && !fit.eligible) {
+      if (settings.strictEligibility && fit.eligible === false) {
         skippedIneligible++
-        log.push({ message: `Skip: ${opp.title.slice(0, 50)} — ${fit.eligibilityReason}`, level: 'info' })
+        log.push({ message: `Skip (ineligible): ${opp.title.slice(0, 50)} — ${fit.eligibilityReason}`, level: 'info' })
         continue
       }
 
-      if (settings.strictEligibility && fit.confidence === 'unverified' && !fit.deadline && !opp.deadline) {
-        skippedIneligible++
-        log.push({ message: `Skip (unverified): ${opp.title.slice(0, 50)} — ${fit.verifyNotes ?? 'check primary source'}`, level: 'info' })
+      const threshold = minFitScore(enrichedOpp)
+      if (fit.score < threshold) {
+        skippedLowScore++
+        log.push({ message: `Skip (fit ${fit.score}% < ${threshold}%): ${opp.title.slice(0, 50)}`, level: 'info' })
         continue
       }
-
-      if (fit.score < 50) continue
 
       const pack = await generateFundingPack(masterProfile, enrichedOpp, aiSettings)
       const deadline = resolveDeadline(enrichedOpp, fit.deadline)
@@ -191,7 +247,7 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
         amount: fit.amount ?? enrichedOpp.amount ?? null,
         fit_score: fit.score,
         fit_reason: fit.reason,
-        eligibility_pass: fit.eligible && ruleElig.eligible,
+        eligibility_pass: fit.eligible !== false && ruleElig.eligible,
         eligibility_reason: eligibilityReason,
         eligibility_flags: allFlags,
         motivation_letter: pack.motivationLetter,
@@ -201,7 +257,12 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
         source: enrichedOpp.source,
       }).select('id').single()
 
-      if (!error && inserted) {
+      if (error) {
+        log.push({ message: `DB insert failed: ${opp.title.slice(0, 40)} — ${error.message}`, level: 'error' })
+        continue
+      }
+
+      if (inserted) {
         packsCreated++
         const conf = fit.confidence === 'verified' ? '✓' : '?'
         const deadlineNote = deadline ? ` · ${deadline}` : ''
@@ -212,7 +273,7 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
           try {
             await upsertFundingDeadlineEvent(supabase, userId, inserted.id, enrichedOpp.funder, enrichedOpp.title, deadline)
           } catch {
-            log.push({ message: `Calendar sync failed`, level: 'warn' })
+            log.push({ message: 'Calendar sync failed', level: 'warn' })
           }
         }
       }
@@ -222,8 +283,20 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
   }
 
   if (skippedIneligible > 0) {
-    log.push({ message: `Skipped ${skippedIneligible} after AI eligibility / disqualifier check`, level: 'info' })
+    log.push({ message: `Skipped ${skippedIneligible} — eligibility / disqualifiers`, level: 'info' })
+  }
+  if (skippedLowScore > 0) {
+    log.push({ message: `Skipped ${skippedLowScore} — fit score below threshold`, level: 'info' })
+  }
+  if (skippedNoFit > 0) {
+    log.push({ message: `Skipped ${skippedNoFit} — no AI evaluation returned`, level: 'warn' })
+  }
+  if (packsCreated === 0 && candidatesNew > 0) {
+    log.push({
+      message: 'Found new openings but none became packs — check log above. Try turning off strict eligibility.',
+      level: 'warn',
+    })
   }
 
-  return { opportunitiesScanned, packsCreated, regionsScanned, log }
+  return { opportunitiesScanned, packsCreated, candidatesNew, candidatesDuplicate, regionsScanned, log }
 }

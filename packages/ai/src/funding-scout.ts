@@ -79,7 +79,7 @@ function normalizeEvaluation(raw: Record<string, unknown>): FundingProgramEvalua
   const confidence = raw.confidence === 'verified' ? 'verified' : 'unverified'
 
   const disqualifiers = Array.isArray(raw.disqualifiers) ? raw.disqualifiers.map(String) : []
-  const eligible = raw.eligible === false || disqualifiers.length > 0 ? false : true
+  const eligible = raw.eligible === false ? false : disqualifiers.length === 0 || raw.eligible === true
 
   return {
     index: typeof raw.index === 'number' ? raw.index : undefined,
@@ -140,23 +140,41 @@ export async function evaluateFundingOpeningsBatch(
   if (!openings.length) return []
 
   const safe = profileForApplications(profile)
-  const raw = await createClaudeMessage({
-    system: `${FUNDING_SCOUT_SYSTEM_PROMPT}\n${JOB_APPLICATION_GUARDRAILS}`,
-    messages: [{
-      role: 'user',
-      content: buildBatchOpeningsTask(safe, settings, openings),
-    }],
-    maxTokens: 4096,
-    temperature: 0.15,
-  })
+  const CHUNK = 4
+  const all: FundingProgramEvaluation[] = []
 
-  try {
-    const parsed = parseJsonPayload(raw)
-    const rows = Array.isArray(parsed) ? parsed : [parsed]
-    return rows.map((row) => normalizeEvaluation(row as Record<string, unknown>))
-  } catch {
-    return []
+  for (let start = 0; start < openings.length; start += CHUNK) {
+    const chunk = openings.slice(start, start + CHUNK)
+    const chunkOffset = start
+    const raw = await createClaudeMessage({
+      system: `${FUNDING_SCOUT_SYSTEM_PROMPT}\n${JOB_APPLICATION_GUARDRAILS}`,
+      messages: [{
+        role: 'user',
+        content: buildBatchOpeningsTask(safe, settings, chunk),
+      }],
+      maxTokens: 6144,
+      temperature: 0.15,
+    })
+
+    try {
+      const parsed = parseJsonPayload(raw)
+      const rows = Array.isArray(parsed) ? parsed : [parsed]
+      for (let i = 0; i < rows.length; i++) {
+        const ev = normalizeEvaluation(rows[i] as Record<string, unknown>)
+        const localIdx = typeof ev.index === 'number' ? ev.index : i
+        ev.index = chunkOffset + localIdx
+        all.push(ev)
+      }
+    } catch {
+      for (let i = 0; i < chunk.length; i++) {
+        const ev = await evaluateFundingOpening(profile, chunk[i], settings)
+        ev.index = chunkOffset + i
+        all.push(ev)
+      }
+    }
   }
+
+  return all
 }
 
 export async function evaluateFundingOpening(
@@ -211,7 +229,7 @@ export async function scoreFundingFitBatch(
   const evaluations = await evaluateFundingOpeningsBatch(profile, settings, openings)
   const map = new Map<number, FundingFitResult>()
   for (const ev of evaluations) {
-    const idx = ev.index ?? evaluations.indexOf(ev)
+    const idx = typeof ev.index === 'number' ? ev.index : map.size
     map.set(idx, evaluationToFitResult(ev))
   }
   return map

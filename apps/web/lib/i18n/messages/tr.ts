@@ -703,7 +703,7 @@ export const tr: Messages = {
     stopScan: 'Durdur',
     scanning: 'Taranıyor…',
     stopped: 'Tarama durduruldu.',
-    scanSummary: '{scanned} ilan tarandı — {created} yeni açık çağrı paketi',
+    scanSummary: '{scanned} ilan tarandı — {created} yeni paket ({new} yeni aday, {dup} zaten kayıtlı)',
     saveSettings: 'Ayarları kaydet',
     inbox: 'Gelen kutusu',
     inboxEmpty: 'Açık ilan yok. Tarama başlat — sadece gerçek duyurular paketlenir.',

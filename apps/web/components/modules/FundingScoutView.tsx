@@ -230,7 +230,11 @@ export function FundingScoutView() {
           {stopped && <p className="text-xs text-[var(--text-muted)]">{fs.stopped}</p>}
           {summary && (
             <p className="text-sm text-[var(--accent)]">
-              {fs.scanSummary.replace('{scanned}', String(summary.scanned)).replace('{created}', String(summary.created))}
+              {fs.scanSummary
+                .replace('{scanned}', String(summary.scanned))
+                .replace('{created}', String(summary.created))
+                .replace('{new}', String(summary.newCandidates ?? 0))
+                .replace('{dup}', String(summary.duplicates ?? 0))}
             </p>
           )}
           {log && (

@@ -705,7 +705,7 @@ export const en: Messages = {
     stopScan: 'Stop',
     scanning: 'Scanning…',
     stopped: 'Scan stopped.',
-    scanSummary: '{scanned} openings scanned — {created} new live call packs',
+    scanSummary: '{scanned} openings scanned — {created} new packs ({new} new candidates, {dup} already saved)',
     saveSettings: 'Save settings',
     inbox: 'Inbox',
     inboxEmpty: 'No live openings yet. Run a scan — only real posted calls become packs.',

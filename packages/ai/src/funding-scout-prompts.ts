@@ -79,17 +79,28 @@ export function buildBatchOpeningsTask(
   settings: FundingSettingsInput,
   openings: FundingOppInput[],
 ): string {
-  const payload = openings.map((opp, index) => ({
-    index,
-    funder: opp.funder,
-    title: opp.title,
-    type: opp.fundingType,
-    region: opp.region,
-    url: opp.opportunityUrl ?? null,
-    hasPrimarySource: Boolean(opp.primarySourceText),
-    hasWebVerification: Boolean(opp.searchVerificationSnippets?.length),
-    description: opp.description.slice(0, 5000),
-  }))
+  const payload = openings.map((opp, index) => {
+    const parts: string[] = [opp.description.slice(0, 2500)]
+    if (opp.primarySourceText) {
+      parts.push(`PRIMARY SOURCE (${opp.primarySourceFetchedAt ?? 'fetched'}): ${opp.primarySourceText.slice(0, 3500)}`)
+    }
+    if (opp.searchVerificationSnippets?.length) {
+      const verify = opp.searchVerificationSnippets
+        .map((h) => `[${h.title}] ${h.url}\n${h.snippet}`)
+        .join('\n')
+        .slice(0, 2000)
+      parts.push(`WEB VERIFICATION: ${verify}`)
+    }
+    return {
+      index,
+      funder: opp.funder,
+      title: opp.title,
+      type: opp.fundingType,
+      region: opp.region,
+      url: opp.opportunityUrl ?? null,
+      text: parts.join('\n\n'),
+    }
+  })
 
   return `${buildResearcherProfileBlock(profile, settings)}
 
