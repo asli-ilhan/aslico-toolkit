@@ -60,6 +60,7 @@ export interface FundingCandidate {
   amount?: string
   source: string
   fullFunding?: boolean
+  priorityTier?: 'turkey_national' | 'home_university' | 'global'
 }
 
 export const DEFAULT_FUNDING_SETTINGS: FundingSettings = {
@@ -87,7 +88,7 @@ export const DEFAULT_FUNDING_SETTINGS: FundingSettings = {
   citizenship: 'TR',
   phdStage: 'starting',
   phdStartMonth: '2026-09',
-  homeUniversity: '',
+    homeUniversity: 'İstanbul Teknik Üniversitesi',
   homeCountry: 'TR',
   partnerCountries: ['china', 'netherlands'],
   supervisionModel: 'co_supervision',

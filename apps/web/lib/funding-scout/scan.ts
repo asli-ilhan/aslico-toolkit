@@ -1,11 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateFundingPack, scoreFundingFit, type MasterProfileData } from '@aslico/ai'
 import {
-  CURATED_OPPORTUNITIES,
+  buildCuratedBatch,
   fetchPortalListings,
   parseFundingRss,
   sourcesForRegions,
 } from '@/lib/funding-scout/sources'
+import { isTurkishCandidate } from '@/lib/funding-scout/turkey-priority'
 import { fundingScanLimits } from '@/lib/funding-scout/scan-limits'
 import { rankFundingCandidates } from '@/lib/funding-scout/relevance'
 import { settingsFromDbRow, type FundingCandidate } from '@/lib/funding-scout/types'
@@ -59,7 +60,10 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
   const { data: existing } = await supabase.from('funding_applications').select('funder, title, opportunity_url').eq('user_id', userId)
   const seen = new Set((existing ?? []).map((r) => `${r.funder}::${r.title}::${r.opportunity_url ?? ''}`.toLowerCase()))
 
-  const raw: FundingCandidate[] = limits.curatedAll ? [...CURATED_OPPORTUNITIES] : CURATED_OPPORTUNITIES.slice(0, 6)
+  const raw: FundingCandidate[] = buildCuratedBatch(settings, limits.curatedAll)
+  if (isTurkishCandidate(settings)) {
+    log.push({ message: `TR priority: TÜBİTAK, YÖK, KYK + ${settings.homeUniversity.trim() ? 'home university' : 'set home university for ITU bursları'} — always scanned` })
+  }
   const sources = sourcesForRegions(settings.regions, limits.sourceBatch)
 
   for (const source of sources) {

@@ -25,7 +25,10 @@ const COMMONWEALTH_CITIZENSHIPS = new Set([
 const JOINT_RE = /\b(joint phd|joint doctoral|double degree|dual degree|cotutelle|co-?supervis|joint supervision|sandwich phd)\b/i
 const CHINA_RE = /\b(china|csc|chinese university|peking|tsinghua|zhejiang|shanghai jiao tong)\b/i
 const NL_RE = /\b(netherlands|holland|dutch|nwo|tu delft|eindhoven|wageningen|utrecht|groningen|leiden|amsterdam|erasmus mundus)\b/i
-const TR_ABROAD_RE = /\b(tubitak 2214|2214-a|research fellowship abroad|yurtdisi|overseas phd)\b/i
+const TR_ABROAD_RE = /\b(tubitak 2214|2214-a|research fellowship abroad|yurtdisi|overseas phd|yurtdışı doktora)\b/i
+const KYK_RE = /\b(kyk|kredi ve yurtlar|yurtlar kurumu|lisansustu burs|lisansüstü burs)\b/i
+const ITU_RE = /\b(itu|i̇tü|istanbul technical|istanbul teknik|itu bap|bap\.itu)\b/i
+const YOK_RE = /\b(yök|yok 100|100\/2000|1002000|mevlana)\b/i
 const MSCA_RE = /\b(marie skłodowska-curie|msca|doctoral network|dn\b|horizon europe)\b/i
 const BILATERAL_RE = /\b(bilateral|university partnership|memorandum|mou|twinning|exchange agreement)\b/i
 
@@ -91,10 +94,28 @@ export function checkFundingEligibility(opp: FundingCandidate, settings: Funding
 
   if (citizenship === 'TR' || citizenship === 'TURKEY') {
     score += 8
-    if (/tubitak|tübitak|yök|turkish nationals?|turkey/i.test(text)) {
+    if (/tubitak|tübitak|yök|turkish nationals?|turkey|kyk/i.test(text)) {
       score += 25
       flags.push('turkish_national')
       reasons.push('Open to Turkish nationals')
+    }
+    if (KYK_RE.test(h)) {
+      score += 30
+      flags.push('kyk')
+      reasons.push('KYK — lisansüstü burs/kredi')
+    }
+    if (YOK_RE.test(h)) {
+      score += 28
+      flags.push('yok')
+      reasons.push('YÖK burs programı')
+    }
+    if (ITU_RE.test(h) && settings.homeUniversity && ITU_RE.test(settings.homeUniversity.toLowerCase())) {
+      score += 35
+      flags.push('itu_home')
+      reasons.push('İTÜ — ana üniversite bursları')
+    } else if (ITU_RE.test(h)) {
+      score += 15
+      flags.push('itu')
     }
   }
 

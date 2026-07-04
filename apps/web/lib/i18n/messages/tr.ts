@@ -694,7 +694,7 @@ export const tr: Messages = {
   fundingScout: {
     subtitle: 'Küresel doktora bursları, fellowships ve proje hibeleri — manuel tarama, AI başvuru paketleri.',
     scanTitle: 'Burs keşif taraması',
-    scanHint: 'İstediğin zaman başlat — bölgeler sırayla taranır. Job Agent ana profilini kullanır.',
+    scanHint: 'TÜBİTAK, YÖK, KYK ve ana üniversite bursları her taramada dahil. Diğer bölgeler sırayla taranır.',
     scanDepth: 'Tarama derinliği',
     scanDepthNormal: 'Normal — seçilmiş portallar',
     scanDepthDeep: 'Derin — bölge başına daha fazla kaynak',

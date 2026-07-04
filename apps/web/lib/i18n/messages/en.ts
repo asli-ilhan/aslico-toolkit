@@ -696,7 +696,7 @@ export const en: Messages = {
   fundingScout: {
     subtitle: 'Global PhD scholarships, fellowships & project grants — manual scan, AI application packs.',
     scanTitle: 'Funding discovery scan',
-    scanHint: 'Start when you want — scans rotate regions to stay within time limits. Uses your Job Agent master profile.',
+    scanHint: 'TÜBİTAK, YÖK, KYK and home-university scholarships are always included. Other regions rotate per scan.',
     scanDepth: 'Scan depth',
     scanDepthNormal: 'Normal — curated portals',
     scanDepthDeep: 'Deep — more sources per region',

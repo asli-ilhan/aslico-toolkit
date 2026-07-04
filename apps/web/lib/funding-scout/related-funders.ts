@@ -9,8 +9,12 @@ export interface RelatedFunder {
 }
 
 export const RELATED_FUNDERS: RelatedFunder[] = [
-  { label: 'TÜBİTAK', patterns: ['tubitak', 'tübitak'], regions: ['turkey'], sectors: ['research', 'engineering'] },
-  { label: 'YÖK 100/2000', patterns: ['yök', 'yok 100', '100/2000'], regions: ['turkey'], sectors: ['research'] },
+  { label: 'TÜBİTAK', patterns: ['tubitak', 'tübitak', '2210', '2214', '2247'], regions: ['turkey'], sectors: ['research', 'engineering'] },
+  { label: 'YÖK 100/2000', patterns: ['yök', 'yok 100', '100/2000', '1002000'], regions: ['turkey'], sectors: ['research'] },
+  { label: 'KYK', patterns: ['kyk', 'kredi ve yurtlar', 'yurtlar kurumu'], regions: ['turkey'], sectors: ['research'] },
+  { label: 'İTÜ', patterns: ['itu', 'i̇tü', 'istanbul technical', 'istanbul teknik'], regions: ['turkey'], sectors: ['research', 'engineering', 'maritime'] },
+  { label: 'İTÜ BAP', patterns: ['itu bap', 'i̇tü bap', 'bap.itu'], regions: ['turkey'], sectors: ['research'] },
+  { label: 'Mevlana', patterns: ['mevlana'], regions: ['turkey'], sectors: ['research'] },
   { label: 'Marie Skłodowska-Curie', patterns: ['marie curie', 'msca', 'ms ca'], regions: ['eu'], sectors: ['research'] },
   { label: 'Horizon Europe', patterns: ['horizon europe', 'horizon 2020'], regions: ['eu'], sectors: ['research', 'energy'] },
   { label: 'Euraxess', patterns: ['euraxess'], regions: ['eu', 'global'], sectors: ['research'] },
