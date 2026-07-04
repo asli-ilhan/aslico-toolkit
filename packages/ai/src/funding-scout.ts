@@ -21,10 +21,10 @@ export async function scoreFundingFit(
   profile: MasterProfileData,
   opp: FundingOppInput,
   settings: FundingSettingsInput,
-): Promise<{ score: number; reason: string }> {
+): Promise<{ score: number; reason: string; deadline?: string | null }> {
   const safe = profileForApplications(profile)
   const raw = await createClaudeMessage({
-    system: `Score funding fit 0-100 for a PhD/research candidate. Output ONLY JSON: {"score": number, "reason": "one sentence"}. Penalize wrong citizenship, undergraduate-only, or unrelated fields.\n${JOB_APPLICATION_GUARDRAILS}`,
+    system: `Score funding fit 0-100 for a PhD/research candidate. Output ONLY JSON: {"score": number, "reason": "one sentence", "deadline": "YYYY-MM-DD" or null}. Penalize wrong citizenship, undergraduate-only, or unrelated fields. Extract application deadline from the text when explicitly stated; null if rolling or unknown.\n${JOB_APPLICATION_GUARDRAILS}`,
     messages: [{
       role: 'user',
       content: `Candidate: ${safe.summary}
@@ -44,10 +44,18 @@ ${opp.description.slice(0, 6000)}`,
   })
 
   try {
-    const parsed = JSON.parse(raw) as { score: number; reason: string }
-    return { score: Math.min(100, Math.max(0, Math.round(parsed.score))), reason: parsed.reason ?? '' }
+    const parsed = JSON.parse(raw) as { score: number; reason: string; deadline?: string | null }
+    const deadline =
+      typeof parsed.deadline === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(parsed.deadline) ?
+        parsed.deadline
+      : null
+    return {
+      score: Math.min(100, Math.max(0, Math.round(parsed.score))),
+      reason: parsed.reason ?? '',
+      deadline,
+    }
   } catch {
-    return { score: 50, reason: 'Could not parse fit score' }
+    return { score: 50, reason: 'Could not parse fit score', deadline: null }
   }
 }
 

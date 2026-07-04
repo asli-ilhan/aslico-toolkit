@@ -41,6 +41,7 @@ export const tr: Messages = {
     fundingPendingInbox: 'İnceleme bekleyen {count} burs/hibe paketi var.',
     todayTodos: 'Bugünün görevleri',
     upcomingTrip: 'Yaklaşan seyahat',
+    fundingDeadlines: 'Burs son tarihleri',
     yourInterests: 'Odak alanların',
     generating: 'Oluşturuluyor…',
   },
@@ -715,6 +716,9 @@ export const tr: Messages = {
     markSubmitted: 'Gönderildi işaretle',
     skip: 'Atla',
     profileHint: 'Daha iyi AI paketleri için Job Agent\'ta ana profilini tamamla.',
+    deadline: 'Başvuru son tarihi',
+    noDeadline: 'Son tarih bulunamadı — biliyorsan manuel ekle',
+    deadlineCalendarHint: 'Son tarihler otomatik olarak takvime eklenir.',
     warnings: { tableMissing: 'Supabase SQL Editor\'da funding_scout.sql çalıştır.' },
   },
   voiceAssistant: {

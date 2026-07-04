@@ -52,11 +52,19 @@ interface TripPreview {
   end_date: string | null
 }
 
+interface FundingDeadline {
+  id: string
+  funder: string
+  title: string
+  deadline: string
+}
+
 export function DailyBriefing() {
   const { t, locale } = useLocale()
   const b = t.brief
   const [pendingCount, setPendingCount] = useState(0)
   const [fundingPendingCount, setFundingPendingCount] = useState(0)
+  const [fundingDeadlines, setFundingDeadlines] = useState<FundingDeadline[]>([])
   const [deadlines, setDeadlines] = useState<BriefItem[]>([])
   const [followUps, setFollowUps] = useState<BriefItem[]>([])
   const [todayEvents, setTodayEvents] = useState<CalEvent[]>([])
@@ -75,6 +83,7 @@ export function DailyBriefing() {
       .then((data) => {
         if (data.pendingCount != null) setPendingCount(data.pendingCount)
         if (data.fundingPendingCount != null) setFundingPendingCount(data.fundingPendingCount)
+        setFundingDeadlines(data.fundingDeadlines ?? [])
         setDeadlines(data.deadlines ?? [])
         setFollowUps(data.followUps ?? [])
         setTodayEvents(data.todayEvents ?? [])
@@ -107,6 +116,7 @@ export function DailyBriefing() {
   const hasReminders =
     pendingCount > 0 ||
     fundingPendingCount > 0 ||
+    fundingDeadlines.length > 0 ||
     deadlines.length > 0 ||
     followUps.length > 0 ||
     todayEvents.length > 0 ||
@@ -272,6 +282,20 @@ export function DailyBriefing() {
                 {deadlines.map((d) => (
                   <li key={d.id}>
                     {d.company} · {d.role} ({new Date(d.deadline_at!).toLocaleDateString(locale)})
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {fundingDeadlines.length > 0 && (
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-[var(--accent)]">
+                {b.fundingDeadlines}
+              </p>
+              <ul className="mt-1 space-y-1 text-sm text-[var(--text-muted)]">
+                {fundingDeadlines.map((d) => (
+                  <li key={d.id}>
+                    {d.funder} · {d.title} ({new Date(`${d.deadline}T12:00:00`).toLocaleDateString(locale)})
                   </li>
                 ))}
               </ul>

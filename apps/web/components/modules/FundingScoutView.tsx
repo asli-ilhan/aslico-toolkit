@@ -28,7 +28,7 @@ interface FundingApp {
 const REGIONS = ['uk', 'eu', 'turkey', 'china', 'japan', 'korea', 'gulf', 'americas', 'australia', 'global'] as const
 
 export function FundingScoutView() {
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const fs = t.fundingScout
   const mod = getModuleById('funding-scout')!
   const { running, stopped, log, summary, runScan, stopScan } = useFundingScan()
@@ -41,9 +41,19 @@ export function FundingScoutView() {
   const [loading, setLoading] = useState(true)
   const [warning, setWarning] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [deadlineDraft, setDeadlineDraft] = useState('')
 
   const selected = items.find((i) => i.id === selectedId) ?? items[0] ?? null
-  const inbox = items.filter((i) => i.status === 'pending_review')
+  const inbox = [...items.filter((i) => i.status === 'pending_review')].sort((a, b) => {
+    if (a.deadline && b.deadline) return a.deadline.localeCompare(b.deadline)
+    if (a.deadline) return -1
+    if (b.deadline) return 1
+    return 0
+  })
+
+  useEffect(() => {
+    setDeadlineDraft(selected?.deadline?.slice(0, 10) ?? '')
+  }, [selected?.id, selected?.deadline])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -89,13 +99,22 @@ export function FundingScoutView() {
     if (!aborted) load()
   }
 
-  async function patchItem(id: string, patch: Record<string, string>) {
+  async function patchItem(id: string, patch: Record<string, string | null>) {
     await fetch(`/api/modules/funding-scout/applications/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(patch),
     })
     load()
+  }
+
+  function formatDeadline(date: string) {
+    return new Date(`${date}T12:00:00`).toLocaleDateString(locale, {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
   }
 
   const fieldClass = 'mt-1 w-full rounded-xl border border-[var(--surface-border)] bg-[var(--background-alt)]/50 px-3 py-2 text-sm'
@@ -190,6 +209,11 @@ export function FundingScoutView() {
                     >
                       <div className="font-medium text-[var(--text)]">{item.funder}</div>
                       <div className="text-xs text-[var(--text-muted)]">{item.title}</div>
+                      {item.deadline && (
+                        <div className="text-xs font-medium text-[var(--accent)]">
+                          {fs.deadline}: {formatDeadline(item.deadline)}
+                        </div>
+                      )}
                       {item.fit_score != null && <div className="text-xs text-[var(--accent)]">{fs.fit}: {item.fit_score}%</div>}
                     </button>
                   </li>
@@ -204,6 +228,29 @@ export function FundingScoutView() {
                 <h2 className="text-lg font-semibold text-[var(--text)]">{selected.funder}</h2>
                 <p className="text-sm text-[var(--text-muted)]">{selected.title}</p>
                 <p className="text-xs text-[var(--text-muted)]">{selected.region} · {selected.funding_type}</p>
+                <div className="mt-2 space-y-2">
+                  <label className="block text-sm">
+                    {fs.deadline}
+                    <input
+                      type="date"
+                      value={deadlineDraft}
+                      onChange={(e) => setDeadlineDraft(e.target.value)}
+                      className={fieldClass}
+                    />
+                  </label>
+                  {!deadlineDraft && <p className="text-xs text-[var(--text-muted)]">{fs.noDeadline}</p>}
+                  {deadlineDraft && (
+                    <p className="text-xs text-[var(--text-muted)]">
+                      {formatDeadline(deadlineDraft)} · {fs.deadlineCalendarHint}
+                    </p>
+                  )}
+                  <Button
+                    variant="outline"
+                    onClick={() => patchItem(selected.id, { deadline: deadlineDraft || null })}
+                  >
+                    {fs.saveSettings}
+                  </Button>
+                </div>
                 {selected.opportunity_url && (
                   <a href={selected.opportunity_url} target="_blank" rel="noreferrer" className="text-xs text-[var(--accent)] hover:underline">
                     {fs.openLink}

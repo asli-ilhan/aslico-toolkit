@@ -40,6 +40,7 @@ export const fr: Messages = {
     fundingPendingInbox: '{count} pack(s) de financement en attente.',
     todayTodos: 'Tâches du jour',
     upcomingTrip: 'Voyage à venir',
+    fundingDeadlines: 'Échéances financement',
     yourInterests: 'Vos centres d\'intérêt',
     generating: 'Génération…',
   },
@@ -453,6 +454,9 @@ export const fr: Messages = {
     markSubmitted: 'Soumis',
     skip: 'Ignorer',
     profileHint: 'Complétez le profil Job Agent.',
+    deadline: 'Date limite',
+    noDeadline: 'Pas de date — ajouter manuellement',
+    deadlineCalendarHint: 'Les dates sont ajoutées au calendrier automatiquement.',
     warnings: { tableMissing: 'Exécuter funding_scout.sql.' },
   },
   voiceAssistant: {

@@ -40,6 +40,7 @@ export const ar: Messages = {
     fundingPendingInbox: '{count} funding pack(s) pending review.',
     todayTodos: 'مهام اليوم',
     upcomingTrip: 'رحلة قادمة',
+    fundingDeadlines: 'Funding deadlines',
     yourInterests: 'اهتماماتك',
     generating: 'جاري الإنشاء…',
   },
@@ -451,6 +452,9 @@ export const ar: Messages = {
     markSubmitted: 'Submitted',
     skip: 'Skip',
     profileHint: 'Complete Job Agent profile.',
+    deadline: 'Deadline',
+    noDeadline: 'No deadline — add manually',
+    deadlineCalendarHint: 'Deadlines sync to calendar automatically.',
     warnings: { tableMissing: 'Run funding_scout.sql.' },
   },
   voiceAssistant: {

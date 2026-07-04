@@ -1,4 +1,5 @@
 import type { FundingCandidate, FundingRegion } from '@/lib/funding-scout/types'
+import { parseDeadlineFromText } from '@/lib/funding-scout/deadline'
 
 export interface FundingSource {
   id: string
@@ -75,10 +76,20 @@ export async function parseFundingRss(feedUrl: string, region: FundingRegion, la
     const link = tagValue(block, 'link') ?? tagValue(block, 'id')
     const desc = stripHtml(tagValue(block, 'description') ?? tagValue(block, 'summary') ?? '')
     const hay = `${title} ${desc}`.toLowerCase()
+    const deadline = parseDeadlineFromText(`${title}\n${desc}`)
     let fundingType: FundingCandidate['fundingType'] = 'phd_scholarship'
     if (hay.includes('fellowship') || hay.includes('postdoc')) fundingType = 'fellowship'
     else if (hay.includes('grant')) fundingType = 'project_grant'
-    return { funder: label, title: title.slice(0, 300), fundingType, region, description: desc.slice(0, 8000) || title, opportunityUrl: link, source: `rss:${label}` }
+    return {
+      funder: label,
+      title: title.slice(0, 300),
+      fundingType,
+      region,
+      description: desc.slice(0, 8000) || title,
+      opportunityUrl: link,
+      deadline: deadline ?? undefined,
+      source: `rss:${label}`,
+    }
   })
 }
 

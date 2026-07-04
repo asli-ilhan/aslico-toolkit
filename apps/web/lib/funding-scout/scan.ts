@@ -9,12 +9,20 @@ import {
 import { fundingScanLimits } from '@/lib/funding-scout/scan-limits'
 import { rankFundingCandidates } from '@/lib/funding-scout/relevance'
 import { mergeFundingSettings, type FundingCandidate, type FundingSettings } from '@/lib/funding-scout/types'
+import { parseDeadlineFromText } from '@/lib/funding-scout/deadline'
+import { upsertFundingDeadlineEvent } from '@/lib/funding-scout/calendar-sync'
 
 export interface FundingScanResult {
   opportunitiesScanned: number
   packsCreated: number
   regionsScanned: string[]
   log: { message: string; level?: 'info' | 'warn' | 'error' }[]
+}
+
+function resolveDeadline(opp: FundingCandidate, aiDeadline?: string | null): string | null {
+  if (opp.deadline && /^\d{4}-\d{2}-\d{2}$/.test(opp.deadline)) return opp.deadline
+  if (aiDeadline && /^\d{4}-\d{2}-\d{2}$/.test(aiDeadline)) return aiDeadline
+  return parseDeadlineFromText(`${opp.title}\n${opp.description}`)
 }
 
 function dedupeKey(opp: FundingCandidate): string {
@@ -92,7 +100,8 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
       const fit = await scoreFundingFit(masterProfile, opp, settings)
       if (fit.score < 40) continue
       const pack = await generateFundingPack(masterProfile, opp, settings)
-      const { error } = await supabase.from('funding_applications').insert({
+      const deadline = resolveDeadline(opp, fit.deadline)
+      const { data: inserted, error } = await supabase.from('funding_applications').insert({
         user_id: userId,
         funder: opp.funder,
         title: opp.title,
@@ -100,7 +109,7 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
         region: opp.region,
         opportunity_url: opp.opportunityUrl ?? null,
         description: opp.description.slice(0, 20000),
-        deadline: opp.deadline ?? null,
+        deadline,
         amount: opp.amount ?? null,
         fit_score: fit.score,
         fit_reason: fit.reason,
@@ -109,10 +118,18 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
         project_outline: pack.projectOutline,
         status: 'pending_review',
         source: opp.source,
-      })
-      if (!error) {
+      }).select('id').single()
+      if (!error && inserted) {
         packsCreated++
-        log.push({ message: `Pack: ${opp.funder} · ${opp.title} (${fit.score}%)` })
+        const deadlineNote = deadline ? ` · deadline ${deadline}` : ''
+        log.push({ message: `Pack: ${opp.funder} · ${opp.title} (${fit.score}%)${deadlineNote}` })
+        if (deadline) {
+          try {
+            await upsertFundingDeadlineEvent(supabase, userId, inserted.id, opp.funder, opp.title, deadline)
+          } catch {
+            log.push({ message: `Calendar sync failed for ${opp.funder}`, level: 'warn' })
+          }
+        }
       }
     } catch (err) {
       log.push({ message: `Failed ${opp.funder}: ${err instanceof Error ? err.message : 'error'}`, level: 'error' })

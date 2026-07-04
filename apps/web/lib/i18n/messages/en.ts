@@ -41,6 +41,7 @@ export const en: Messages = {
     fundingPendingInbox: '{count} funding opportunity pack(s) waiting for review.',
     todayTodos: 'Today\'s tasks',
     upcomingTrip: 'Upcoming trip',
+    fundingDeadlines: 'Funding deadlines',
     yourInterests: 'Your focus',
     generating: 'Generating…',
   },
@@ -717,6 +718,9 @@ export const en: Messages = {
     markSubmitted: 'Mark submitted',
     skip: 'Skip',
     profileHint: 'Complete your master profile in Job Agent for better AI packs.',
+    deadline: 'Application deadline',
+    noDeadline: 'No deadline found — add manually if known',
+    deadlineCalendarHint: 'Deadlines are added to your calendar automatically.',
     warnings: { tableMissing: 'Run packages/storage/sql/funding_scout.sql in Supabase SQL Editor.' },
   },
   voiceAssistant: {

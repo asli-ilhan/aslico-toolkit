@@ -50,6 +50,7 @@ export type Messages = {
     fundingPendingInbox: string
     todayTodos: string
     upcomingTrip: string
+    fundingDeadlines: string
     yourInterests: string
     generating: string
   }
@@ -609,6 +610,9 @@ export type Messages = {
     markSubmitted: string
     skip: string
     profileHint: string
+    deadline: string
+    noDeadline: string
+    deadlineCalendarHint: string
     warnings: { tableMissing: string }
   }
   voiceAssistant: {
