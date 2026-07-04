@@ -92,3 +92,14 @@ export function isMissingLanguageTutorTable(error: {
     isMissingTable(error, 'language_tutor_flashcards')
   )
 }
+
+export function isMissingFundingScoutTable(error: {
+  code?: string
+  message?: string
+}): boolean {
+  return (
+    isMissingTable(error, 'funding_scout_settings') ||
+    isMissingTable(error, 'funding_applications') ||
+    isMissingTable(error, 'funding_scout_runs')
+  )
+}

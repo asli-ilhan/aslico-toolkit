@@ -1,9 +1,10 @@
 'use client'
 
-import { useCallback, useState } from 'react'
-import { Button } from '@aslico/ui'
-import { useLocale } from '@/components/shell/LocaleProvider'
+import { DiscoveryScanControls } from './DiscoveryScanControls'
 import { launchAutofill } from '@/lib/job-agent/autofill-client'
+import { useLocale } from '@/components/shell/LocaleProvider'
+import { useState } from 'react'
+import { Button } from '@aslico/ui'
 
 interface DiscoveryPanelProps {
   onComplete: () => void
@@ -12,63 +13,12 @@ interface DiscoveryPanelProps {
 }
 
 export function DiscoveryPanel({ onComplete, onWarning, compact }: DiscoveryPanelProps) {
-  const { t } = useLocale()
-  const ja = t.jobAgent
-  const [running, setRunning] = useState(false)
-  const [log, setLog] = useState<string | null>(null)
-  const [summary, setSummary] = useState<{ scanned: number; created: number } | null>(null)
-
-  const runDiscovery = useCallback(async () => {
-    setRunning(true)
-    setLog(null)
-    setSummary(null)
-    onWarning(null)
-
-    const res = await fetch('/api/modules/job-agent/nightly', { method: 'POST' })
-    const data = await res.json()
-
-    setRunning(false)
-
-    if (data.warning === 'job_agent_v2_missing') {
-      onWarning(ja.warnings.v2Missing)
-      return
-    }
-
-    if (data.log?.length) {
-      setLog(data.log.map((l: { message: string }) => l.message).join('\n'))
-    }
-
-    if (typeof data.jobsScanned === 'number' || typeof data.packsCreated === 'number') {
-      setSummary({
-        scanned: data.jobsScanned ?? 0,
-        created: data.packsCreated ?? 0,
-      })
-    }
-
-    if (data.packsCreated > 0) {
-      onComplete()
-    }
-  }, [ja.warnings.v2Missing, onComplete, onWarning])
-
   return (
-    <div className={compact ? 'space-y-2' : 'space-y-3'}>
-      <p className="text-sm text-[var(--text-muted)]">{ja.discovery.hint}</p>
-      <Button onClick={runDiscovery} disabled={running}>
-        {running ? ja.discovery.running : ja.discovery.runNow}
-      </Button>
-      {summary && (
-        <p className="text-sm font-medium text-[var(--accent)]">
-          {ja.discovery.summary
-            .replace('{scanned}', String(summary.scanned))
-            .replace('{created}', String(summary.created))}
-        </p>
-      )}
-      {log && (
-        <pre className="max-h-40 overflow-auto rounded-xl border border-[var(--surface-border)] bg-[var(--background-alt)]/50 p-3 text-xs text-[var(--text-muted)]">
-          {log}
-        </pre>
-      )}
-    </div>
+    <DiscoveryScanControls
+      compact={compact}
+      onComplete={onComplete}
+      onWarning={onWarning}
+    />
   )
 }
 

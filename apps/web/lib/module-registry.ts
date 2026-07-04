@@ -136,6 +136,21 @@ export const moduleRegistry: ModuleManifest[] = [
     status: 'beta',
     href: '/language-tutor',
   },
+  {
+    id: 'funding-scout',
+    name: 'Funding Scout',
+    description: 'Global PhD scholarships, fellowships & grants — UK, EU, Turkey, China, Gulf, Japan & more.',
+    icon: 'funding-scout',
+    category: 'learning',
+    accent: {
+      primary: '#a78bfa',
+      secondary: '#c4b5fd',
+      glow: '#8b5cf6',
+      canvasMode: 'constellation',
+    },
+    status: 'beta',
+    href: '/funding-scout',
+  },
 ]
 
 export function getModuleById(id: string): ModuleManifest | undefined {

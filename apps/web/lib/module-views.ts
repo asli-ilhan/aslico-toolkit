@@ -7,6 +7,7 @@ import { VoiceAssistantView } from '@/components/modules/VoiceAssistantView'
 import { CultureTrackerView } from '@/components/modules/CultureTrackerView'
 import { TravelScoutView } from '@/components/modules/TravelScoutView'
 import { LanguageTutorView } from '@/components/modules/LanguageTutorView'
+import { FundingScoutView } from '@/components/modules/FundingScoutView'
 
 export const moduleViews: Record<string, ComponentType> = {
   transcription: TranscriptionView,
@@ -17,6 +18,7 @@ export const moduleViews: Record<string, ComponentType> = {
   'culture-tracker': CultureTrackerView,
   'travel-scout': TravelScoutView,
   'language-tutor': LanguageTutorView,
+  'funding-scout': FundingScoutView,
 }
 
 export function getModuleView(moduleId: string): ComponentType | undefined {

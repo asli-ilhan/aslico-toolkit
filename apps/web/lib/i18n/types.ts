@@ -46,6 +46,8 @@ export type Messages = {
     openLanguageTutor: string
     openCultureTracker: string
     openTravelScout: string
+    openFundingScout: string
+    fundingPendingInbox: string
     todayTodos: string
     upcomingTrip: string
     yourInterests: string
@@ -220,6 +222,8 @@ export type Messages = {
       hint: string
       runNow: string
       running: string
+      stop: string
+      stopped: string
       summary: string
     }
     autofill: {
@@ -579,6 +583,33 @@ export type Messages = {
     goalDays: string
     warnings: { tableMissing: string }
     errors: { lessonFailed: string; grammarBlocked: string; submitFailed: string }
+  }
+  fundingScout: {
+    subtitle: string
+    scanTitle: string
+    scanHint: string
+    scanDepth: string
+    scanDepthNormal: string
+    scanDepthDeep: string
+    requireFullFunding: string
+    startScan: string
+    stopScan: string
+    scanning: string
+    stopped: string
+    scanSummary: string
+    saveSettings: string
+    inbox: string
+    inboxEmpty: string
+    fit: string
+    openLink: string
+    motivation: string
+    researchSummary: string
+    projectOutline: string
+    approve: string
+    markSubmitted: string
+    skip: string
+    profileHint: string
+    warnings: { tableMissing: string }
   }
   voiceAssistant: {
     title: string

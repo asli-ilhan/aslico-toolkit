@@ -56,6 +56,7 @@ export function DailyBriefing() {
   const { t, locale } = useLocale()
   const b = t.brief
   const [pendingCount, setPendingCount] = useState(0)
+  const [fundingPendingCount, setFundingPendingCount] = useState(0)
   const [deadlines, setDeadlines] = useState<BriefItem[]>([])
   const [followUps, setFollowUps] = useState<BriefItem[]>([])
   const [todayEvents, setTodayEvents] = useState<CalEvent[]>([])
@@ -73,6 +74,7 @@ export function DailyBriefing() {
       .then((r) => r.json())
       .then((data) => {
         if (data.pendingCount != null) setPendingCount(data.pendingCount)
+        if (data.fundingPendingCount != null) setFundingPendingCount(data.fundingPendingCount)
         setDeadlines(data.deadlines ?? [])
         setFollowUps(data.followUps ?? [])
         setTodayEvents(data.todayEvents ?? [])
@@ -104,6 +106,7 @@ export function DailyBriefing() {
 
   const hasReminders =
     pendingCount > 0 ||
+    fundingPendingCount > 0 ||
     deadlines.length > 0 ||
     followUps.length > 0 ||
     todayEvents.length > 0 ||
@@ -141,6 +144,9 @@ export function DailyBriefing() {
           </Link>
           <Link href="/travel-scout" className="text-[var(--accent)] hover:underline">
             {b.openTravelScout}
+          </Link>
+          <Link href="/funding-scout" className="text-[var(--accent)] hover:underline">
+            {b.openFundingScout}
           </Link>
         </div>
       </div>
@@ -197,6 +203,12 @@ export function DailyBriefing() {
 
       {hasReminders ?
         <div className="mt-4 space-y-3">
+          {fundingPendingCount > 0 && (
+            <p className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent-soft)] px-3 py-2 text-sm text-[var(--text)]">
+              {b.fundingPendingInbox.replace('{count}', String(fundingPendingCount))}
+            </p>
+          )}
+
           {pendingCount > 0 && (
             <p className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent-soft)] px-3 py-2 text-sm text-[var(--text)]">
               {b.pendingInbox.replace('{count}', String(pendingCount))}

@@ -23,7 +23,7 @@ export async function GET() {
   const todayTodos = await fetchTodayTodos(supabase, user.id, today)
   const interests = await fetchNewsletterInterests(supabase, user.id)
 
-  const [newsletterRes, cultureRes, languageRes, travelRes] = await Promise.all([
+  const [newsletterRes, cultureRes, languageRes, travelRes, fundingRes] = await Promise.all([
     supabase
       .from('newsletter_issues')
       .select('id, title, issue_date, sections')
@@ -50,6 +50,11 @@ export async function GET() {
       .order('start_date', { ascending: true })
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from('funding_applications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('status', 'pending_review'),
   ])
 
   const newsletter = newsletterRes.data
@@ -94,6 +99,7 @@ export async function GET() {
 
   return NextResponse.json({
     pendingCount: jobBrief.pendingCount,
+    fundingPendingCount: fundingRes.count ?? 0,
     deadlines: jobBrief.deadlines,
     followUps: jobBrief.followUps,
     todayEvents,

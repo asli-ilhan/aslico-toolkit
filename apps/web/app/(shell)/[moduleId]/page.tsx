@@ -28,5 +28,6 @@ export function generateStaticParams() {
     { moduleId: 'culture-tracker' },
     { moduleId: 'travel-scout' },
     { moduleId: 'language-tutor' },
+    { moduleId: 'funding-scout' },
   ]
 }

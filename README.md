@@ -74,6 +74,7 @@ Run these before using each module:
 - `packages/storage/sql/culture_tracker.sql`
 - `packages/storage/sql/travel_scout.sql`
 - `packages/storage/sql/language_tutor.sql`
+- `packages/storage/sql/funding_scout.sql`
 
 ## Adding a new module
 

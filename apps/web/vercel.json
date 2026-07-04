@@ -1,10 +1,6 @@
 {
   "crons": [
     {
-      "path": "/api/modules/job-agent/nightly",
-      "schedule": "0 2 * * *"
-    },
-    {
       "path": "/api/modules/newsletter/nightly",
       "schedule": "0 5 * * *"
     },
@@ -18,6 +14,9 @@
     }
   ],
   "functions": {
+    "app/api/modules/job-agent/scan/route.ts": {
+      "maxDuration": 300
+    },
     "app/api/modules/job-agent/nightly/route.ts": {
       "maxDuration": 300
     },
@@ -53,6 +52,9 @@
     },
     "app/api/modules/job-agent/scrape/route.ts": {
       "maxDuration": 60
+    },
+    "app/api/modules/funding-scout/scan/route.ts": {
+      "maxDuration": 300
     },
     "app/api/modules/language-tutor/report/route.ts": {
       "maxDuration": 60

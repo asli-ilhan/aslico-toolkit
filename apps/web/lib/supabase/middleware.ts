@@ -76,6 +76,7 @@ const MODULE_IDS = [
   'culture-tracker',
   'travel-scout',
   'language-tutor',
+  'funding-scout',
 ]
 
 function isModuleRoute(pathname: string) {

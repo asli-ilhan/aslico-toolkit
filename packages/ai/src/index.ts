@@ -50,6 +50,7 @@ export {
   type EvidenceItem,
   type PackInput,
 } from './job-agent'
+export { scoreFundingFit, generateFundingPack, type FundingOppInput, type FundingSettingsInput } from './funding-scout'
 
 export const aiEngine = {
   version: '0.2.0',

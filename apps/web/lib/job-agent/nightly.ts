@@ -45,10 +45,12 @@ export interface NightlyResult {
   log: { message: string; level?: 'info' | 'warn' | 'error' }[]
 }
 
-export async function runNightlyForUser(
+export async function runDiscoveryForUser(
   supabase: SupabaseClient,
   userId: string,
+  options?: { trigger?: 'manual' | 'scheduled' },
 ): Promise<NightlyResult> {
+  const trigger = options?.trigger ?? 'manual'
   const log: NightlyResult['log'] = []
   let jobsScanned = 0
   let packsCreated = 0
@@ -72,10 +74,12 @@ export async function runNightlyForUser(
     message: `Scan mode: ${preferences.scanDepth ?? 'normal'} (max ${limits.maxPacks} packs, ${limits.employerBatch} employer + ${limits.maritimeBatch} maritime careers)`,
   })
 
-  if (!preferences.nightlyEnabled) {
-    log.push({ message: 'Nightly run disabled in preferences.' })
+  if (trigger === 'scheduled' && !preferences.nightlyEnabled) {
+    log.push({ message: 'Scheduled scan disabled in preferences.' })
     return { jobsScanned, packsCreated, log }
   }
+
+  log.push({ message: trigger === 'manual' ? 'Manual scan started.' : 'Scheduled scan started.' })
 
   const { data: profileRow } = await supabase
     .from('candidate_profiles')
@@ -411,3 +415,6 @@ export async function runNightlyForUser(
 
   return { jobsScanned, packsCreated, log }
 }
+
+/** @deprecated use runDiscoveryForUser */
+export const runNightlyForUser = runDiscoveryForUser

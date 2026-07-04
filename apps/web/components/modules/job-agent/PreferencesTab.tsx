@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { GlassPanel, Button } from '@aslico/ui'
 import { useLocale } from '@/components/shell/LocaleProvider'
 import { DEFAULT_PREFERENCES } from '@/lib/job-agent/types'
+import { DiscoveryScanControls } from './DiscoveryScanControls'
 
 interface PreferencesTabProps {
   onWarning: (msg: string | null) => void
@@ -44,12 +45,8 @@ export function PreferencesTab({ onWarning }: PreferencesTabProps) {
   const [targetCompanies, setTargetCompanies] = useState('')
   const [keywords, setKeywords] = useState('')
   const [rss, setRss] = useState('')
-  const [nightlyEnabled, setNightlyEnabled] = useState(true)
   const [scanDepth, setScanDepth] = useState<'normal' | 'deep'>('normal')
   const [saving, setSaving] = useState(false)
-  const [nightlyRunning, setNightlyRunning] = useState(false)
-  const [nightlyLog, setNightlyLog] = useState<string | null>(null)
-  const [lastSummary, setLastSummary] = useState<{ scanned: number; created: number } | null>(null)
   const [runs, setRuns] = useState<RunRow[]>([])
   const [gmailConnected, setGmailConnected] = useState(false)
   const [gmailEmail, setGmailEmail] = useState<string | null>(null)
@@ -83,7 +80,6 @@ export function PreferencesTab({ onWarning }: PreferencesTabProps) {
     setTargetCompanies((p.targetCompanies ?? []).join(', '))
     setKeywords((p.keywords ?? []).join(', '))
     setRss((p.rssFeeds ?? []).join(', '))
-    setNightlyEnabled(p.nightlyEnabled ?? true)
     setScanDepth(p.scanDepth === 'deep' ? 'deep' : 'normal')
     const runsRes = await fetch('/api/modules/job-agent/runs')
     const runsData = await runsRes.json()
@@ -120,7 +116,7 @@ export function PreferencesTab({ onWarning }: PreferencesTabProps) {
           targetCompanies: targetCompanies.split(',').map((s) => s.trim()).filter(Boolean),
           keywords: keywords.split(',').map((s) => s.trim()).filter(Boolean),
           rssFeeds,
-          nightlyEnabled,
+          nightlyEnabled: false,
           scanDepth,
         },
       }),
@@ -135,26 +131,6 @@ export function PreferencesTab({ onWarning }: PreferencesTabProps) {
     }
 
     setSaving(false)
-  }
-
-  async function runNightly() {
-    setNightlyRunning(true)
-    setNightlyLog(null)
-    setLastSummary(null)
-    const res = await fetch('/api/modules/job-agent/nightly', { method: 'POST' })
-    const data = await res.json()
-    setNightlyRunning(false)
-    if (data.log) {
-      setNightlyLog(data.log.map((l: { message: string }) => l.message).join('\n'))
-    }
-    if (typeof data.jobsScanned === 'number' || typeof data.packsCreated === 'number') {
-      setLastSummary({
-        scanned: data.jobsScanned ?? 0,
-        created: data.packsCreated ?? 0,
-      })
-    }
-    if (data.warning) onWarning(ja.warnings.v3Missing)
-    load()
   }
 
   const fieldClass =
@@ -314,34 +290,14 @@ export function PreferencesTab({ onWarning }: PreferencesTabProps) {
           <option value="deep">{ja.preferences.scanDepthDeep}</option>
         </select>
       </label>
-      <label className="flex items-center gap-2 text-sm text-[var(--text)]">
-        <input
-          type="checkbox"
-          checked={nightlyEnabled}
-          onChange={(e) => setNightlyEnabled(e.target.checked)}
-        />
-        {ja.preferences.nightly}
-      </label>
+
+      <DiscoveryScanControls onWarning={onWarning} onRunFinished={load} />
+
       <div className="flex flex-wrap gap-2">
         <Button onClick={save} disabled={saving}>
           {saving ? t.common.loading : ja.preferences.save}
         </Button>
-        <Button variant="outline" onClick={runNightly} disabled={nightlyRunning}>
-          {nightlyRunning ? ja.preferences.nightlyRunning : ja.preferences.runNightly}
-        </Button>
       </div>
-      {lastSummary && (
-        <p className="text-sm text-[var(--accent)]">
-          {ja.preferences.runSummary
-            .replace('{scanned}', String(lastSummary.scanned))
-            .replace('{created}', String(lastSummary.created))}
-        </p>
-      )}
-      {nightlyLog && (
-        <pre className="max-h-40 overflow-auto rounded-xl border border-[var(--surface-border)] bg-[var(--background-alt)]/50 p-3 text-xs text-[var(--text-muted)]">
-          {nightlyLog}
-        </pre>
-      )}
     </GlassPanel>
   )
 }

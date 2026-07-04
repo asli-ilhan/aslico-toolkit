@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isMissingJobAgentV2 } from '@/lib/supabase/errors'
-import { runNightlyForUser } from '@/lib/job-agent/nightly'
+import { runDiscoveryForUser } from '@/lib/job-agent/nightly'
 import { getAllowedEmail } from '@/lib/auth/allowlist'
 
 function isCronAuthorized(request: NextRequest): boolean {
@@ -12,7 +12,7 @@ function isCronAuthorized(request: NextRequest): boolean {
   return auth === `Bearer ${secret}`
 }
 
-/** Nightly job discovery + pack generation. Cron: GET/POST with Authorization: Bearer CRON_SECRET */
+/** Optional scheduled scan (off by default). Prefer POST /api/modules/job-agent/scan for manual runs. */
 export const maxDuration = 300
 export const dynamic = 'force-dynamic'
 
@@ -31,7 +31,7 @@ async function handleNightly(request: NextRequest) {
     }
 
     const supabase = admin
-    const result = await runNightlyForUser(supabase, userId)
+    const result = await runDiscoveryForUser(supabase, userId, { trigger: 'scheduled' })
 
     await supabase.from('job_agent_runs').insert({
       user_id: userId,
@@ -52,7 +52,7 @@ async function handleNightly(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   userId = user.id
-  const result = await runNightlyForUser(supabase, userId)
+  const result = await runDiscoveryForUser(supabase, userId, { trigger: 'manual' })
 
   const { data: run, error: runError } = await supabase
     .from('job_agent_runs')

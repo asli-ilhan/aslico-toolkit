@@ -121,7 +121,7 @@ export const DEFAULT_PREFERENCES: SearchPreferences = {
   experienceLevel: 'mid',
   targetCompanies: [],
   rssFeeds: [],
-  nightlyEnabled: true,
+  nightlyEnabled: false,
   scanDepth: 'normal',
 }
 
