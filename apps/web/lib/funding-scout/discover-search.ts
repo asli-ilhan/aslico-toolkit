@@ -6,6 +6,17 @@ import { isAllowedSearchResult, isWebSearchAvailable, webSearch, type WebSearchH
 const FUNDING_SIGNAL_RE =
   /\b(burs|scholarship|fellowship|doktora|phd|doctoral|grant|hibe|2210|2214|2247|msca|marie curie|studentship|stipend|call for|başvuru|basvuru)\b/i
 
+const DISCIPLINE_RE =
+  /\b(maritime|ocean|offshore|energy|renewable|wind|machine learning|data science|engineering|digital twin|ai\b|hydrodynamic|cfd|ship|naval|gemi|deniz)\b/i
+
+const OFF_TOPIC_RE =
+  /\b(mrc\b|bbsrc|stfc|obesity|wildfire|biomarker|biomedical|political science|populist|parliamentar|proof of concept|drive35)\b/i
+
+const POSTDOC_RE = /\b(postdoc|postdoctoral|post-doctoral)\b/i
+
+const PRIORITY_FUNDER_RE =
+  /\b(tubitak|tübitak|yök|kyk|itu|i̇tü|csc|msca|nwo|fulbright|delft|cotutelle|2210|2214|horizon europe|marie curie)\b/i
+
 function inferFundingType(text: string): FundingCandidate['fundingType'] {
   const hay = text.toLowerCase()
   if (hay.includes('fellowship') || hay.includes('postdoc')) return 'fellowship'
@@ -41,6 +52,9 @@ function inferFunder(hit: WebSearchHit): string {
 function hitToCandidate(hit: WebSearchHit, settings: FundingSettings, query: string): FundingCandidate | null {
   const blob = `${hit.title} ${hit.snippet}`
   if (!FUNDING_SIGNAL_RE.test(blob)) return null
+  if (OFF_TOPIC_RE.test(blob)) return null
+  if (settings.phdStage === 'starting' && POSTDOC_RE.test(blob)) return null
+  if (!DISCIPLINE_RE.test(blob) && !PRIORITY_FUNDER_RE.test(blob)) return null
 
   const deadline = parseDeadlineFromText(blob)
   return {

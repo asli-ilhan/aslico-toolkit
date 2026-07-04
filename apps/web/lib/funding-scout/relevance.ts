@@ -2,8 +2,10 @@ import type { FundingCandidate, FundingSettings } from '@/lib/funding-scout/type
 import { matchRelatedFunder } from '@/lib/funding-scout/related-funders'
 import { checkFundingEligibility } from '@/lib/funding-scout/eligibility'
 
-const RESEARCH_RE = /\b(phd|doctoral|fellowship|scholarship|stipend|grant|funding|research|msca|burs)\b/i
-const DISCIPLINE_RE = /\b(maritime|ocean|offshore|energy|renewable|wind|machine learning|data science|engineering|digital twin|ai\b|vessel|turbine)\b/i
+const RESEARCH_RE = /\b(phd|doctoral|fellowship|scholarship|stipend|grant|funding|research|msca|burs|doktora|bursiyer)\b/i
+const DISCIPLINE_RE = /\b(maritime|ocean|offshore|energy|renewable|wind|machine learning|data science|engineering|digital twin|ai\b|vessel|turbine|hydrodynamic|cfd|ship|naval|gemi|deniz)\b/i
+const OFF_TOPIC_RE = /\b(mrc\b|bbsrc|stfc|obesity|wildfire|biomarker|biomedical|quantum computing hardware|political science|populist|parliamentar|medical research council|proof of concept|innovate uk\b(?!\s+student)|drive35|zev manufacturing)\b/i
+const POSTDOC_RE = /\b(postdoc|postdoctoral|post-doctoral|post doc|researcher r2)\b/i
 const BLOCK_RE = /\b(undergraduate only|us citizens only|uk nationals only)\b/i
 
 export interface FundingRelevance {
@@ -39,19 +41,38 @@ export function scoreFundingRelevance(opp: FundingCandidate, settings: FundingSe
   if (settings.fundingTypes.includes(opp.fundingType)) { score += 12 }
   if (RESEARCH_RE.test(hay) || /\b(burs|bursu|burslar)\b/i.test(hay)) { score += 20; reasons.push('Research funding') }
   if (DISCIPLINE_RE.test(hay)) { score += 18; reasons.push('Discipline match') }
+  if (DISCIPLINE_RE.test(opp.title)) { score += 22; reasons.push('Discipline in title') }
+  if (opp.source.startsWith('announcement:')) { score += 55; reasons.push('Official announcement page') }
+  if (opp.source.startsWith('search:')) { score -= 15; reasons.push('Web search lead — verify carefully') }
+  if (opp.region === 'turkey') { score += 30; reasons.push('Turkey region') }
+  if (OFF_TOPIC_RE.test(hay)) { score -= 50; reasons.push('Off-topic domain (health/politics/industry portal)') }
+  if (settings.phdStage === 'starting' && POSTDOC_RE.test(hay)) { score -= 45; reasons.push('Postdoc — not incoming PhD') }
   if (opp.fullFunding) { score += 10 }
   if (BLOCK_RE.test(hay)) score -= 40
   return { score: Math.min(100, Math.max(0, score)), relatedFunder: related?.label, reasons }
 }
 
 export function passesFundingRelevance(opp: FundingCandidate, settings: FundingSettings) {
+  const hay = `${opp.funder} ${opp.title} ${opp.description}`.toLowerCase()
   const relevance = scoreFundingRelevance(opp, settings)
+
+  if (OFF_TOPIC_RE.test(hay) && !opp.source.startsWith('announcement:')) {
+    return { pass: false as const, relevance, reason: 'Off-topic listing' }
+  }
+  if (settings.phdStage === 'starting' && POSTDOC_RE.test(hay) && !opp.source.startsWith('announcement:')) {
+    return { pass: false as const, relevance, reason: 'Postdoc listing' }
+  }
+  if (opp.source.startsWith('search:') && !DISCIPLINE_RE.test(`${opp.title} ${opp.description}`) &&
+    !/\b(tubitak|tübitak|yök|kyk|itu|i̇tü|csc|msca|nwo|fulbright|delft|cotutelle|2210|2214)\b/i.test(hay)) {
+    return { pass: false as const, relevance, reason: 'Search hit without field or priority funder match' }
+  }
+
   if (opp.listingKind === 'live_opening') {
     return { pass: true as const, relevance }
   }
   if (relevance.relatedFunder) return { pass: true as const, relevance }
   if (relevance.score >= 28) return { pass: true as const, relevance }
-  if (DISCIPLINE_RE.test(`${opp.title} ${opp.description}`) && RESEARCH_RE.test(hay(opp))) {
+  if (DISCIPLINE_RE.test(`${opp.title} ${opp.description}`) && RESEARCH_RE.test(hay)) {
     return { pass: true as const, relevance }
   }
   return { pass: false as const, relevance, reason: `Low relevance (${relevance.score})` }
@@ -73,10 +94,15 @@ export function rankFundingCandidates(candidates: FundingCandidate[], settings: 
         relevance: v.relevance,
         eligibility,
         priority:
-          (opp.listingKind === 'live_opening' ? 50 : 0) +
+          (opp.source.startsWith('announcement:') ? 80 : 0) +
+          (opp.region === 'turkey' ? 35 : 0) +
+          (DISCIPLINE_RE.test(opp.title) ? 30 : 0) +
+          (opp.listingKind === 'live_opening' ? 20 : 0) +
           v.relevance.score +
           (v.relevance.relatedFunder ? 30 : 0) +
-          eligibility.score * 0.6,
+          eligibility.score * 0.6 -
+          (opp.source.startsWith('search:') ? 25 : 0) -
+          (OFF_TOPIC_RE.test(hay(opp)) ? 40 : 0),
       }
     })
     .filter((x): x is NonNullable<typeof x> => x !== null)

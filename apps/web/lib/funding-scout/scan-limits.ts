@@ -10,5 +10,7 @@ export function fundingScanLimits(settings: FundingSettings) {
     searchQueries: deep ? 10 : 6,
     resultsPerQuery: deep ? 5 : 4,
     enrichConcurrency: deep ? 4 : 3,
+    evalWindow: deep ? 8 : 6,
+    maxEvaluate: deep ? 48 : 30,
   }
 }

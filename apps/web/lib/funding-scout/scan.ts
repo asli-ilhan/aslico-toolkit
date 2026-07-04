@@ -180,151 +180,147 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
     return { opportunitiesScanned, packsCreated, candidatesNew, candidatesDuplicate, skippedSaved: 0, regionsScanned, skipped, log }
   }
 
-  const evaluateBatch = ranked.slice(0, Math.min(ranked.length, limits.maxPacks * 3))
-  const toEnrich = evaluateBatch.map(({ opp }) => opp)
-  log.push({ message: `Fetching primary sources + verification search for ${toEnrich.length} candidates…` })
-  const enriched = await enrichOpeningsBatch(toEnrich, {
-    concurrency: limits.enrichConcurrency,
-    fetchPrimary: true,
-    verifySearch: isWebSearchAvailable(),
-  })
-
-  const openings = enriched.map((opp) => ({
-    funder: opp.funder,
-    title: opp.title,
-    fundingType: opp.fundingType,
-    region: opp.region,
-    description: opp.listingDescription,
-    opportunityUrl: opp.opportunityUrl,
-    primarySourceText: opp.primarySourceText,
-    primarySourceFetchedAt: opp.primarySourceFetchedAt,
-    searchVerificationSnippets: opp.searchVerificationSnippets?.map((h) => ({
-      title: h.title,
-      url: h.url,
-      snippet: h.snippet,
-    })),
-  }))
-
-  const fitMap = await scoreFundingFitBatch(masterProfile, aiSettings, openings)
-  log.push({ message: `AI evaluated ${fitMap.size} / ${openings.length} openings` })
-  if (fitMap.size < openings.length) {
-    log.push({
-      message: `Warning: ${openings.length - fitMap.size} openings missing AI scores — batch may have truncated`,
-      level: 'warn',
-    })
-  }
-
   let skippedIneligible = 0
   let skippedLowScore = 0
   let skippedNoFit = 0
+  let evalCursor = 0
+  let totalEvaluated = 0
 
-  for (let i = 0; i < evaluateBatch.length; i++) {
-    const { opp, eligibility: ruleElig } = evaluateBatch[i]
-    const enrichedOpp = enriched[i] ?? opp
-    const fit = fitMap.get(i)
-    if (!fit) {
-      skippedNoFit++
-      recordFundingSkip(skipped, opp, 'no_ai_eval', 'No AI evaluation returned', undefined, enrichedOpp)
-      continue
-    }
+  while (packsCreated < limits.maxPacks && evalCursor < ranked.length && evalCursor < limits.maxEvaluate) {
+    const wave = ranked.slice(evalCursor, evalCursor + limits.evalWindow)
+    evalCursor += wave.length
+    if (!wave.length) break
 
-    try {
-      if (!passesEligibilityGate(ruleElig, settings)) {
-        skippedIneligible++
-        recordFundingSkip(skipped, opp, 'rules', 'Failed rule-based eligibility gate', fit, enrichedOpp)
-        log.push({ message: `Skip (rules): ${opp.title.slice(0, 50)}`, level: 'info' })
+    log.push({ message: `Wave: enriching + AI eval for ${wave.length} candidates (${evalCursor}/${Math.min(ranked.length, limits.maxEvaluate)})…` })
+    const toEnrich = wave.map(({ opp }) => opp)
+    const enriched = await enrichOpeningsBatch(toEnrich, {
+      concurrency: limits.enrichConcurrency,
+      fetchPrimary: true,
+      verifySearch: isWebSearchAvailable(),
+    })
+
+    const openings = enriched.map((opp) => ({
+      funder: opp.funder,
+      title: opp.title,
+      fundingType: opp.fundingType,
+      region: opp.region,
+      description: opp.listingDescription,
+      opportunityUrl: opp.opportunityUrl,
+      primarySourceText: opp.primarySourceText,
+      primarySourceFetchedAt: opp.primarySourceFetchedAt,
+      searchVerificationSnippets: opp.searchVerificationSnippets?.map((h) => ({
+        title: h.title,
+        url: h.url,
+        snippet: h.snippet,
+      })),
+    }))
+
+    const fitMap = await scoreFundingFitBatch(masterProfile, aiSettings, openings)
+    totalEvaluated += wave.length
+    log.push({ message: `AI evaluated ${fitMap.size} / ${wave.length} in this wave` })
+
+    for (let i = 0; i < wave.length; i++) {
+      if (packsCreated >= limits.maxPacks) break
+      const { opp, eligibility: ruleElig } = wave[i]
+      const enrichedOpp = enriched[i] ?? opp
+      const fit = fitMap.get(i)
+      if (!fit) {
+        skippedNoFit++
+        recordFundingSkip(skipped, opp, 'no_ai_eval', 'No AI evaluation returned', undefined, enrichedOpp)
         continue
       }
 
-      if (fit.disqualifiers?.length) {
-        skippedIneligible++
-        const reason = fit.disqualifiers.join('; ')
-        recordFundingSkip(skipped, opp, 'disqualifier', reason, fit, enrichedOpp)
-        log.push({ message: `Skip (disqualifier): ${opp.title.slice(0, 50)} — ${reason}`, level: 'info' })
-        continue
-      }
+      try {
+        if (!passesEligibilityGate(ruleElig, settings)) {
+          skippedIneligible++
+          recordFundingSkip(skipped, opp, 'rules', 'Failed rule-based eligibility gate', fit, enrichedOpp)
+          continue
+        }
 
-      if (settings.strictEligibility && fit.eligible === false) {
-        skippedIneligible++
-        recordFundingSkip(skipped, opp, 'ineligible', fit.eligibilityReason, fit, enrichedOpp)
-        log.push({ message: `Skip (ineligible): ${opp.title.slice(0, 50)} — ${fit.eligibilityReason}`, level: 'info' })
-        continue
-      }
+        if (fit.disqualifiers?.length) {
+          skippedIneligible++
+          recordFundingSkip(skipped, opp, 'disqualifier', fit.disqualifiers.join('; '), fit, enrichedOpp)
+          continue
+        }
 
-      const threshold = minFitScore(enrichedOpp)
-      if (fit.score < threshold) {
-        skippedLowScore++
-        recordFundingSkip(skipped, opp, 'low_fit', `Fit ${fit.score}% below ${threshold}%`, fit, enrichedOpp)
-        log.push({ message: `Skip (fit ${fit.score}% < ${threshold}%): ${opp.title.slice(0, 50)}`, level: 'info' })
-        continue
-      }
+        if (settings.strictEligibility && fit.eligible === false) {
+          skippedIneligible++
+          recordFundingSkip(skipped, opp, 'ineligible', fit.eligibilityReason, fit, enrichedOpp)
+          continue
+        }
 
-      if (packsCreated >= limits.maxPacks) {
-        recordFundingSkip(skipped, opp, 'pack_limit', `Max ${limits.maxPacks} packs per scan reached`, fit, enrichedOpp)
-        continue
-      }
+        const threshold = minFitScore(enrichedOpp)
+        if (fit.score < threshold) {
+          skippedLowScore++
+          recordFundingSkip(skipped, opp, 'low_fit', `Fit ${fit.score}% below ${threshold}%`, fit, enrichedOpp)
+          continue
+        }
 
-      const pack = await generateFundingPack(masterProfile, enrichedOpp, aiSettings)
-      const deadline = resolveDeadline(enrichedOpp, fit.deadline)
-      const allFlags = [...new Set([
-        ...ruleElig.flags,
-        ...fit.eligibilityFlags,
-        enrichedOpp.primarySourceText ? 'primary_source:fetched' : 'primary_source:missing',
-        enrichedOpp.searchVerificationSnippets?.length ? 'web_verify:yes' : 'web_verify:no',
-      ])]
-      const eligibilityReason = [
-        fit.eligibilityReason,
-        fit.confidence ? `confidence: ${fit.confidence}` : '',
-        fit.applicantType ? `type: ${fit.applicantType}` : '',
-        fit.verifyNotes ? `verify: ${fit.verifyNotes}` : '',
-      ].filter(Boolean).join(' · ')
+        const pack = await generateFundingPack(masterProfile, enrichedOpp, aiSettings)
+        const deadline = resolveDeadline(enrichedOpp, fit.deadline)
+        const allFlags = [...new Set([
+          ...ruleElig.flags,
+          ...fit.eligibilityFlags,
+          enrichedOpp.primarySourceText ? 'primary_source:fetched' : 'primary_source:missing',
+          enrichedOpp.searchVerificationSnippets?.length ? 'web_verify:yes' : 'web_verify:no',
+        ])]
+        const eligibilityReason = [
+          fit.eligibilityReason,
+          fit.confidence ? `confidence: ${fit.confidence}` : '',
+          fit.applicantType ? `type: ${fit.applicantType}` : '',
+          fit.verifyNotes ? `verify: ${fit.verifyNotes}` : '',
+        ].filter(Boolean).join(' · ')
 
-      const { data: inserted, error } = await supabase.from('funding_applications').insert({
-        user_id: userId,
-        funder: enrichedOpp.funder,
-        title: enrichedOpp.title,
-        funding_type: enrichedOpp.fundingType,
-        region: enrichedOpp.region,
-        opportunity_url: enrichedOpp.opportunityUrl ?? null,
-        description: composeEnrichedDescription(enrichedOpp).slice(0, 20000),
-        deadline,
-        amount: fit.amount ?? enrichedOpp.amount ?? null,
-        fit_score: fit.score,
-        fit_reason: fit.reason,
-        eligibility_pass: fit.eligible !== false && ruleElig.eligible,
-        eligibility_reason: eligibilityReason,
-        eligibility_flags: allFlags,
-        motivation_letter: pack.motivationLetter,
-        research_summary: pack.researchSummary,
-        project_outline: pack.projectOutline,
-        status: 'pending_review',
-        source: enrichedOpp.source,
-      }).select('id').single()
+        const { data: inserted, error } = await supabase.from('funding_applications').insert({
+          user_id: userId,
+          funder: enrichedOpp.funder,
+          title: enrichedOpp.title,
+          funding_type: enrichedOpp.fundingType,
+          region: enrichedOpp.region,
+          opportunity_url: enrichedOpp.opportunityUrl ?? null,
+          description: composeEnrichedDescription(enrichedOpp).slice(0, 20000),
+          deadline,
+          amount: fit.amount ?? enrichedOpp.amount ?? null,
+          fit_score: fit.score,
+          fit_reason: fit.reason,
+          eligibility_pass: fit.eligible !== false && ruleElig.eligible,
+          eligibility_reason: eligibilityReason,
+          eligibility_flags: allFlags,
+          motivation_letter: pack.motivationLetter,
+          research_summary: pack.researchSummary,
+          project_outline: pack.projectOutline,
+          status: 'pending_review',
+          source: enrichedOpp.source,
+        }).select('id').single()
 
-      if (error) {
-        log.push({ message: `DB insert failed: ${opp.title.slice(0, 40)} — ${error.message}`, level: 'error' })
-        continue
-      }
+        if (error) {
+          log.push({ message: `DB insert failed: ${opp.title.slice(0, 40)} — ${error.message}`, level: 'error' })
+          continue
+        }
 
-      if (inserted) {
-        packsCreated++
-        const conf = fit.confidence === 'verified' ? '✓' : '?'
-        const deadlineNote = deadline ? ` · ${deadline}` : ''
-        log.push({
-          message: `${conf} ${enrichedOpp.funder}: ${enrichedOpp.title.slice(0, 55)} (${fit.score}%, ${fit.applicantType ?? 'student'})${deadlineNote}`,
-        })
-        if (deadline) {
-          try {
-            await upsertFundingDeadlineEvent(supabase, userId, inserted.id, enrichedOpp.funder, enrichedOpp.title, deadline)
-          } catch {
-            log.push({ message: 'Calendar sync failed', level: 'warn' })
+        if (inserted) {
+          packsCreated++
+          seen.add(dedupeKey(enrichedOpp))
+          const conf = fit.confidence === 'verified' ? '✓' : '?'
+          const deadlineNote = deadline ? ` · ${deadline}` : ''
+          log.push({
+            message: `${conf} PACK ${enrichedOpp.funder}: ${enrichedOpp.title.slice(0, 55)} (${fit.score}%)${deadlineNote}`,
+          })
+          if (deadline) {
+            try {
+              await upsertFundingDeadlineEvent(supabase, userId, inserted.id, enrichedOpp.funder, enrichedOpp.title, deadline)
+            } catch {
+              log.push({ message: 'Calendar sync failed', level: 'warn' })
+            }
           }
         }
+      } catch (err) {
+        log.push({ message: `Failed: ${err instanceof Error ? err.message : 'error'}`, level: 'error' })
       }
-    } catch (err) {
-      log.push({ message: `Failed: ${err instanceof Error ? err.message : 'error'}`, level: 'error' })
     }
   }
+
+  log.push({ message: `Total AI-evaluated: ${totalEvaluated} candidates across waves` })
 
   if (skippedIneligible > 0) {
     log.push({ message: `Skipped ${skippedIneligible} — eligibility / disqualifiers`, level: 'info' })
