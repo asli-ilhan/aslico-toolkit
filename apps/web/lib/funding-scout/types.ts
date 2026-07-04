@@ -30,6 +30,8 @@ export type FundingStatus =
 
 export type ScanDepth = 'normal' | 'deep'
 
+export type SupervisionModel = 'standard' | 'joint_phd' | 'co_supervision' | 'cotutelle'
+
 export interface FundingSettings {
   regions: FundingRegion[]
   fundingTypes: FundingType[]
@@ -38,6 +40,13 @@ export interface FundingSettings {
   scanDepth: ScanDepth
   citizenship: string
   phdStage: 'starting' | 'in_progress' | 'postdoc'
+  phdStartMonth: string
+  homeUniversity: string
+  homeCountry: string
+  partnerCountries: string[]
+  supervisionModel: SupervisionModel
+  partnershipNotes: string
+  strictEligibility: boolean
 }
 
 export interface FundingCandidate {
@@ -77,6 +86,13 @@ export const DEFAULT_FUNDING_SETTINGS: FundingSettings = {
   scanDepth: 'normal',
   citizenship: 'TR',
   phdStage: 'starting',
+  phdStartMonth: '2026-09',
+  homeUniversity: '',
+  homeCountry: 'TR',
+  partnerCountries: ['china', 'netherlands'],
+  supervisionModel: 'co_supervision',
+  partnershipNotes: '',
+  strictEligibility: true,
 }
 
 export function mergeFundingSettings(
@@ -88,4 +104,45 @@ export function mergeFundingSettings(
     ...new Set([...DEFAULT_FUNDING_SETTINGS.disciplines, ...(saved?.disciplines ?? [])]),
   ]
   return merged
+}
+
+export function settingsFromDbRow(row: Record<string, unknown> | null | undefined): FundingSettings {
+  if (!row) return mergeFundingSettings(null)
+  return mergeFundingSettings({
+    regions: row.regions as FundingSettings['regions'],
+    fundingTypes: row.funding_types as FundingSettings['fundingTypes'],
+    disciplines: row.disciplines as string[],
+    requireFullFunding: row.require_full_funding as boolean,
+    scanDepth: row.scan_depth as FundingSettings['scanDepth'],
+    citizenship: (row.citizenship as string) ?? 'TR',
+    phdStage: row.phd_stage as FundingSettings['phdStage'],
+    phdStartMonth: (row.phd_start_month as string) ?? '2026-09',
+    homeUniversity: (row.home_university as string) ?? '',
+    homeCountry: (row.home_country as string) ?? 'TR',
+    partnerCountries: (row.partner_countries as string[]) ?? ['china', 'netherlands'],
+    supervisionModel: (row.supervision_model as FundingSettings['supervisionModel']) ?? 'co_supervision',
+    partnershipNotes: (row.partnership_notes as string) ?? '',
+    strictEligibility: row.strict_eligibility !== false,
+  })
+}
+
+export function settingsToDbRow(userId: string, s: FundingSettings) {
+  return {
+    user_id: userId,
+    regions: s.regions,
+    funding_types: s.fundingTypes,
+    disciplines: s.disciplines,
+    require_full_funding: s.requireFullFunding,
+    scan_depth: s.scanDepth,
+    citizenship: s.citizenship,
+    phd_stage: s.phdStage,
+    phd_start_month: s.phdStartMonth,
+    home_university: s.homeUniversity,
+    home_country: s.homeCountry,
+    partner_countries: s.partnerCountries,
+    supervision_model: s.supervisionModel,
+    partnership_notes: s.partnershipNotes,
+    strict_eligibility: s.strictEligibility,
+    updated_at: new Date().toISOString(),
+  }
 }

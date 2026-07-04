@@ -75,6 +75,7 @@ Run these before using each module:
 - `packages/storage/sql/travel_scout.sql`
 - `packages/storage/sql/language_tutor.sql`
 - `packages/storage/sql/funding_scout.sql`
+- `packages/storage/sql/funding_scout_v2_eligibility.sql`
 
 ## Adding a new module
 

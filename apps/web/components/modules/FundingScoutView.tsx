@@ -18,6 +18,10 @@ interface FundingApp {
   region: string
   opportunity_url: string | null
   fit_score: number | null
+  fit_reason: string | null
+  eligibility_pass: boolean | null
+  eligibility_reason: string | null
+  eligibility_flags: string[] | null
   motivation_letter: string | null
   research_summary: string | null
   project_outline: string | null
@@ -26,6 +30,8 @@ interface FundingApp {
 }
 
 const REGIONS = ['uk', 'eu', 'turkey', 'china', 'japan', 'korea', 'gulf', 'americas', 'australia', 'global'] as const
+const PARTNER_COUNTRIES = ['china', 'netherlands', 'uk', 'germany', 'japan', 'usa'] as const
+const SUPERVISION_MODELS = ['standard', 'joint_phd', 'co_supervision', 'cotutelle'] as const
 
 export function FundingScoutView() {
   const { t, locale } = useLocale()
@@ -38,6 +44,13 @@ export function FundingScoutView() {
   const [regions, setRegions] = useState<string[]>([...DEFAULT_FUNDING_SETTINGS.regions])
   const [scanDepth, setScanDepth] = useState<'normal' | 'deep'>('normal')
   const [requireFull, setRequireFull] = useState(true)
+  const [phdStartMonth, setPhdStartMonth] = useState(DEFAULT_FUNDING_SETTINGS.phdStartMonth)
+  const [homeUniversity, setHomeUniversity] = useState('')
+  const [homeCountry, setHomeCountry] = useState(DEFAULT_FUNDING_SETTINGS.homeCountry)
+  const [partnerCountries, setPartnerCountries] = useState<string[]>([...DEFAULT_FUNDING_SETTINGS.partnerCountries])
+  const [supervisionModel, setSupervisionModel] = useState(DEFAULT_FUNDING_SETTINGS.supervisionModel)
+  const [partnershipNotes, setPartnershipNotes] = useState('')
+  const [strictEligibility, setStrictEligibility] = useState(true)
   const [loading, setLoading] = useState(true)
   const [warning, setWarning] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -70,9 +83,17 @@ export function FundingScoutView() {
       setSelectedId(listData.items?.[0]?.id ?? null)
     }
     if (settingsData.settings) {
-      setRegions(settingsData.settings.regions ?? regions)
-      setScanDepth(settingsData.settings.scanDepth ?? 'normal')
-      setRequireFull(settingsData.settings.requireFullFunding ?? true)
+      const s = settingsData.settings
+      setRegions(s.regions ?? regions)
+      setScanDepth(s.scanDepth ?? 'normal')
+      setRequireFull(s.requireFullFunding ?? true)
+      setPhdStartMonth(s.phdStartMonth ?? DEFAULT_FUNDING_SETTINGS.phdStartMonth)
+      setHomeUniversity(s.homeUniversity ?? '')
+      setHomeCountry(s.homeCountry ?? 'TR')
+      setPartnerCountries(s.partnerCountries ?? [...DEFAULT_FUNDING_SETTINGS.partnerCountries])
+      setSupervisionModel(s.supervisionModel ?? 'co_supervision')
+      setPartnershipNotes(s.partnershipNotes ?? '')
+      setStrictEligibility(s.strictEligibility !== false)
     }
     setLoading(false)
   }, [fs.warnings.tableMissing])
@@ -85,7 +106,20 @@ export function FundingScoutView() {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        settings: { regions, scanDepth, requireFullFunding: requireFull },
+        settings: {
+          regions,
+          scanDepth,
+          requireFullFunding: requireFull,
+          phdStartMonth,
+          homeUniversity,
+          homeCountry,
+          partnerCountries,
+          supervisionModel,
+          partnershipNotes,
+          strictEligibility,
+          citizenship: homeCountry,
+          phdStage: 'starting',
+        },
       }),
     })
     setSaving(false)
@@ -193,6 +227,64 @@ export function FundingScoutView() {
           )}
         </GlassPanel>
 
+        <GlassPanel className="space-y-4 p-6">
+          <h2 className="text-sm font-semibold text-[var(--text)]">{fs.eligibilityTitle}</h2>
+          <p className="text-xs text-[var(--text-muted)]">{fs.eligibilityHint}</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-sm">
+              {fs.phdStartMonth}
+              <input type="month" value={phdStartMonth} onChange={(e) => setPhdStartMonth(e.target.value)} className={fieldClass} />
+            </label>
+            <label className="block text-sm">
+              {fs.homeCountry}
+              <input value={homeCountry} onChange={(e) => setHomeCountry(e.target.value.toUpperCase())} placeholder="TR" className={fieldClass} />
+            </label>
+            <label className="block text-sm sm:col-span-2">
+              {fs.homeUniversity}
+              <input value={homeUniversity} onChange={(e) => setHomeUniversity(e.target.value)} placeholder="Istanbul Technical University" className={fieldClass} />
+            </label>
+            <label className="block text-sm">
+              {fs.supervisionModel}
+              <select value={supervisionModel} onChange={(e) => setSupervisionModel(e.target.value as typeof supervisionModel)} className={fieldClass}>
+                {SUPERVISION_MODELS.map((m) => (
+                  <option key={m} value={m}>{fs.supervisionModels[m] ?? m}</option>
+                ))}
+              </select>
+            </label>
+            <div className="text-sm">
+              <span className="block">{fs.partnerCountries}</span>
+              <div className="mt-1 flex flex-wrap gap-2">
+                {PARTNER_COUNTRIES.map((c) => (
+                  <label key={c} className="flex items-center gap-1 rounded-lg border border-[var(--surface-border)] px-2 py-1 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={partnerCountries.includes(c)}
+                      onChange={(e) => {
+                        setPartnerCountries((prev) => e.target.checked ? [...prev, c] : prev.filter((x) => x !== c))
+                      }}
+                    />
+                    {c}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <label className="block text-sm sm:col-span-2">
+              {fs.partnershipNotes}
+              <textarea
+                value={partnershipNotes}
+                onChange={(e) => setPartnershipNotes(e.target.value)}
+                placeholder={fs.partnershipNotesPlaceholder}
+                rows={3}
+                className={fieldClass}
+              />
+            </label>
+            <label className="flex items-center gap-2 text-sm sm:col-span-2">
+              <input type="checkbox" checked={strictEligibility} onChange={(e) => setStrictEligibility(e.target.checked)} />
+              {fs.strictEligibility}
+            </label>
+          </div>
+        </GlassPanel>
+
         <div className="grid gap-6 lg:grid-cols-3">
           <GlassPanel className="p-4 lg:col-span-1">
             <h2 className="mb-3 text-sm font-semibold">{fs.inbox} ({inbox.length})</h2>
@@ -215,6 +307,9 @@ export function FundingScoutView() {
                         </div>
                       )}
                       {item.fit_score != null && <div className="text-xs text-[var(--accent)]">{fs.fit}: {item.fit_score}%</div>}
+                      {item.eligibility_pass && item.eligibility_reason && (
+                        <div className="text-xs text-green-500/90">{fs.eligible}: {item.eligibility_reason.slice(0, 90)}{item.eligibility_reason.length > 90 ? '…' : ''}</div>
+                      )}
                     </button>
                   </li>
                 ))}
@@ -228,6 +323,18 @@ export function FundingScoutView() {
                 <h2 className="text-lg font-semibold text-[var(--text)]">{selected.funder}</h2>
                 <p className="text-sm text-[var(--text-muted)]">{selected.title}</p>
                 <p className="text-xs text-[var(--text-muted)]">{selected.region} · {selected.funding_type}</p>
+                {selected.eligibility_reason && (
+                  <p className="mt-2 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-xs text-[var(--text)]">
+                    <span className="font-medium">{fs.eligibilityReason}: </span>
+                    {selected.eligibility_reason}
+                    {selected.eligibility_flags?.length ? (
+                      <span className="mt-1 block text-[var(--text-muted)]">{selected.eligibility_flags.join(' · ')}</span>
+                    ) : null}
+                  </p>
+                )}
+                {selected.fit_reason && (
+                  <p className="text-xs text-[var(--text-muted)]">{fs.fit}: {selected.fit_reason}</p>
+                )}
                 <div className="mt-2 space-y-2">
                   <label className="block text-sm">
                     {fs.deadline}

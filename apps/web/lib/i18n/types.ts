@@ -613,7 +613,20 @@ export type Messages = {
     deadline: string
     noDeadline: string
     deadlineCalendarHint: string
-    warnings: { tableMissing: string }
+    eligibilityTitle: string
+    eligibilityHint: string
+    phdStartMonth: string
+    homeUniversity: string
+    homeCountry: string
+    partnerCountries: string
+    supervisionModel: string
+    partnershipNotes: string
+    partnershipNotesPlaceholder: string
+    strictEligibility: string
+    eligible: string
+    eligibilityReason: string
+    supervisionModels: Record<string, string>
+    warnings: { tableMissing: string; eligibilityMigration: string }
   }
   voiceAssistant: {
     title: string

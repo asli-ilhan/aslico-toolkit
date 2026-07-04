@@ -33,6 +33,8 @@ export const RELATED_FUNDERS: RelatedFunder[] = [
   { label: 'Vestas', patterns: ['vestas'], regions: ['eu', 'global'], sectors: ['wind'] },
   { label: 'FindAPhD', patterns: ['findaphd'], regions: ['uk', 'global'], sectors: ['research'] },
   { label: 'ProFellow', patterns: ['profellow'], regions: ['global'], sectors: ['research'] },
+  { label: 'NWO', patterns: ['nwo', 'netherlands organisation'], regions: ['eu'], sectors: ['research'] },
+  { label: 'Erasmus Mundus', patterns: ['erasmus mundus', 'emjmd'], regions: ['eu', 'global'], sectors: ['research'] },
 ]
 
 export function matchRelatedFunder(name: string): RelatedFunder | null {

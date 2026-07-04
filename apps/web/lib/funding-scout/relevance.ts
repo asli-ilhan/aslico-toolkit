@@ -1,5 +1,6 @@
 import type { FundingCandidate, FundingSettings } from '@/lib/funding-scout/types'
 import { matchRelatedFunder } from '@/lib/funding-scout/related-funders'
+import { checkFundingEligibility } from '@/lib/funding-scout/eligibility'
 
 const RESEARCH_RE = /\b(phd|doctoral|fellowship|scholarship|stipend|grant|funding|research|msca|burs)\b/i
 const DISCIPLINE_RE = /\b(maritime|ocean|offshore|energy|renewable|wind|machine learning|data science|engineering|digital twin|ai\b|vessel|turbine)\b/i
@@ -45,7 +46,17 @@ export function rankFundingCandidates(candidates: FundingCandidate[], settings: 
     .map((opp) => {
       const v = passesFundingRelevance(opp, settings)
       if (!v.pass) return null
-      return { opp, relevance: v.relevance, priority: v.relevance.score + (v.relevance.relatedFunder ? 30 : 0) }
+      const eligibility = checkFundingEligibility(opp, settings)
+      if (eligibility.hardBlock) return null
+      return {
+        opp,
+        relevance: v.relevance,
+        eligibility,
+        priority:
+          v.relevance.score +
+          (v.relevance.relatedFunder ? 30 : 0) +
+          eligibility.score * 0.6,
+      }
     })
     .filter((x): x is NonNullable<typeof x> => x !== null)
     .sort((a, b) => b.priority - a.priority)

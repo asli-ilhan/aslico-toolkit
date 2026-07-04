@@ -8,9 +8,10 @@ import {
 } from '@/lib/funding-scout/sources'
 import { fundingScanLimits } from '@/lib/funding-scout/scan-limits'
 import { rankFundingCandidates } from '@/lib/funding-scout/relevance'
-import { mergeFundingSettings, type FundingCandidate, type FundingSettings } from '@/lib/funding-scout/types'
+import { settingsFromDbRow, type FundingCandidate } from '@/lib/funding-scout/types'
 import { parseDeadlineFromText } from '@/lib/funding-scout/deadline'
 import { upsertFundingDeadlineEvent } from '@/lib/funding-scout/calendar-sync'
+import { passesEligibilityGate } from '@/lib/funding-scout/eligibility'
 
 export interface FundingScanResult {
   opportunitiesScanned: number
@@ -40,21 +41,13 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
   }
 
   const { data: settingsRow } = await supabase.from('funding_scout_settings').select('*').eq('user_id', userId).maybeSingle()
-  const settings: FundingSettings = mergeFundingSettings(
-    settingsRow ? {
-      regions: settingsRow.regions as FundingSettings['regions'],
-      fundingTypes: settingsRow.funding_types as FundingSettings['fundingTypes'],
-      disciplines: settingsRow.disciplines as string[],
-      requireFullFunding: settingsRow.require_full_funding,
-      scanDepth: settingsRow.scan_depth as FundingSettings['scanDepth'],
-      citizenship: settingsRow.citizenship ?? 'TR',
-      phdStage: settingsRow.phd_stage as FundingSettings['phdStage'],
-    } : null,
-  )
+  const settings = settingsFromDbRow(settingsRow)
 
   const limits = fundingScanLimits(settings)
   const regionsScanned = settings.regions
-  log.push({ message: `Manual scan (${settings.scanDepth}) — ${regionsScanned.join(', ')}` })
+  log.push({
+    message: `Manual scan (${settings.scanDepth}) — eligibility: ${settings.strictEligibility ? 'strict' : 'relaxed'} · PhD ${settings.phdStartMonth} · partners: ${settings.partnerCountries.join(', ')}`,
+  })
 
   const { data: profileRow } = await supabase.from('candidate_profiles').select('master_profile').eq('user_id', userId).maybeSingle()
   const masterProfile = profileRow?.master_profile as MasterProfileData | null
@@ -92,15 +85,32 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
   }
 
   const ranked = rankFundingCandidates([...unique.values()], settings)
-  log.push({ message: `Relevant: ${ranked.length} / ${unique.size} unique` })
+  log.push({ message: `Eligible + relevant: ${ranked.length} / ${unique.size} unique` })
 
-  for (const { opp } of ranked) {
+  let skippedIneligible = 0
+
+  for (const { opp, eligibility: ruleElig } of ranked) {
     if (packsCreated >= limits.maxPacks) break
     try {
+      if (!passesEligibilityGate(ruleElig, settings)) {
+        skippedIneligible++
+        log.push({ message: `Skip: ${opp.funder} — ${ruleElig.reasons[0] ?? 'ineligible'}`, level: 'info' })
+        continue
+      }
+
       const fit = await scoreFundingFit(masterProfile, opp, settings)
-      if (fit.score < 40) continue
+      if (settings.strictEligibility && !fit.eligible) {
+        skippedIneligible++
+        log.push({ message: `Skip: ${opp.funder} — ${fit.eligibilityReason}`, level: 'info' })
+        continue
+      }
+      if (fit.score < 45) continue
+
       const pack = await generateFundingPack(masterProfile, opp, settings)
       const deadline = resolveDeadline(opp, fit.deadline)
+      const allFlags = [...new Set([...ruleElig.flags, ...fit.eligibilityFlags])]
+      const eligibilityReason = fit.eligibilityReason || ruleElig.reasons.join('; ')
+
       const { data: inserted, error } = await supabase.from('funding_applications').insert({
         user_id: userId,
         funder: opp.funder,
@@ -113,6 +123,9 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
         amount: opp.amount ?? null,
         fit_score: fit.score,
         fit_reason: fit.reason,
+        eligibility_pass: fit.eligible && ruleElig.eligible,
+        eligibility_reason: eligibilityReason,
+        eligibility_flags: allFlags,
         motivation_letter: pack.motivationLetter,
         research_summary: pack.researchSummary,
         project_outline: pack.projectOutline,
@@ -122,7 +135,7 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
       if (!error && inserted) {
         packsCreated++
         const deadlineNote = deadline ? ` · deadline ${deadline}` : ''
-        log.push({ message: `Pack: ${opp.funder} · ${opp.title} (${fit.score}%)${deadlineNote}` })
+        log.push({ message: `✓ ${opp.funder} · ${opp.title} (${fit.score}%) — ${eligibilityReason.slice(0, 80)}${deadlineNote}` })
         if (deadline) {
           try {
             await upsertFundingDeadlineEvent(supabase, userId, inserted.id, opp.funder, opp.title, deadline)
@@ -134,6 +147,10 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
     } catch (err) {
       log.push({ message: `Failed ${opp.funder}: ${err instanceof Error ? err.message : 'error'}`, level: 'error' })
     }
+  }
+
+  if (skippedIneligible > 0) {
+    log.push({ message: `Skipped ${skippedIneligible} ineligible / poor-fit programmes`, level: 'info' })
   }
 
   return { opportunitiesScanned, packsCreated, regionsScanned, log }

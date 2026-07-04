@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isMissingFundingScoutTable } from '@/lib/supabase/errors'
-import { DEFAULT_FUNDING_SETTINGS, mergeFundingSettings } from '@/lib/funding-scout/types'
+import {
+  DEFAULT_FUNDING_SETTINGS,
+  mergeFundingSettings,
+  settingsFromDbRow,
+  settingsToDbRow,
+} from '@/lib/funding-scout/types'
 
 export async function GET() {
   const supabase = await createClient()
@@ -18,19 +23,7 @@ export async function GET() {
     return NextResponse.json({ settings: DEFAULT_FUNDING_SETTINGS, warning: 'funding_scout_table_missing' })
   }
 
-  const settings = mergeFundingSettings(
-    data ? {
-      regions: data.regions,
-      fundingTypes: data.funding_types,
-      disciplines: data.disciplines,
-      requireFullFunding: data.require_full_funding,
-      scanDepth: data.scan_depth,
-      citizenship: data.citizenship,
-      phdStage: data.phd_stage,
-    } : null,
-  )
-
-  return NextResponse.json({ settings })
+  return NextResponse.json({ settings: settingsFromDbRow(data) })
 }
 
 export async function PATCH(request: Request) {
@@ -41,17 +34,7 @@ export async function PATCH(request: Request) {
   const body = await request.json()
   const s = mergeFundingSettings(body.settings)
 
-  const { error } = await supabase.from('funding_scout_settings').upsert({
-    user_id: user.id,
-    regions: s.regions,
-    funding_types: s.fundingTypes,
-    disciplines: s.disciplines,
-    require_full_funding: s.requireFullFunding,
-    scan_depth: s.scanDepth,
-    citizenship: s.citizenship,
-    phd_stage: s.phdStage,
-    updated_at: new Date().toISOString(),
-  })
+  const { error } = await supabase.from('funding_scout_settings').upsert(settingsToDbRow(user.id, s))
 
   if (error) {
     if (isMissingFundingScoutTable(error)) {
