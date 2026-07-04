@@ -775,4 +775,28 @@ export const tr: Messages = {
       noMic: 'Bu tarayıcıda mikrofon kullanılamıyor.',
     },
   },
+  scoutSkipped: {
+    title: 'Taramada atlananlar',
+    hint: 'Otomatik elenen adaylar — uygun olduğunu düşünürsen paket üret.',
+    empty: 'Son taramalardan atlanan kayıt yok.',
+    fit: 'Uyum',
+    openLink: 'Linki aç →',
+    generatePack: 'Paket üret',
+    dismiss: 'Kaldır',
+    categories: {
+      duplicate: 'Zaten kayıtlı',
+      rules: 'Kural filtresi',
+      disqualifier: 'Eleme',
+      ineligible: 'Uygun değil',
+      low_fit: 'Düşük uyum',
+      no_ai_eval: 'AI skoru yok',
+      keyword: 'Anahtar kelime yok',
+      remote: 'Remote değil',
+      excluded: 'Engelli şirket',
+      pack_limit: 'Tarama limiti',
+    },
+    warnings: {
+      tableMissing: 'Supabase SQL Editor\'da scout_skipped.sql çalıştır.',
+    },
+  },
 }

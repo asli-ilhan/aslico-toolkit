@@ -38,11 +38,33 @@ import {
   experienceNoteForCv,
   rankCandidatesByRelevance,
 } from '@/lib/job-agent/relevance'
+import type { ScoutSkippedInput } from '@/lib/scout/skipped'
 
 export interface NightlyResult {
   jobsScanned: number
   packsCreated: number
+  skipped: ScoutSkippedInput[]
   log: { message: string; level?: 'info' | 'warn' | 'error' }[]
+}
+
+function recordJobSkip(
+  skipped: ScoutSkippedInput[],
+  job: JobCandidate,
+  category: ScoutSkippedInput['skipCategory'],
+  reason: string,
+  fit?: { score: number; reason: string },
+) {
+  skipped.push({
+    moduleId: 'job-agent',
+    title: job.role,
+    subtitle: job.company,
+    itemUrl: job.jobUrl,
+    description: job.jobDescription.slice(0, 2000),
+    skipReason: reason,
+    skipCategory: category,
+    fitScore: fit?.score ?? null,
+    candidateData: { job, fit },
+  })
 }
 
 export async function runDiscoveryForUser(
@@ -52,12 +74,13 @@ export async function runDiscoveryForUser(
 ): Promise<NightlyResult> {
   const trigger = options?.trigger ?? 'manual'
   const log: NightlyResult['log'] = []
+  const skipped: ScoutSkippedInput[] = []
   let jobsScanned = 0
   let packsCreated = 0
 
   if (!process.env.ANTHROPIC_API_KEY) {
     log.push({ message: 'ANTHROPIC_API_KEY missing. Skipping pack generation.', level: 'warn' })
-    return { jobsScanned, packsCreated, log }
+    return { jobsScanned, packsCreated, skipped, log }
   }
 
   const { data: prefsRow } = await supabase
@@ -76,7 +99,7 @@ export async function runDiscoveryForUser(
 
   if (trigger === 'scheduled' && !preferences.nightlyEnabled) {
     log.push({ message: 'Scheduled scan disabled in preferences.' })
-    return { jobsScanned, packsCreated, log }
+    return { jobsScanned, packsCreated, skipped, log }
   }
 
   log.push({ message: trigger === 'manual' ? 'Manual scan started.' : 'Scheduled scan started.' })
@@ -90,7 +113,7 @@ export async function runDiscoveryForUser(
   const masterProfile = profileRow?.master_profile as MasterProfileData | null
   if (!masterProfile?.summary && !masterProfile?.evidence?.length) {
     log.push({ message: 'No master profile. Build profile first.', level: 'warn' })
-    return { jobsScanned, packsCreated, log }
+    return { jobsScanned, packsCreated, skipped, log }
   }
 
   const dedupeIndex = await loadJobDedupeIndex(supabase, userId)
@@ -276,7 +299,7 @@ export async function runDiscoveryForUser(
       message: 'No relevant jobs after filtering. Try Deep scan or lower min fit.',
       level: 'warn',
     })
-    return { jobsScanned, packsCreated, log }
+    return { jobsScanned, packsCreated, skipped, log }
   }
 
   let skippedDupes = 0
@@ -288,15 +311,20 @@ export async function runDiscoveryForUser(
   const maxPacks = limits.maxPacks
 
   for (const { job, alignment: preAlignment } of ranked) {
-    if (packsCreated >= maxPacks) break
+    if (packsCreated >= maxPacks) {
+      recordJobSkip(skipped, job, 'pack_limit', `Max ${maxPacks} packs per scan reached`)
+      continue
+    }
 
     const dupe = dedupeIndex.check(job)
     if (dupe.duplicate) {
       skippedDupes++
+      recordJobSkip(skipped, job, 'duplicate', 'Already seen / in inbox / applied')
       continue
     }
 
     if (isCompanyExcluded(job.company, preferences.excludeCompanies)) {
+      recordJobSkip(skipped, job, 'excluded', `Company on blocklist: ${job.company}`)
       log.push({ message: `Skipped excluded company: ${job.company}` })
       continue
     }
@@ -305,6 +333,7 @@ export async function runDiscoveryForUser(
 
     if (userKeywords.length && !matchesKeywords(`${job.jobDescription} ${job.role}`, userKeywords)) {
       skippedKeywords++
+      recordJobSkip(skipped, job, 'keyword', 'No user keyword match')
       continue
     }
 
@@ -315,6 +344,7 @@ export async function runDiscoveryForUser(
       )
       if (!remoteish) {
         skippedRemote++
+        recordJobSkip(skipped, job, 'remote', 'Remote required — listing not remote/hybrid')
         continue
       }
     }
@@ -337,6 +367,7 @@ export async function runDiscoveryForUser(
 
     if (fit.score < preferences.minFitScore) {
       skippedFit++
+      recordJobSkip(skipped, job, 'low_fit', `Fit ${fit.score}% below min ${preferences.minFitScore}%`, fit)
       if (skippedFit <= 12) {
         log.push({ message: `Below min fit (${fit.score}%): ${job.company} · ${job.role}` })
       }
@@ -413,7 +444,9 @@ export async function runDiscoveryForUser(
     })
   }
 
-  return { jobsScanned, packsCreated, log }
+  log.push({ message: `Skipped candidates saved for review: ${skipped.length}`, level: skipped.length ? 'info' : undefined })
+
+  return { jobsScanned, packsCreated, skipped, log }
 }
 
 /** @deprecated use runDiscoveryForUser */

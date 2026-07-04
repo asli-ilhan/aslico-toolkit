@@ -652,4 +652,15 @@ export type Messages = {
     warnings: { tableMissing: string }
     errors: { sendFailed: string; noMic: string }
   }
+  scoutSkipped: {
+    title: string
+    hint: string
+    empty: string
+    fit: string
+    openLink: string
+    generatePack: string
+    dismiss: string
+    categories: Record<string, string>
+    warnings: { tableMissing: string }
+  }
 }

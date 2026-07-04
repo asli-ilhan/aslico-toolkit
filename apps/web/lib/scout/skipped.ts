@@ -1,0 +1,121 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+export type ScoutModuleId = 'funding-scout' | 'job-agent'
+
+export type SkipCategory =
+  | 'duplicate'
+  | 'rules'
+  | 'disqualifier'
+  | 'ineligible'
+  | 'low_fit'
+  | 'no_ai_eval'
+  | 'keyword'
+  | 'remote'
+  | 'excluded'
+  | 'pack_limit'
+
+export interface ScoutSkippedInput {
+  moduleId: ScoutModuleId
+  title: string
+  subtitle?: string
+  itemUrl?: string
+  description?: string
+  skipReason: string
+  skipCategory: SkipCategory | string
+  fitScore?: number | null
+  candidateData?: Record<string, unknown>
+}
+
+export interface ScoutSkippedRecord {
+  id: string
+  module_id: ScoutModuleId
+  run_id: string | null
+  title: string
+  subtitle: string | null
+  item_url: string | null
+  description: string | null
+  skip_reason: string
+  skip_category: string
+  fit_score: number | null
+  candidate_data: Record<string, unknown>
+  promoted_at: string | null
+  dismissed_at: string | null
+  created_at: string
+}
+
+const MAX_PER_SCAN = 80
+
+export async function saveScoutSkippedItems(
+  supabase: SupabaseClient,
+  userId: string,
+  runId: string | null,
+  items: ScoutSkippedInput[],
+): Promise<number> {
+  if (!items.length) return 0
+
+  const rows = items.slice(0, MAX_PER_SCAN).map((item) => ({
+    user_id: userId,
+    module_id: item.moduleId,
+    run_id: runId,
+    title: item.title.slice(0, 300),
+    subtitle: item.subtitle?.slice(0, 200) ?? null,
+    item_url: item.itemUrl ?? null,
+    description: item.description?.slice(0, 8000) ?? null,
+    skip_reason: item.skipReason.slice(0, 500),
+    skip_category: item.skipCategory,
+    fit_score: item.fitScore ?? null,
+    candidate_data: item.candidateData ?? {},
+  }))
+
+  const { error } = await supabase.from('scout_skipped_items').insert(rows)
+  if (error) throw error
+  return rows.length
+}
+
+export async function listScoutSkippedItems(
+  supabase: SupabaseClient,
+  userId: string,
+  moduleId: ScoutModuleId,
+  limit = 60,
+): Promise<ScoutSkippedRecord[]> {
+  const { data, error } = await supabase
+    .from('scout_skipped_items')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('module_id', moduleId)
+    .is('dismissed_at', null)
+    .is('promoted_at', null)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) throw error
+  return (data ?? []) as ScoutSkippedRecord[]
+}
+
+export async function dismissScoutSkippedItem(
+  supabase: SupabaseClient,
+  userId: string,
+  id: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('scout_skipped_items')
+    .update({ dismissed_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('user_id', userId)
+
+  if (error) throw error
+}
+
+export async function markScoutSkippedPromoted(
+  supabase: SupabaseClient,
+  userId: string,
+  id: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('scout_skipped_items')
+    .update({ promoted_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('user_id', userId)
+
+  if (error) throw error
+}

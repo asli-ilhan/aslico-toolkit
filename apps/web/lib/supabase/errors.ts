@@ -103,3 +103,10 @@ export function isMissingFundingScoutTable(error: {
     isMissingTable(error, 'funding_scout_runs')
   )
 }
+
+export function isMissingScoutSkippedTable(error: {
+  code?: string
+  message?: string
+}): boolean {
+  return isMissingTable(error, 'scout_skipped_items')
+}

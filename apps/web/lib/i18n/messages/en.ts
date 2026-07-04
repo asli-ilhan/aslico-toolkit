@@ -777,4 +777,28 @@ export const en: Messages = {
       noMic: 'Microphone unavailable in this browser.',
     },
   },
+  scoutSkipped: {
+    title: 'Skipped by scan',
+    hint: 'Auto-filtered candidates — review and generate a pack if you disagree.',
+    empty: 'No skipped items from recent scans.',
+    fit: 'Fit',
+    openLink: 'Open link →',
+    generatePack: 'Generate pack',
+    dismiss: 'Dismiss',
+    categories: {
+      duplicate: 'Already saved',
+      rules: 'Rule filter',
+      disqualifier: 'Disqualifier',
+      ineligible: 'Ineligible',
+      low_fit: 'Low fit',
+      no_ai_eval: 'No AI score',
+      keyword: 'No keyword',
+      remote: 'Not remote',
+      excluded: 'Blocklist',
+      pack_limit: 'Scan limit',
+    },
+    warnings: {
+      tableMissing: 'Run packages/storage/sql/scout_skipped.sql in Supabase SQL Editor.',
+    },
+  },
 }

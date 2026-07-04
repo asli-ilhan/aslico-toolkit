@@ -6,6 +6,7 @@ import { useLocale } from '@/components/shell/LocaleProvider'
 import type { ApplicationPack } from './types'
 import { PackDetailPanel } from './PackDetailPanel'
 import { DiscoveryPanel } from './DiscoveryPanel'
+import { ScoutSkippedPanel } from '@/components/scout/ScoutSkippedPanel'
 
 interface InboxTabProps {
   onWarning: (msg: string | null) => void
@@ -17,6 +18,7 @@ export function InboxTab({ onWarning }: InboxTabProps) {
   const [items, setItems] = useState<ApplicationPack[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [skippedRefresh, setSkippedRefresh] = useState(0)
 
   const selected = items.find((i) => i.id === selectedId) ?? items[0] ?? null
 
@@ -63,18 +65,40 @@ export function InboxTab({ onWarning }: InboxTabProps) {
 
   if (items.length === 0) {
     return (
-      <GlassPanel className="space-y-4 p-8">
-        <p className="text-center text-sm text-[var(--text-muted)]">{ja.inbox.empty}</p>
-        <DiscoveryPanel onComplete={load} onWarning={onWarning} />
-      </GlassPanel>
+      <div className="space-y-4">
+        <GlassPanel className="space-y-4 p-8">
+          <p className="text-center text-sm text-[var(--text-muted)]">{ja.inbox.empty}</p>
+          <DiscoveryPanel
+            onComplete={load}
+            onWarning={onWarning}
+            onRunFinished={() => setSkippedRefresh((n) => n + 1)}
+          />
+        </GlassPanel>
+        <ScoutSkippedPanel
+          moduleId="job-agent"
+          refreshKey={skippedRefresh}
+          onPromoted={load}
+        />
+      </div>
     )
   }
 
   return (
     <div className="space-y-4">
       <GlassPanel className="p-4">
-        <DiscoveryPanel onComplete={load} onWarning={onWarning} compact />
+        <DiscoveryPanel
+          onComplete={load}
+          onWarning={onWarning}
+          compact
+          onRunFinished={() => setSkippedRefresh((n) => n + 1)}
+        />
       </GlassPanel>
+
+      <ScoutSkippedPanel
+        moduleId="job-agent"
+        refreshKey={skippedRefresh}
+        onPromoted={load}
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <GlassPanel className="p-4 lg:col-span-1">

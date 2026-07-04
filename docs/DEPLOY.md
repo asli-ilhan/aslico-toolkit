@@ -51,6 +51,9 @@ Copy from `apps/web/.env.local` into Vercel → Settings → Environment Variabl
 | `JOOBLE_API_KEY` | job discovery (LinkedIn/Indeed agg.) |
 | `FINDWORK_API_KEY` | optional dev jobs |
 | `TAVILY_API_KEY` | Funding Scout web search + verification ([tavily.com](https://tavily.com)) — optional but recommended |
+
+Run `packages/storage/sql/scout_skipped.sql` for the **Skipped by scan** review list (Funding Scout + Job Agent).
+
 | `CRON_SECRET` | ✓ for cron (random string) |
 | `NEXT_PUBLIC_APP_URL` | `https://your-app.vercel.app` |
 

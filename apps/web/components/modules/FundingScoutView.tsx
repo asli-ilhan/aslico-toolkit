@@ -9,6 +9,7 @@ import { ModuleGlyph } from '@/components/canvas/ModuleGlyph'
 import { getModuleById } from '@/lib/module-registry'
 import { useFundingScan } from '@/lib/funding-scout/use-funding-scan'
 import { DEFAULT_FUNDING_SETTINGS } from '@/lib/funding-scout/types'
+import { ScoutSkippedPanel } from '@/components/scout/ScoutSkippedPanel'
 
 interface FundingApp {
   id: string
@@ -61,6 +62,7 @@ export function FundingScoutView() {
   const [warning, setWarning] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [deadlineDraft, setDeadlineDraft] = useState('')
+  const [skippedRefresh, setSkippedRefresh] = useState(0)
 
   const selected = items.find((i) => i.id === selectedId) ?? items[0] ?? null
   const selectedConfidence = selected ? flagValue(selected.eligibility_flags, 'confidence') : null
@@ -141,7 +143,10 @@ export function FundingScoutView() {
     await saveSettings()
     const { data, aborted } = await runScan()
     if (!aborted && data?.warning === 'funding_scout_table_missing') setWarning(fs.warnings.tableMissing)
-    if (!aborted) load()
+    if (!aborted) {
+      load()
+      setSkippedRefresh((n) => n + 1)
+    }
   }
 
   async function patchItem(id: string, patch: Record<string, string | null>) {
@@ -434,6 +439,12 @@ export function FundingScoutView() {
             </GlassPanel>
           )}
         </div>
+
+        <ScoutSkippedPanel
+          moduleId="funding-scout"
+          refreshKey={skippedRefresh}
+          onPromoted={load}
+        />
 
         <p className="text-xs text-[var(--text-muted)]">{fs.profileHint}</p>
       </div>

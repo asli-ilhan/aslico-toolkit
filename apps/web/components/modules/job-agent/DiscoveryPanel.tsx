@@ -9,15 +9,17 @@ import { Button } from '@aslico/ui'
 interface DiscoveryPanelProps {
   onComplete: () => void
   onWarning: (msg: string | null) => void
+  onRunFinished?: () => void
   compact?: boolean
 }
 
-export function DiscoveryPanel({ onComplete, onWarning, compact }: DiscoveryPanelProps) {
+export function DiscoveryPanel({ onComplete, onWarning, onRunFinished, compact }: DiscoveryPanelProps) {
   return (
     <DiscoveryScanControls
       compact={compact}
       onComplete={onComplete}
       onWarning={onWarning}
+      onRunFinished={onRunFinished}
     />
   )
 }
