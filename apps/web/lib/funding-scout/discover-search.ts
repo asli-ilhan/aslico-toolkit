@@ -63,7 +63,7 @@ export async function discoverFromWebSearch(
 ): Promise<{ items: FundingCandidate[]; log: string[] }> {
   const log: string[] = []
   if (!isWebSearchAvailable()) {
-    log.push('Web search: no TAVILY_API_KEY or BRAVE_SEARCH_API_KEY — skipping discovery')
+    log.push('Web search: TAVILY_API_KEY not set — skipping discovery')
     return { items: [], log }
   }
 

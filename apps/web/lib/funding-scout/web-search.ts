@@ -120,7 +120,7 @@ async function braveSearch(query: string, maxResults: number): Promise<WebSearch
     }))
 }
 
-/** Run web search using Tavily (preferred) or Brave Search API. */
+/** Run web search — Tavily when TAVILY_API_KEY is set (Brave remains an undocumented fallback). */
 export async function webSearch(query: string, maxResults = 5): Promise<WebSearchHit[]> {
   const provider = webSearchProvider()
   if (!provider) return []

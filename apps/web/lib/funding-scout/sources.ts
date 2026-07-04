@@ -121,7 +121,7 @@ export async function discoverLiveOpenings(
     raw.push(...searched.items)
     log.push(...searched.log)
   } else {
-    log.push('Web search: add TAVILY_API_KEY or BRAVE_SEARCH_API_KEY for live discovery')
+    log.push('Web search: add TAVILY_API_KEY for live discovery')
   }
 
   return { items: raw, log }

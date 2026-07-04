@@ -50,8 +50,7 @@ Copy from `apps/web/.env.local` into Vercel → Settings → Environment Variabl
 | `ADZUNA_APP_KEY` | job discovery |
 | `JOOBLE_API_KEY` | job discovery (LinkedIn/Indeed agg.) |
 | `FINDWORK_API_KEY` | optional dev jobs |
-| `TAVILY_API_KEY` | Funding Scout web search + verification ([tavily.com](https://tavily.com)) |
-| `BRAVE_SEARCH_API_KEY` | Funding Scout fallback search ([brave.com/search/api](https://brave.com/search/api/)) |
+| `TAVILY_API_KEY` | Funding Scout web search + verification ([tavily.com](https://tavily.com)) — optional but recommended |
 | `CRON_SECRET` | ✓ for cron (random string) |
 | `NEXT_PUBLIC_APP_URL` | `https://your-app.vercel.app` |
 
