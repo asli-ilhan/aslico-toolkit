@@ -27,6 +27,12 @@ interface FundingApp {
   project_outline: string | null
   status: string
   deadline: string | null
+  amount: string | null
+}
+
+function flagValue(flags: string[] | null | undefined, key: string): string | null {
+  const hit = flags?.find((f) => f.startsWith(`${key}:`))
+  return hit ? hit.slice(key.length + 1) : null
 }
 
 const REGIONS = ['uk', 'eu', 'turkey', 'china', 'japan', 'korea', 'gulf', 'americas', 'australia', 'global'] as const
@@ -57,6 +63,11 @@ export function FundingScoutView() {
   const [deadlineDraft, setDeadlineDraft] = useState('')
 
   const selected = items.find((i) => i.id === selectedId) ?? items[0] ?? null
+  const selectedConfidence = selected ? flagValue(selected.eligibility_flags, 'confidence') : null
+  const selectedApplicantType = selected ? flagValue(selected.eligibility_flags, 'applicant_type') : null
+  const selectedVerifyNote = selected?.eligibility_reason?.includes('verify: ')
+    ? selected.eligibility_reason.split('verify: ').pop()?.split(' · ')[0]
+    : null
   const inbox = [...items.filter((i) => i.status === 'pending_review')].sort((a, b) => {
     if (a.deadline && b.deadline) return a.deadline.localeCompare(b.deadline)
     if (a.deadline) return -1
@@ -307,6 +318,12 @@ export function FundingScoutView() {
                         </div>
                       )}
                       {item.fit_score != null && <div className="text-xs text-[var(--accent)]">{fs.fit}: {item.fit_score}%</div>}
+                      {flagValue(item.eligibility_flags, 'confidence') === 'verified' && (
+                        <div className="text-xs text-green-500/90">{fs.confidenceVerified}</div>
+                      )}
+                      {flagValue(item.eligibility_flags, 'confidence') === 'unverified' && (
+                        <div className="text-xs text-amber-500/90">{fs.confidenceUnverified}</div>
+                      )}
                       {item.eligibility_pass && item.eligibility_reason && (
                         <div className="text-xs text-green-500/90">{fs.eligible}: {item.eligibility_reason.slice(0, 90)}{item.eligibility_reason.length > 90 ? '…' : ''}</div>
                       )}
@@ -323,6 +340,29 @@ export function FundingScoutView() {
                 <h2 className="text-lg font-semibold text-[var(--text)]">{selected.funder}</h2>
                 <p className="text-sm text-[var(--text-muted)]">{selected.title}</p>
                 <p className="text-xs text-[var(--text-muted)]">{selected.region} · {selected.funding_type}</p>
+                {(selectedConfidence || selectedApplicantType || selected.amount) && (
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                    {selectedConfidence && (
+                      <span className={`rounded-lg px-2 py-1 ${selectedConfidence === 'verified' ? 'bg-green-500/15 text-green-400' : 'bg-amber-500/15 text-amber-400'}`}>
+                        {fs.confidence}: {selectedConfidence === 'verified' ? fs.confidenceVerified : fs.confidenceUnverified}
+                      </span>
+                    )}
+                    {selectedApplicantType && (
+                      <span className="rounded-lg bg-[var(--background-alt)] px-2 py-1 text-[var(--text-muted)]">
+                        {fs.applicantType}: {selectedApplicantType.includes('PI-led') ? fs.applicantTypePiLed : fs.applicantTypeStudent}
+                      </span>
+                    )}
+                    {selected.amount && (
+                      <span className="rounded-lg bg-[var(--background-alt)] px-2 py-1 text-[var(--text-muted)]">{selected.amount}</span>
+                    )}
+                  </div>
+                )}
+                {selectedVerifyNote && (
+                  <p className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-[var(--text)]">
+                    <span className="font-medium">{fs.verifyNotes}: </span>
+                    {selectedVerifyNote}
+                  </p>
+                )}
                 {selected.eligibility_reason && (
                   <p className="mt-2 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-xs text-[var(--text)]">
                     <span className="font-medium">{fs.eligibilityReason}: </span>

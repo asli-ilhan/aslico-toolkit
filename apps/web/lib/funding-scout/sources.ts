@@ -6,6 +6,8 @@ import {
   type AnnouncementPage,
 } from '@/lib/funding-scout/opening-quality'
 import { isTurkishCandidate } from '@/lib/funding-scout/turkey-priority'
+import { discoverFromWebSearch } from '@/lib/funding-scout/discover-search'
+import { isWebSearchAvailable, webSearchProvider } from '@/lib/funding-scout/web-search'
 
 export interface FundingSource {
   id: string
@@ -84,7 +86,14 @@ export async function parseFundingRss(feedUrl: string, region: FundingRegion, la
 
 export async function discoverLiveOpenings(
   settings: FundingSettings,
-  limits: { rssPerFeed: number; sourceBatch: number; announcementsPerPage: number },
+  limits: {
+    rssPerFeed: number
+    sourceBatch: number
+    announcementsPerPage: number
+    searchQueries: number
+    resultsPerQuery: number
+  },
+  disciplines: string[] = settings.disciplines,
 ): Promise<{ items: FundingCandidate[]; log: string[] }> {
   const log: string[] = []
   const raw: FundingCandidate[] = []
@@ -104,6 +113,15 @@ export async function discoverLiveOpenings(
     } catch (err) {
       log.push(`RSS ${source.label}: ${err instanceof Error ? err.message : 'failed'}`)
     }
+  }
+
+  if (isWebSearchAvailable()) {
+    log.push(`Web search discovery (${webSearchProvider()})`)
+    const searched = await discoverFromWebSearch(settings, limits, disciplines)
+    raw.push(...searched.items)
+    log.push(...searched.log)
+  } else {
+    log.push('Web search: add TAVILY_API_KEY or BRAVE_SEARCH_API_KEY for live discovery')
   }
 
   return { items: raw, log }

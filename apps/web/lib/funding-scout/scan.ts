@@ -1,19 +1,37 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { generateFundingPack, scoreFundingFit, type MasterProfileData } from '@aslico/ai'
+import { generateFundingPack, scoreFundingFitBatch, type MasterProfileData } from '@aslico/ai'
 import { discoverLiveOpenings } from '@/lib/funding-scout/sources'
 import { fundingScanLimits } from '@/lib/funding-scout/scan-limits'
 import { rankFundingCandidates } from '@/lib/funding-scout/relevance'
-import { settingsFromDbRow, type FundingCandidate } from '@/lib/funding-scout/types'
+import { settingsFromDbRow, type FundingCandidate, type FundingSettings } from '@/lib/funding-scout/types'
 import { parseDeadlineFromText } from '@/lib/funding-scout/deadline'
 import { upsertFundingDeadlineEvent } from '@/lib/funding-scout/calendar-sync'
 import { passesEligibilityGate } from '@/lib/funding-scout/eligibility'
 import { filterLiveOpenings } from '@/lib/funding-scout/opening-quality'
+import { enrichOpeningsBatch, composeEnrichedDescription } from '@/lib/funding-scout/enrich-opening'
+import { isWebSearchAvailable, webSearchProvider } from '@/lib/funding-scout/web-search'
 
 export interface FundingScanResult {
   opportunitiesScanned: number
   packsCreated: number
   regionsScanned: string[]
   log: { message: string; level?: 'info' | 'warn' | 'error' }[]
+}
+
+function settingsForAi(settings: FundingSettings) {
+  return {
+    citizenship: settings.citizenship,
+    homeCountry: settings.homeCountry,
+    phdStage: settings.phdStage,
+    phdStartMonth: settings.phdStartMonth,
+    homeUniversity: settings.homeUniversity,
+    partnerCountries: settings.partnerCountries,
+    supervisionModel: settings.supervisionModel,
+    partnershipNotes: settings.partnershipNotes,
+    strictEligibility: settings.strictEligibility,
+    disciplines: settings.disciplines,
+    regions: settings.regions,
+  }
 }
 
 function resolveDeadline(opp: FundingCandidate, aiDeadline?: string | null): string | null {
@@ -38,12 +56,16 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
 
   const { data: settingsRow } = await supabase.from('funding_scout_settings').select('*').eq('user_id', userId).maybeSingle()
   const settings = settingsFromDbRow(settingsRow)
+  const aiSettings = settingsForAi(settings)
 
   const limits = fundingScanLimits(settings)
   const regionsScanned = settings.regions
   log.push({
-    message: `Live-opening scan (${settings.scanDepth}) — max ${limits.maxPacks} packs · eligibility ${settings.strictEligibility ? 'strict' : 'relaxed'}`,
+    message: `Live-opening scan (${settings.scanDepth}) — AI scout + primary verify · max ${limits.maxPacks} packs`,
   })
+  if (isWebSearchAvailable()) {
+    log.push({ message: `Web search: ${webSearchProvider()} enabled` })
+  }
 
   const { data: profileRow } = await supabase.from('candidate_profiles').select('master_profile').eq('user_id', userId).maybeSingle()
   const masterProfile = profileRow?.master_profile as MasterProfileData | null
@@ -61,12 +83,12 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
   opportunitiesScanned = discovered.items.length
   const liveOnly = filterLiveOpenings(discovered.items)
   log.push({
-    message: `Specific openings: ${liveOnly.length} kept · ${discovered.items.length - liveOnly.length} generic/catalog entries dropped`,
+    message: `Specific openings: ${liveOnly.length} kept · ${discovered.items.length - liveOnly.length} generic dropped`,
     level: liveOnly.length ? 'info' : 'warn',
   })
 
   if (!liveOnly.length) {
-    log.push({ message: 'No live calls found this run. Try Deep scan or check again later — we only create packs for open postings with apply links.', level: 'warn' })
+    log.push({ message: 'No live calls found. Try Deep scan later.', level: 'warn' })
     return { opportunitiesScanned, packsCreated, regionsScanned, log }
   }
 
@@ -77,42 +99,96 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
   }
 
   const ranked = rankFundingCandidates([...unique.values()], settings)
-  log.push({ message: `Eligible openings: ${ranked.length} / ${unique.size} unique` })
+  log.push({ message: `Rule-filtered: ${ranked.length} / ${unique.size} unique` })
+
+  const evaluateBatch = ranked.slice(0, Math.min(ranked.length, limits.maxPacks * 3))
+  const toEnrich = evaluateBatch.map(({ opp }) => opp)
+  log.push({ message: `Fetching primary sources + verification search for ${toEnrich.length} candidates…` })
+  const enriched = await enrichOpeningsBatch(toEnrich, {
+    concurrency: limits.enrichConcurrency,
+    fetchPrimary: true,
+    verifySearch: isWebSearchAvailable(),
+  })
+
+  const openings = enriched.map((opp) => ({
+    funder: opp.funder,
+    title: opp.title,
+    fundingType: opp.fundingType,
+    region: opp.region,
+    description: opp.listingDescription,
+    opportunityUrl: opp.opportunityUrl,
+    primarySourceText: opp.primarySourceText,
+    primarySourceFetchedAt: opp.primarySourceFetchedAt,
+    searchVerificationSnippets: opp.searchVerificationSnippets?.map((h) => ({
+      title: h.title,
+      url: h.url,
+      snippet: h.snippet,
+    })),
+  }))
+
+  const fitMap = await scoreFundingFitBatch(masterProfile, aiSettings, openings)
+  log.push({ message: `AI evaluated ${fitMap.size} openings (research-funding scout prompt)` })
 
   let skippedIneligible = 0
 
-  for (const { opp, eligibility: ruleElig } of ranked) {
+  for (let i = 0; i < evaluateBatch.length; i++) {
     if (packsCreated >= limits.maxPacks) break
+    const { opp, eligibility: ruleElig } = evaluateBatch[i]
+    const enrichedOpp = enriched[i] ?? opp
+    const fit = fitMap.get(i)
+    if (!fit) continue
+
     try {
       if (!passesEligibilityGate(ruleElig, settings)) {
         skippedIneligible++
-        log.push({ message: `Skip: ${opp.title.slice(0, 60)} — ${ruleElig.reasons[0] ?? 'ineligible'}`, level: 'info' })
         continue
       }
 
-      const fit = await scoreFundingFit(masterProfile, opp, settings)
+      if (fit.disqualifiers?.length) {
+        skippedIneligible++
+        log.push({ message: `Skip: ${opp.title.slice(0, 50)} — ${fit.disqualifiers.join('; ')}`, level: 'info' })
+        continue
+      }
+
       if (settings.strictEligibility && !fit.eligible) {
         skippedIneligible++
-        log.push({ message: `Skip: ${opp.title.slice(0, 60)} — ${fit.eligibilityReason}`, level: 'info' })
+        log.push({ message: `Skip: ${opp.title.slice(0, 50)} — ${fit.eligibilityReason}`, level: 'info' })
         continue
       }
+
+      if (settings.strictEligibility && fit.confidence === 'unverified' && !fit.deadline && !opp.deadline) {
+        skippedIneligible++
+        log.push({ message: `Skip (unverified): ${opp.title.slice(0, 50)} — ${fit.verifyNotes ?? 'check primary source'}`, level: 'info' })
+        continue
+      }
+
       if (fit.score < 50) continue
 
-      const pack = await generateFundingPack(masterProfile, opp, settings)
-      const deadline = resolveDeadline(opp, fit.deadline)
-      const allFlags = [...new Set([...ruleElig.flags, ...fit.eligibilityFlags])]
-      const eligibilityReason = fit.eligibilityReason || ruleElig.reasons.join('; ')
+      const pack = await generateFundingPack(masterProfile, enrichedOpp, aiSettings)
+      const deadline = resolveDeadline(enrichedOpp, fit.deadline)
+      const allFlags = [...new Set([
+        ...ruleElig.flags,
+        ...fit.eligibilityFlags,
+        enrichedOpp.primarySourceText ? 'primary_source:fetched' : 'primary_source:missing',
+        enrichedOpp.searchVerificationSnippets?.length ? 'web_verify:yes' : 'web_verify:no',
+      ])]
+      const eligibilityReason = [
+        fit.eligibilityReason,
+        fit.confidence ? `confidence: ${fit.confidence}` : '',
+        fit.applicantType ? `type: ${fit.applicantType}` : '',
+        fit.verifyNotes ? `verify: ${fit.verifyNotes}` : '',
+      ].filter(Boolean).join(' · ')
 
       const { data: inserted, error } = await supabase.from('funding_applications').insert({
         user_id: userId,
-        funder: opp.funder,
-        title: opp.title,
-        funding_type: opp.fundingType,
-        region: opp.region,
-        opportunity_url: opp.opportunityUrl ?? null,
-        description: opp.description.slice(0, 20000),
+        funder: enrichedOpp.funder,
+        title: enrichedOpp.title,
+        funding_type: enrichedOpp.fundingType,
+        region: enrichedOpp.region,
+        opportunity_url: enrichedOpp.opportunityUrl ?? null,
+        description: composeEnrichedDescription(enrichedOpp).slice(0, 20000),
         deadline,
-        amount: opp.amount ?? null,
+        amount: fit.amount ?? enrichedOpp.amount ?? null,
         fit_score: fit.score,
         fit_reason: fit.reason,
         eligibility_pass: fit.eligible && ruleElig.eligible,
@@ -122,27 +198,31 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
         research_summary: pack.researchSummary,
         project_outline: pack.projectOutline,
         status: 'pending_review',
-        source: opp.source,
+        source: enrichedOpp.source,
       }).select('id').single()
+
       if (!error && inserted) {
         packsCreated++
-        const deadlineNote = deadline ? ` · deadline ${deadline}` : ''
-        log.push({ message: `✓ ${opp.funder}: ${opp.title.slice(0, 70)} (${fit.score}%)${deadlineNote}` })
+        const conf = fit.confidence === 'verified' ? '✓' : '?'
+        const deadlineNote = deadline ? ` · ${deadline}` : ''
+        log.push({
+          message: `${conf} ${enrichedOpp.funder}: ${enrichedOpp.title.slice(0, 55)} (${fit.score}%, ${fit.applicantType ?? 'student'})${deadlineNote}`,
+        })
         if (deadline) {
           try {
-            await upsertFundingDeadlineEvent(supabase, userId, inserted.id, opp.funder, opp.title, deadline)
+            await upsertFundingDeadlineEvent(supabase, userId, inserted.id, enrichedOpp.funder, enrichedOpp.title, deadline)
           } catch {
-            log.push({ message: `Calendar sync failed for ${opp.funder}`, level: 'warn' })
+            log.push({ message: `Calendar sync failed`, level: 'warn' })
           }
         }
       }
     } catch (err) {
-      log.push({ message: `Failed ${opp.title.slice(0, 40)}: ${err instanceof Error ? err.message : 'error'}`, level: 'error' })
+      log.push({ message: `Failed: ${err instanceof Error ? err.message : 'error'}`, level: 'error' })
     }
   }
 
   if (skippedIneligible > 0) {
-    log.push({ message: `Skipped ${skippedIneligible} ineligible / poor-fit openings`, level: 'info' })
+    log.push({ message: `Skipped ${skippedIneligible} after AI eligibility / disqualifier check`, level: 'info' })
   }
 
   return { opportunitiesScanned, packsCreated, regionsScanned, log }

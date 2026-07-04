@@ -625,6 +625,14 @@ export type Messages = {
     strictEligibility: string
     eligible: string
     eligibilityReason: string
+    confidence: string
+    confidenceVerified: string
+    confidenceUnverified: string
+    applicantType: string
+    applicantTypeStudent: string
+    applicantTypePiLed: string
+    verifyNotes: string
+    disqualifiers: string
     supervisionModels: Record<string, string>
     warnings: { tableMissing: string; eligibilityMigration: string }
   }

@@ -50,7 +50,18 @@ export {
   type EvidenceItem,
   type PackInput,
 } from './job-agent'
-export { scoreFundingFit, generateFundingPack, type FundingOppInput, type FundingSettingsInput, type FundingFitResult } from './funding-scout'
+export {
+  scoreFundingFit,
+  scoreFundingFitBatch,
+  evaluateFundingOpening,
+  evaluateFundingOpeningsBatch,
+  generateFundingPack,
+  type FundingOppInput,
+  type FundingSettingsInput,
+  type FundingFitResult,
+  type FundingProgramEvaluation,
+} from './funding-scout'
+export { FUNDING_SCOUT_SYSTEM_PROMPT, buildResearcherProfileBlock } from './funding-scout-prompts'
 
 export const aiEngine = {
   version: '0.2.0',

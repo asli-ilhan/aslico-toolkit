@@ -696,7 +696,7 @@ export const en: Messages = {
   fundingScout: {
     subtitle: 'Global PhD scholarships, fellowships & project grants — manual scan, AI application packs.',
     scanTitle: 'Funding discovery scan',
-    scanHint: 'Only live calls with apply links — scraped announcements + RSS. No generic program catalog.',
+    scanHint: 'Live calls via announcements + RSS + web search. Primary URLs fetched before AI verify. Add TAVILY_API_KEY for discovery.',
     scanDepth: 'Scan depth',
     scanDepthNormal: 'Normal — curated portals',
     scanDepthDeep: 'Deep — more sources per region',
@@ -733,6 +733,14 @@ export const en: Messages = {
     strictEligibility: 'Strict eligibility — skip ineligible programmes',
     eligible: 'Eligible',
     eligibilityReason: 'Why eligible',
+    confidence: 'Verification',
+    confidenceVerified: 'Verified from source text',
+    confidenceUnverified: 'Unverified — check primary source',
+    applicantType: 'Application type',
+    applicantTypeStudent: 'Student-direct',
+    applicantTypePiLed: 'PI-led / join as scholar',
+    verifyNotes: 'What to verify',
+    disqualifiers: 'Disqualifiers',
     supervisionModels: {
       standard: 'Standard single supervisor',
       joint_phd: 'Joint PhD / double degree',

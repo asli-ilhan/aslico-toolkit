@@ -694,7 +694,7 @@ export const tr: Messages = {
   fundingScout: {
     subtitle: 'Küresel doktora bursları, fellowships ve proje hibeleri — manuel tarama, AI başvuru paketleri.',
     scanTitle: 'Burs keşif taraması',
-    scanHint: 'Sadece açık ilanlar ve başvuru linkleri — TÜBİTAK/YÖK/İTÜ duyuruları + RSS. Genel program listesi çıkmaz.',
+    scanHint: 'Duyurular + RSS + web arama. AI öncesi birincil URL çekilir. Keşif için TAVILY_API_KEY ekle.',
     scanDepth: 'Tarama derinliği',
     scanDepthNormal: 'Normal — seçilmiş portallar',
     scanDepthDeep: 'Derin — bölge başına daha fazla kaynak',
@@ -731,6 +731,14 @@ export const tr: Messages = {
     strictEligibility: 'Sıkı uygunluk — uygun olmayan programları atla',
     eligible: 'Uygun',
     eligibilityReason: 'Neden uygun',
+    confidence: 'Doğrulama',
+    confidenceVerified: 'Kaynak metinden doğrulandı',
+    confidenceUnverified: 'Doğrulanmadı — birincil kaynağı kontrol et',
+    applicantType: 'Başvuru türü',
+    applicantTypeStudent: 'Doğrudan öğrenci başvurusu',
+    applicantTypePiLed: 'PI-led / bursiyer olarak katılım',
+    verifyNotes: 'Kontrol edilecekler',
+    disqualifiers: 'Eleme nedenleri',
     supervisionModels: {
       standard: 'Standart tek danışman',
       joint_phd: 'Joint PhD / çift diploma',

@@ -89,7 +89,7 @@ export const DEFAULT_FUNDING_SETTINGS: FundingSettings = {
   citizenship: 'TR',
   phdStage: 'starting',
   phdStartMonth: '2026-09',
-    homeUniversity: 'İstanbul Teknik Üniversitesi',
+  homeUniversity: 'İstanbul Teknik Üniversitesi',
   homeCountry: 'TR',
   partnerCountries: ['china', 'netherlands'],
   supervisionModel: 'co_supervision',
