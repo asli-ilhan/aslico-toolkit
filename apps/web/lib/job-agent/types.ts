@@ -21,6 +21,8 @@ export type WatchlistKind = 'url' | 'rss' | 'keyword' | 'careers'
 
 export type ExperienceLevel = 'junior' | 'mid' | 'senior' | 'any'
 
+export type ScanDepth = 'normal' | 'deep'
+
 export interface EvidenceItem {
   id: string
   domain: string
@@ -71,6 +73,8 @@ export interface SearchPreferences {
   targetCompanies: string[]
   rssFeeds: string[]
   nightlyEnabled: boolean
+  /** normal = ~12 packs/run; deep = ~18 packs, more feeds & careers pages */
+  scanDepth?: ScanDepth
 }
 
 export const DOMAIN_WEIGHTS: Record<string, number> = {
@@ -118,6 +122,7 @@ export const DEFAULT_PREFERENCES: SearchPreferences = {
   targetCompanies: [],
   rssFeeds: [],
   nightlyEnabled: true,
+  scanDepth: 'normal',
 }
 
 /** Merge saved prefs with expanded defaults — adds new sector domains without removing user choices. */

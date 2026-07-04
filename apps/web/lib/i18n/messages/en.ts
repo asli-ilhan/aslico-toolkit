@@ -326,7 +326,12 @@ export const en: Messages = {
       runsRow: '{scanned} scanned · {created} packs · {when}',
       runSummary: 'Last run: {scanned} jobs scanned, {created} packs created.',
       lowResultsHint:
-        'Few results? Lower min fit (e.g. 45), turn off “Require domain match”, or add keywords. Already-seen jobs are skipped.',
+        'Few results? Lower min fit (e.g. 45), turn off strict sector filter, or add keywords. Already-seen jobs are skipped.',
+      softRelevanceHint:
+        'Without strict filter, jobs still need sector fit: known employers (BP, Siemens…), technical roles in energy/maritime/ML, or domain signals — random support/sales roles are filtered out.',
+      scanDepth: 'Scan depth',
+      scanDepthNormal: 'Normal (~12 packs, 12 employer + 8 maritime careers)',
+      scanDepthDeep: 'Deep (~18 packs, 18 employer + 15 maritime careers, more RSS)',
     },
     watchlist: {
       hint: 'Job URLs, company careers pages (scans listings + open applications), RSS, keywords.',

@@ -158,7 +158,33 @@ export interface RelevanceVerdict {
   alignment: DomainAlignment
 }
 
-function passesDomainGate(
+/** Minimum alignment for soft relevance (strict mode off). */
+const SOFT_RELEVANCE_MIN = 10
+
+/** Roles that are almost never relevant unless at a known sector employer. */
+const IRRELEVANT_ROLE_RE =
+  /\b(customer support|call center|sales development|account executive|business development representative|recruiter|talent acquisition|copywriter|content writer|social media manager|virtual assistant|bookkeeper|payroll|hr generalist|legal counsel|paralegal|receptionist|data entry)\b/i
+
+function passesSoftRelevanceGate(
+  job: { company: string; role: string; jobDescription: string },
+  alignment: DomainAlignment,
+): boolean {
+  if (alignment.relatedEmployer || alignment.knownSectorCompany) return true
+  if (alignment.score >= SOFT_RELEVANCE_MIN) return true
+  if (alignment.technicalAdjacent) return true
+
+  const combined = `${job.role} ${job.jobDescription}`.toLowerCase()
+  if (isTechnicalRole(job.role) && hasIndustrySignals(combined)) return true
+  if (isTechnicalRole(job.role) && alignment.score >= 6) return true
+
+  if (IRRELEVANT_ROLE_RE.test(job.role) && !alignment.knownSectorCompany && !alignment.relatedEmployer) {
+    return false
+  }
+
+  return false
+}
+
+function passesStrictDomainGate(
   job: { company: string; role: string; jobDescription: string },
   alignment: DomainAlignment,
   preferences: SearchPreferences,
@@ -199,10 +225,18 @@ export function evaluateJobRelevance(
     }
   }
 
-  if (!passesDomainGate(job, alignment, preferences)) {
+  if (!passesStrictDomainGate(job, alignment, preferences)) {
     return {
       pass: false,
       reason: `No sector/domain match for ${job.company} · ${job.role}`,
+      alignment,
+    }
+  }
+
+  if (!passesSoftRelevanceGate(job, alignment)) {
+    return {
+      pass: false,
+      reason: `Not related enough (needs sector employer, tech+industry role, or domain signal): ${job.company} · ${job.role}`,
       alignment,
     }
   }
@@ -264,3 +298,26 @@ export function boostFitWithAlignment(
 
 /** Re-export for tests and fit scoring. */
 export { DOMAIN_ALIASES, relevanceDomains }
+
+export function rankCandidatesByRelevance<
+  T extends { company: string; role: string; jobDescription: string },
+>(
+  candidates: T[],
+  preferences: SearchPreferences,
+  profileDomains: string[],
+  preferenceDomains: string[] = preferences.domains ?? [],
+): { job: T; alignment: DomainAlignment; priority: number }[] {
+  return candidates
+    .map((job) => {
+      const verdict = evaluateJobRelevance(job, preferences, profileDomains, preferenceDomains)
+      if (!verdict.pass) return null
+      const a = verdict.alignment
+      let priority = a.score
+      if (a.relatedEmployer) priority += 55
+      if (a.knownSectorCompany) priority += 22
+      if (a.technicalAdjacent) priority += 12
+      return { job, alignment: a, priority }
+    })
+    .filter((x): x is { job: T; alignment: DomainAlignment; priority: number } => x !== null)
+    .sort((a, b) => b.priority - a.priority)
+}

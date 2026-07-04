@@ -19,9 +19,7 @@ import {
   BUILTIN_RSS_FEEDS,
   collectJobicyPool,
   fetchArbeitnowJobs,
-  MAX_NIGHTLY_PACKS,
   parseRssFeed,
-  RSS_ITEMS_PER_FEED,
   uniqueFeedUrls,
   type JobCandidate,
 } from '@/lib/job-agent/feeds'
@@ -31,12 +29,14 @@ import {
 } from '@/lib/job-agent/dedupe'
 import { scrapeJobUrl } from '@/lib/job-agent/scrape'
 import { scrapeCareersPage } from '@/lib/job-agent/careers'
+import { maritimeBatchForRun } from '@/lib/job-agent/maritime-targets'
 import { relatedEmployerCareersBatch } from '@/lib/job-agent/related-employers'
+import { scanLimits } from '@/lib/job-agent/scan-limits'
 import { relevanceDomains } from '@/lib/job-agent/domain-aliases'
 import {
   boostFitWithAlignment,
-  evaluateJobRelevance,
   experienceNoteForCv,
+  rankCandidatesByRelevance,
 } from '@/lib/job-agent/relevance'
 
 export interface NightlyResult {
@@ -67,6 +67,10 @@ export async function runNightlyForUser(
   const preferences: SearchPreferences = mergeSearchPreferences(
     prefsRow?.preferences as Partial<SearchPreferences> | null,
   )
+  const limits = scanLimits(preferences)
+  log.push({
+    message: `Scan mode: ${preferences.scanDepth ?? 'normal'} (max ${limits.maxPacks} packs, ${limits.employerBatch} employer + ${limits.maritimeBatch} maritime careers)`,
+  })
 
   if (!preferences.nightlyEnabled) {
     log.push({ message: 'Nightly run disabled in preferences.' })
@@ -164,7 +168,7 @@ export async function runNightlyForUser(
   }
 
   const runDay = new Date().getDate()
-  for (const target of relatedEmployerCareersBatch(runDay, 10)) {
+  for (const target of relatedEmployerCareersBatch(runDay, limits.employerBatch)) {
     if (!target.careersUrl) continue
     try {
       const careersJobs = await scrapeCareersPage(target.careersUrl, target.label)
@@ -181,10 +185,26 @@ export async function runNightlyForUser(
     }
   }
 
+  for (const target of maritimeBatchForRun(runDay, limits.maritimeBatch)) {
+    try {
+      const careersJobs = await scrapeCareersPage(target.careersUrl, target.company)
+      rawCandidates.push(...careersJobs)
+      jobsScanned += careersJobs.length
+      log.push({
+        message: `Maritime target ${target.company}: ${careersJobs.length} opportunities`,
+      })
+    } catch (err) {
+      log.push({
+        message: `Maritime careers ${target.company} failed: ${err instanceof Error ? err.message : 'error'}`,
+        level: 'warn',
+      })
+    }
+  }
+
   for (const feedUrl of rssSources) {
     try {
       const rssJobs = await parseRssFeed(feedUrl, 'rss')
-      const slice = rssJobs.slice(0, RSS_ITEMS_PER_FEED)
+      const slice = rssJobs.slice(0, limits.rssPerFeed)
       rawCandidates.push(...slice.map((j) => ({ ...j, source: 'builtin_rss' })))
       jobsScanned += slice.length
       log.push({ message: `RSS ${feedUrl}: ${rssJobs.length} listings (${slice.length} sampled)` })
@@ -220,7 +240,7 @@ export async function runNightlyForUser(
     })
   }
 
-  const agg = await collectAggregatorJobs(searchTerms)
+  const agg = await collectAggregatorJobs(searchTerms, limits)
   rawCandidates.push(...agg.jobs)
   jobsScanned += agg.jobs.length
   for (const line of agg.logs) {
@@ -233,25 +253,37 @@ export async function runNightlyForUser(
   let candidates = dedupeCandidates(rawCandidates)
   log.push({ message: `Unique candidates after dedupe: ${candidates.length}` })
 
-  if (!candidates.length) {
-    log.push({ message: 'No jobs found from feeds. Add watchlist URLs or check network.' })
+  const profileDomains = masterProfile.domains ?? preferences.domains ?? []
+  const preferenceDomains = preferences.domains ?? []
+  const scoringDomains = relevanceDomains(profileDomains, preferenceDomains)
+
+  const ranked = rankCandidatesByRelevance(
+    candidates,
+    preferences,
+    profileDomains,
+    preferenceDomains,
+  )
+  log.push({
+    message: `Relevant after soft filter: ${ranked.length} (prioritized — related employers & sector roles first)`,
+  })
+
+  if (!ranked.length) {
+    log.push({
+      message: 'No relevant jobs after filtering. Try Deep scan or lower min fit.',
+      level: 'warn',
+    })
     return { jobsScanned, packsCreated, log }
   }
 
   let skippedDupes = 0
   let skippedKeywords = 0
   let skippedRemote = 0
-  let skippedRelevance = 0
   let skippedFit = 0
 
-  const profileDomains = masterProfile.domains ?? preferences.domains ?? []
-  const preferenceDomains = preferences.domains ?? []
-  const scoringDomains = relevanceDomains(profileDomains, preferenceDomains)
   const expNote = experienceNoteForCv(preferences)
+  const maxPacks = limits.maxPacks
 
-  const maxPacks = MAX_NIGHTLY_PACKS
-
-  for (const job of candidates) {
+  for (const { job, alignment: preAlignment } of ranked) {
     if (packsCreated >= maxPacks) break
 
     const dupe = dedupeIndex.check(job)
@@ -265,14 +297,7 @@ export async function runNightlyForUser(
       continue
     }
 
-    const relevance = evaluateJobRelevance(job, preferences, profileDomains, preferenceDomains)
-    if (!relevance.pass) {
-      skippedRelevance++
-      if (skippedRelevance <= 10) {
-        log.push({ message: `Skipped: ${relevance.reason}` })
-      }
-      continue
-    }
+    const relevance = { pass: true, alignment: preAlignment }
 
     if (userKeywords.length && !matchesKeywords(`${job.jobDescription} ${job.role}`, userKeywords)) {
       skippedKeywords++
@@ -364,9 +389,6 @@ export async function runNightlyForUser(
     }
   }
 
-  if (skippedRelevance) {
-    log.push({ message: `Skipped ${skippedRelevance} irrelevant roles / domain mismatches` })
-  }
   if (skippedDupes) {
     log.push({ message: `Skipped ${skippedDupes} already seen / applied / in inbox` })
   }

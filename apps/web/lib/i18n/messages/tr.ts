@@ -327,7 +327,12 @@ export const tr: Messages = {
       runsRow: '{scanned} tarandı · {created} paket · {when}',
       runSummary: 'Son çalıştırma: {scanned} ilan tarandı, {created} paket oluşturuldu.',
       lowResultsHint:
-        'Az sonuç mu? Min. uyumu düşür (ör. 45), “Alan eşleşmesi zorunlu”yu kapat veya anahtar kelime ekle. Daha önce görülen ilanlar atlanır.',
+        'Az sonuç mu? Min. uyumu düşür (ör. 45), sıkı sektör filtresini kapat veya anahtar kelime ekle. Daha önce görülen ilanlar atlanır.',
+      softRelevanceHint:
+        'Sıkı filtre kapalıyken bile alaka gerekir: tanınan işveren (BP, Siemens…), energy/maritime/ML teknik roller veya domain sinyali — rastgele destek/satış ilanları elenir.',
+      scanDepth: 'Tarama derinliği',
+      scanDepthNormal: 'Normal (~12 paket, 12 işveren + 8 maritime kariyer)',
+      scanDepthDeep: 'Derin (~18 paket, 18 işveren + 15 maritime kariyer, daha fazla RSS)',
     },
     watchlist: {
       hint: 'İlan URL, şirket kariyer sayfası (açık başvuru dahil), RSS, kelime alarmları.',

@@ -1,3 +1,4 @@
+import type { ScanLimits } from '@/lib/job-agent/scan-limits'
 import type { JobCandidate } from './feeds'
 
 const JSON_HEADERS: Record<string, string> = {
@@ -227,14 +228,20 @@ export interface AggregatorFetchResult {
   warnings: string[]
 }
 
-export async function collectAggregatorJobs(searchTerms: string[]): Promise<AggregatorFetchResult> {
+export async function collectAggregatorJobs(
+  searchTerms: string[],
+  limits?: Pick<ScanLimits, 'remoteOkLimit' | 'remotiveLimit'>,
+): Promise<AggregatorFetchResult> {
   const jobs: JobCandidate[] = []
   const logs: string[] = []
   const warnings: string[] = []
 
+  const remoteOkLimit = limits?.remoteOkLimit ?? 120
+  const remotiveLimit = limits?.remotiveLimit ?? 100
+
   const tasks: { name: string; run: () => Promise<JobCandidate[]> }[] = [
-    { name: 'RemoteOK', run: () => fetchRemoteOkJobs(120) },
-    { name: 'Remotive API', run: () => fetchRemotiveApiJobs(100) },
+    { name: 'RemoteOK', run: () => fetchRemoteOkJobs(remoteOkLimit) },
+    { name: 'Remotive API', run: () => fetchRemotiveApiJobs(remotiveLimit) },
     { name: 'The Muse', run: () => fetchTheMuseJobs(4) },
     { name: 'Working Nomads', run: () => fetchWorkingNomadsJobs() },
     { name: 'Findwork', run: () => fetchFindworkJobs(searchTerms) },

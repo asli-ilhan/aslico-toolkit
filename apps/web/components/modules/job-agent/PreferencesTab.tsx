@@ -45,6 +45,7 @@ export function PreferencesTab({ onWarning }: PreferencesTabProps) {
   const [keywords, setKeywords] = useState('')
   const [rss, setRss] = useState('')
   const [nightlyEnabled, setNightlyEnabled] = useState(true)
+  const [scanDepth, setScanDepth] = useState<'normal' | 'deep'>('normal')
   const [saving, setSaving] = useState(false)
   const [nightlyRunning, setNightlyRunning] = useState(false)
   const [nightlyLog, setNightlyLog] = useState<string | null>(null)
@@ -83,6 +84,7 @@ export function PreferencesTab({ onWarning }: PreferencesTabProps) {
     setKeywords((p.keywords ?? []).join(', '))
     setRss((p.rssFeeds ?? []).join(', '))
     setNightlyEnabled(p.nightlyEnabled ?? true)
+    setScanDepth(p.scanDepth === 'deep' ? 'deep' : 'normal')
     const runsRes = await fetch('/api/modules/job-agent/runs')
     const runsData = await runsRes.json()
     if (runsData.warning === 'job_agent_v2_missing') onWarning(ja.warnings.v2Missing)
@@ -119,6 +121,7 @@ export function PreferencesTab({ onWarning }: PreferencesTabProps) {
           keywords: keywords.split(',').map((s) => s.trim()).filter(Boolean),
           rssFeeds,
           nightlyEnabled,
+          scanDepth,
         },
       }),
     })
@@ -171,6 +174,7 @@ export function PreferencesTab({ onWarning }: PreferencesTabProps) {
           <p className="mt-1 text-xs text-[var(--text-muted)]">{ja.preferences.stopBody}</p>
         </div>
         <p className="text-xs text-[var(--accent)]">{ja.preferences.lowResultsHint}</p>
+        <p className="text-xs text-[var(--text-muted)]">{ja.preferences.softRelevanceHint}</p>
       </div>
 
       <div className="rounded-xl border border-[var(--surface-border)] p-4">
@@ -298,6 +302,17 @@ export function PreferencesTab({ onWarning }: PreferencesTabProps) {
           onChange={(e) => setRemoteRequired(e.target.checked)}
         />
         {ja.preferences.remoteRequired}
+      </label>
+      <label className="block text-sm text-[var(--text)]">
+        {ja.preferences.scanDepth}
+        <select
+          value={scanDepth}
+          onChange={(e) => setScanDepth(e.target.value as 'normal' | 'deep')}
+          className={fieldClass}
+        >
+          <option value="normal">{ja.preferences.scanDepthNormal}</option>
+          <option value="deep">{ja.preferences.scanDepthDeep}</option>
+        </select>
       </label>
       <label className="flex items-center gap-2 text-sm text-[var(--text)]">
         <input

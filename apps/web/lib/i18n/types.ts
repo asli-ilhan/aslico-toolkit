@@ -289,6 +289,10 @@ export type Messages = {
       runsRow: string
       runSummary: string
       lowResultsHint: string
+      softRelevanceHint: string
+      scanDepth: string
+      scanDepthNormal: string
+      scanDepthDeep: string
     }
     watchlist: {
       hint: string
