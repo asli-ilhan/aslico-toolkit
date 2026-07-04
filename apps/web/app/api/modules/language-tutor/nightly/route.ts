@@ -82,3 +82,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
+
+export async function GET(request: NextRequest) {
+  return POST(request)
+}

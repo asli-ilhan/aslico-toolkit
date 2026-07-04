@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isMissingJobAgentV2 } from '@/lib/supabase/errors'
-import { DEFAULT_PREFERENCES } from '@/lib/job-agent/types'
+import { DEFAULT_PREFERENCES, mergeSearchPreferences } from '@/lib/job-agent/types'
 
 export async function GET() {
   const supabase = await createClient()
@@ -24,7 +24,9 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    preferences: data?.preferences ?? DEFAULT_PREFERENCES,
+    preferences: mergeSearchPreferences(
+      data?.preferences as Partial<typeof DEFAULT_PREFERENCES> | null | undefined,
+    ),
     updatedAt: data?.updated_at ?? null,
   })
 }
@@ -37,7 +39,7 @@ export async function PATCH(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json()
-  const preferences = { ...DEFAULT_PREFERENCES, ...body.preferences }
+  const preferences = mergeSearchPreferences(body.preferences)
 
   const { data, error } = await supabase
     .from('job_search_preferences')

@@ -1,3 +1,5 @@
+import { termsForDomain } from '@/lib/job-agent/domain-aliases'
+
 export type DocType = 'cv' | 'cover_letter' | 'portfolio' | 'other'
 
 export type PackStatus =
@@ -74,8 +76,10 @@ export interface SearchPreferences {
 export const DOMAIN_WEIGHTS: Record<string, number> = {
   maritime: 1.25,
   offshore: 1.2,
+  energy: 1.2,
   renewable_energy: 1.15,
   wind: 1.15,
+  engineering: 1.1,
   digital_twin: 1.1,
   machine_learning: 1.1,
   data_science: 1.1,
@@ -89,8 +93,10 @@ export const DEFAULT_PREFERENCES: SearchPreferences = {
   domains: [
     'maritime',
     'offshore',
+    'energy',
     'renewable_energy',
     'wind',
+    'engineering',
     'digital_twin',
     'machine_learning',
     'data_science',
@@ -99,7 +105,7 @@ export const DEFAULT_PREFERENCES: SearchPreferences = {
   domainWeights: DOMAIN_WEIGHTS,
   remoteRequired: true,
   onsiteMinScore: 85,
-  minFitScore: 55,
+  minFitScore: 48,
   regions: ['remote_global', 'remote_eu', 'turkey'],
   employmentTypes: ['remote_ft', 'contract', 'freelance'],
   gigPlatforms: ['outlier', 'alignerr', 'remotasks', 'dataannotation'],
@@ -107,11 +113,21 @@ export const DEFAULT_PREFERENCES: SearchPreferences = {
   excludeCompanies: [],
   excludeRoles: [],
   avoidSeniorTitles: true,
-  requireCompanyDomainMatch: true,
+  requireCompanyDomainMatch: false,
   experienceLevel: 'mid',
   targetCompanies: [],
   rssFeeds: [],
   nightlyEnabled: true,
+}
+
+/** Merge saved prefs with expanded defaults — adds new sector domains without removing user choices. */
+export function mergeSearchPreferences(
+  saved: Partial<SearchPreferences> | null | undefined,
+): SearchPreferences {
+  const merged = { ...DEFAULT_PREFERENCES, ...(saved ?? {}) }
+  merged.domains = [...new Set([...DEFAULT_PREFERENCES.domains, ...(saved?.domains ?? [])])]
+  merged.domainWeights = { ...DOMAIN_WEIGHTS, ...(saved?.domainWeights ?? {}) }
+  return merged
 }
 
 export const GIG_PLATFORM_RISKS: Record<string, { level: AiRiskLevel; reason: string }> = {
@@ -161,22 +177,10 @@ export function computeDomainFit(
   const result: Record<string, number> = {}
   for (const domain of profileDomains) {
     const key = domain.toLowerCase()
-    const aliases: Record<string, string[]> = {
-      maritime: ['maritime', 'shipping', 'vessel', 'offshore vessel'],
-      offshore: ['offshore', 'subsea', 'oil and gas', 'rig'],
-      renewable_energy: ['renewable', 'solar', 'green energy'],
-      wind: ['wind', 'turbine', 'offshore wind'],
-      digital_twin: ['digital twin', 'simulation', 'iot'],
-      machine_learning: ['machine learning', 'ml ', 'deep learning'],
-      data_science: ['data science', 'analytics', 'statistics'],
-      ai: [' artificial intelligence', ' ai ', 'llm', 'genai'],
-      hci: ['hci', 'human-computer', 'ux research'],
-      research: ['phd', 'research', 'academic'],
-    }
-    const terms = aliases[key] ?? [key.replace(/_/g, ' ')]
-    const hits = terms.filter((t) => hay.includes(t)).length
+    const terms = termsForDomain(key)
+    const hits = terms.filter((t) => t.trim().length > 1 && hay.includes(t.trim())).length
     if (hits > 0) {
-      result[domain] = Math.min(100, Math.round(hits * 25 * (weights[domain] ?? 1)))
+      result[domain] = Math.min(100, Math.round(hits * 22 * (weights[domain] ?? 1)))
     }
   }
   return result

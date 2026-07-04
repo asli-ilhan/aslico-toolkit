@@ -12,11 +12,11 @@ function isCronAuthorized(request: NextRequest): boolean {
   return auth === `Bearer ${secret}`
 }
 
-/** Nightly job discovery + pack generation. Cron: POST with Authorization: Bearer CRON_SECRET */
+/** Nightly job discovery + pack generation. Cron: GET/POST with Authorization: Bearer CRON_SECRET */
 export const maxDuration = 300
 export const dynamic = 'force-dynamic'
 
-export async function POST(request: NextRequest) {
+async function handleNightly(request: NextRequest) {
   const started = new Date().toISOString()
   let userId: string | null = null
 
@@ -75,4 +75,12 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ run, ...result })
+}
+
+export async function GET(request: NextRequest) {
+  return handleNightly(request)
+}
+
+export async function POST(request: NextRequest) {
+  return handleNightly(request)
 }

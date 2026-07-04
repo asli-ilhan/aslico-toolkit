@@ -220,6 +220,7 @@ export type Messages = {
       hint: string
       runNow: string
       running: string
+      summary: string
     }
     autofill: {
       run: string
@@ -279,6 +280,15 @@ export type Messages = {
       runNightly: string
       nightlyRunning: string
       save: string
+      scheduleTitle: string
+      scheduleBody: string
+      stopTitle: string
+      stopBody: string
+      runsTitle: string
+      runsEmpty: string
+      runsRow: string
+      runSummary: string
+      lowResultsHint: string
     }
     watchlist: {
       hint: string

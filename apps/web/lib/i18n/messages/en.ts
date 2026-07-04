@@ -251,9 +251,10 @@ export const en: Messages = {
       gigGuard: 'Gig platform: manual submit only. Auto-submit blocked.',
     },
     discovery: {
-      hint: '30+ sources: RemoteOK, Remotive, Jobicy, WWR, Built In, Himalayas, The Muse, Working Nomads, SkipTheDrive, Landing.jobs and more. Skips jobs already in inbox or submitted. Add Adzuna/Jooble API keys in Vercel for Indeed/LinkedIn/Glassdoor (they block direct RSS). Nightly at 02:00 UTC.',
+      hint: '30+ sources: RemoteOK, Remotive, Jobicy, WWR, Built In, Himalayas, The Muse, Working Nomads, SkipTheDrive, Landing.jobs and more. Skips jobs already in inbox or submitted. Add Adzuna/Jooble API keys in Vercel for Indeed/LinkedIn/Glassdoor (they block direct RSS). Automatic: daily 05:00 Istanbul (02:00 UTC).',
       runNow: 'Search jobs now',
       running: 'Searching job boards…',
+      summary: '{scanned} jobs scanned · {created} new packs',
     },
     autofill: {
       run: 'Autofill application form',
@@ -304,16 +305,28 @@ export const en: Messages = {
       exclude: 'Blocked companies (comma-separated)',
       excludeRoles: 'Blocked role keywords (comma-separated, e.g. senior, manager, director)',
       avoidSenior: 'Skip senior/lead titles unless company matches your domains',
-      requireDomain: 'Require company or job to match target domains (maritime, ML, etc.)',
+      requireDomain: 'Strict sector filter (require maritime/energy/ML match — off recommended)',
       experienceLevel: 'Your level (for CV — not senior)',
       experienceYears: 'Years of relevant experience (optional)',
       targetCompanies: 'Target company careers URLs (comma-separated, https://…)',
       keywords: 'Required keywords in job text (optional — leave empty for broader search)',
       rss: 'RSS feed URLs (comma-separated, saved to watchlist)',
       nightly: 'Enable nightly discovery',
-      runNightly: 'Run nightly now',
+      runNightly: 'Run discovery now',
       nightlyRunning: 'Scanning…',
       save: 'Save preferences',
+      scheduleTitle: 'How discovery runs',
+      scheduleBody:
+        'Not a background process that runs all night. Each run is one batch (~2–5 min): scan feeds → filter → generate CV/cover packs. Automatic: daily at 05:00 Istanbul (02:00 UTC) if “Enable nightly discovery” is on. Manual: “Run discovery now” or Inbox → “Search jobs now”. Max 10 new packs per run.',
+      stopTitle: 'How to stop',
+      stopBody:
+        'Uncheck “Enable nightly discovery” and Save — no more automatic runs. A run in progress cannot be cancelled from the UI (close the tab to abort a manual run). Autofill daemon (pnpm autofill:daemon) only fills forms when you click — it does not search jobs.',
+      runsTitle: 'Recent runs',
+      runsEmpty: 'No runs yet. Click “Run discovery now” to start.',
+      runsRow: '{scanned} scanned · {created} packs · {when}',
+      runSummary: 'Last run: {scanned} jobs scanned, {created} packs created.',
+      lowResultsHint:
+        'Few results? Lower min fit (e.g. 45), turn off “Require domain match”, or add keywords. Already-seen jobs are skipped.',
     },
     watchlist: {
       hint: 'Job URLs, company careers pages (scans listings + open applications), RSS, keywords.',

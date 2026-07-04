@@ -1,4 +1,13 @@
 import type { SearchPreferences } from '@/lib/job-agent/types'
+import {
+  DOMAIN_ALIASES,
+  hasIndustrySignals,
+  isKnownSectorCompany,
+  isTechnicalRole,
+  relevanceDomains,
+  termsForDomain,
+} from '@/lib/job-agent/domain-aliases'
+import { isRelatedEmployer, matchRelatedEmployer } from '@/lib/job-agent/related-employers'
 
 export const DEFAULT_EXCLUDE_ROLES = [
   'senior',
@@ -46,38 +55,20 @@ const SENIOR_PATTERNS = [
   /\bdistinguished\b/i,
 ]
 
-const DOMAIN_ALIASES: Record<string, string[]> = {
-  maritime: [
-    'maritime',
-    'shipping',
-    'vessel',
-    'ship',
-    'fleet',
-    'port',
-    'marine',
-    'naval',
-    'offshore vessel',
-    'classification society',
-    'dnv',
-    'lloyd',
-    'bureau veritas',
-  ],
-  offshore: ['offshore', 'subsea', 'oil and gas', 'rig', 'platform', 'fpso', 'drilling'],
-  renewable_energy: ['renewable', 'solar', 'green energy', 'clean energy', 'hydrogen'],
-  wind: ['wind', 'turbine', 'offshore wind', 'onshore wind', 'vestas', 'siemens gamesa'],
-  digital_twin: ['digital twin', 'simulation', 'iot', 'telemetry', 'twins'],
-  machine_learning: ['machine learning', 'ml ', 'deep learning', 'neural', 'pytorch', 'tensorflow'],
-  data_science: ['data science', 'analytics', 'statistics', 'data scientist', 'bi developer'],
-  ai: [' artificial intelligence', ' ai ', 'llm', 'genai', 'nlp'],
-  hci: ['hci', 'human-computer', 'ux research', 'usability'],
-  research: ['phd', 'research', 'academic', 'r&d', 'postdoc'],
-}
+/** Minimum alignment score when domain match is required (soft gate). */
+const DOMAIN_MATCH_MIN_SCORE = 8
 
 export interface DomainAlignment {
   score: number
   matchedDomains: string[]
   companyHits: number
   descriptionHits: number
+  /** Technical role at a company with sector/industry signals. */
+  technicalAdjacent?: boolean
+  /** Company name matches energy/maritime/engineering sector list. */
+  knownSectorCompany?: boolean
+  /** Matched from curated related-employer list (BP, Siemens, etc.). */
+  relatedEmployer?: string
 }
 
 export function computeCompanyDomainAlignment(
@@ -92,10 +83,9 @@ export function computeCompanyDomainAlignment(
   let descriptionHits = 0
 
   for (const domain of profileDomains) {
-    const key = domain.toLowerCase()
-    const terms = DOMAIN_ALIASES[key] ?? [key.replace(/_/g, ' ')]
-    const companyMatch = terms.some((t) => companyHay.includes(t.trim()))
-    const descMatch = terms.some((t) => descHay.includes(t.trim()))
+    const terms = termsForDomain(domain)
+    const companyMatch = terms.some((t) => t.trim().length > 1 && companyHay.includes(t.trim()))
+    const descMatch = terms.some((t) => t.trim().length > 1 && descHay.includes(t.trim()))
     if (companyMatch) {
       companyHits++
       matchedDomains.push(domain)
@@ -105,13 +95,48 @@ export function computeCompanyDomainAlignment(
     }
   }
 
+  const related = matchRelatedEmployer(company)
+  if (related) {
+    for (const sector of related.employer.sectors) {
+      if (!matchedDomains.includes(sector)) matchedDomains.push(sector)
+    }
+    companyHits = Math.max(companyHits, 2)
+  }
+
+  const knownSectorCompany = isKnownSectorCompany(company)
+  if (knownSectorCompany && !matchedDomains.includes('energy')) {
+    matchedDomains.push('energy')
+    companyHits++
+  }
+
   const unique = [...new Set(matchedDomains)]
   let score = 0
-  if (companyHits > 0) score += Math.min(60, companyHits * 30)
-  if (descriptionHits > 0) score += Math.min(40, descriptionHits * 15)
+  if (companyHits > 0) score += Math.min(60, companyHits * 28)
+  if (descriptionHits > 0) score += Math.min(45, descriptionHits * 14)
+  if (related) score = Math.max(score, related.alignmentScore)
+  else if (knownSectorCompany) score = Math.min(100, score + 18)
   score = Math.min(100, score)
 
-  return { score, matchedDomains: unique, companyHits, descriptionHits }
+  const role = jobText.split('\n')[0] ?? jobText
+  const technicalAdjacent =
+    isTechnicalRole(role) &&
+    (hasIndustrySignals(descHay) || knownSectorCompany || related !== null)
+
+  if (related && isTechnicalRole(role)) {
+    score = Math.min(100, Math.max(score, 78))
+  } else if (technicalAdjacent) {
+    score = Math.min(100, Math.max(score, 35))
+  }
+
+  return {
+    score,
+    matchedDomains: unique,
+    companyHits,
+    descriptionHits,
+    technicalAdjacent,
+    knownSectorCompany,
+    relatedEmployer: related?.employer.label,
+  }
 }
 
 export function isRoleExcluded(role: string, patterns: string[]): boolean {
@@ -133,50 +158,69 @@ export interface RelevanceVerdict {
   alignment: DomainAlignment
 }
 
+function passesDomainGate(
+  job: { company: string; role: string; jobDescription: string },
+  alignment: DomainAlignment,
+  preferences: SearchPreferences,
+): boolean {
+  if (preferences.requireCompanyDomainMatch === false) return true
+
+  if (isRelatedEmployer(job.company)) return true
+  if (alignment.relatedEmployer) return true
+
+  if (alignment.score >= DOMAIN_MATCH_MIN_SCORE) return true
+  if (alignment.knownSectorCompany) return true
+  if (alignment.technicalAdjacent) return true
+
+  const combined = `${job.role} ${job.jobDescription}`.toLowerCase()
+  if (isTechnicalRole(job.role) && hasIndustrySignals(combined)) return true
+
+  return false
+}
+
 export function evaluateJobRelevance(
   job: { company: string; role: string; jobDescription: string },
   preferences: SearchPreferences,
   profileDomains: string[],
+  preferenceDomains: string[] = preferences.domains ?? [],
 ): RelevanceVerdict {
-  const excludeRoles = [
-    ...DEFAULT_EXCLUDE_ROLES,
-    ...(preferences.excludeRoles ?? []),
-  ]
+  const excludeRoles = [...DEFAULT_EXCLUDE_ROLES, ...(preferences.excludeRoles ?? [])]
 
+  const domains = relevanceDomains(profileDomains, preferenceDomains)
   const alignment = computeCompanyDomainAlignment(
     job.company,
     `${job.role} ${job.jobDescription}`,
-    profileDomains,
+    domains,
   )
 
   if (isRoleExcluded(job.role, excludeRoles)) {
-    if (alignment.score < 55) {
+    if (alignment.score < 45 && !alignment.technicalAdjacent) {
       return { pass: false, reason: `Excluded role pattern: ${job.role}`, alignment }
     }
   }
 
-  if (preferences.requireCompanyDomainMatch !== false && alignment.score < 20) {
+  if (!passesDomainGate(job, alignment, preferences)) {
     return {
       pass: false,
-      reason: `No domain match for ${job.company} · ${job.role}`,
+      reason: `No sector/domain match for ${job.company} · ${job.role}`,
       alignment,
     }
   }
 
   if (preferences.avoidSeniorTitles !== false && isSeniorOrLeadRole(job.role)) {
-    if (alignment.score < 50) {
+    if (alignment.score < 35 && !alignment.knownSectorCompany) {
       return {
         pass: false,
-        reason: `Senior/lead title without strong domain fit: ${job.role}`,
+        reason: `Senior/lead title without sector fit: ${job.role}`,
         alignment,
       }
     }
   }
 
-  if (isManagementRole(job.role) && alignment.score < 45) {
+  if (isManagementRole(job.role) && alignment.score < 30 && !alignment.knownSectorCompany) {
     return {
       pass: false,
-      reason: `Management role outside target domains: ${job.company}`,
+      reason: `Management role outside target sectors: ${job.company}`,
       alignment,
     }
   }
@@ -190,6 +234,7 @@ export function experienceNoteForCv(preferences: SearchPreferences): string {
     'Do NOT inflate seniority. Candidate is NOT senior-level.',
     `Target seniority: ${level} (individual contributor / researcher).`,
     'Emphasize PhD research, contracts, and hands-on technical delivery — not people management.',
+    'Highlight fit for energy, maritime, offshore, renewables, and engineering consultancies when relevant.',
   ]
   if (preferences.experienceYears) {
     lines.push(`Experience to reflect: ~${preferences.experienceYears} years relevant work.`)
@@ -203,10 +248,19 @@ export function boostFitWithAlignment(
   preferences: SearchPreferences,
 ): number {
   let score = fitScore
-  if (alignment.score >= 60) score = Math.min(100, score + 12)
-  else if (alignment.score >= 40) score = Math.min(100, score + 6)
-  else if (alignment.score < 20 && preferences.requireCompanyDomainMatch !== false) {
-    score = Math.round(score * 0.55)
+  if (alignment.score >= 60) score = Math.min(100, score + 14)
+  else if (alignment.score >= 40) score = Math.min(100, score + 8)
+  else if (alignment.score >= 20) score = Math.min(100, score + 4)
+  else if (alignment.relatedEmployer) score = Math.min(100, score + 10)
+  else if (alignment.technicalAdjacent) score = Math.min(100, score + 6)
+  else if (
+    alignment.score < DOMAIN_MATCH_MIN_SCORE &&
+    preferences.requireCompanyDomainMatch !== false
+  ) {
+    score = Math.round(score * 0.72)
   }
   return Math.min(100, Math.max(0, Math.round(score)))
 }
+
+/** Re-export for tests and fit scoring. */
+export { DOMAIN_ALIASES, relevanceDomains }

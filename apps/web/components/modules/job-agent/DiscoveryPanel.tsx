@@ -16,10 +16,12 @@ export function DiscoveryPanel({ onComplete, onWarning, compact }: DiscoveryPane
   const ja = t.jobAgent
   const [running, setRunning] = useState(false)
   const [log, setLog] = useState<string | null>(null)
+  const [summary, setSummary] = useState<{ scanned: number; created: number } | null>(null)
 
   const runDiscovery = useCallback(async () => {
     setRunning(true)
     setLog(null)
+    setSummary(null)
     onWarning(null)
 
     const res = await fetch('/api/modules/job-agent/nightly', { method: 'POST' })
@@ -36,6 +38,13 @@ export function DiscoveryPanel({ onComplete, onWarning, compact }: DiscoveryPane
       setLog(data.log.map((l: { message: string }) => l.message).join('\n'))
     }
 
+    if (typeof data.jobsScanned === 'number' || typeof data.packsCreated === 'number') {
+      setSummary({
+        scanned: data.jobsScanned ?? 0,
+        created: data.packsCreated ?? 0,
+      })
+    }
+
     if (data.packsCreated > 0) {
       onComplete()
     }
@@ -47,6 +56,13 @@ export function DiscoveryPanel({ onComplete, onWarning, compact }: DiscoveryPane
       <Button onClick={runDiscovery} disabled={running}>
         {running ? ja.discovery.running : ja.discovery.runNow}
       </Button>
+      {summary && (
+        <p className="text-sm font-medium text-[var(--accent)]">
+          {ja.discovery.summary
+            .replace('{scanned}', String(summary.scanned))
+            .replace('{created}', String(summary.created))}
+        </p>
+      )}
       {log && (
         <pre className="max-h-40 overflow-auto rounded-xl border border-[var(--surface-border)] bg-[var(--background-alt)]/50 p-3 text-xs text-[var(--text-muted)]">
           {log}

@@ -252,9 +252,10 @@ export const tr: Messages = {
       gigGuard: 'Gig platform: sadece manuel gönder. Otomatik gönderim kapalı.',
     },
     discovery: {
-      hint: '30+ kaynak: RemoteOK, Remotive, Jobicy, WWR, Built In, Himalayas, The Muse, Working Nomads, SkipTheDrive, Landing.jobs ve daha fazlası. Kutuda olan veya başvurulan ilanlar atlanır. Indeed/LinkedIn/Glassdoor için Vercel’e Adzuna/Jooble API key ekle (doğrudan RSS engellenir). Gece 02:00 UTC.',
+      hint: '30+ kaynak: RemoteOK, Remotive, Jobicy, WWR, Built In, Himalayas, The Muse, Working Nomads, SkipTheDrive, Landing.jobs ve daha fazlası. Kutuda olan veya başvurulan ilanlar atlanır. Indeed/LinkedIn/Glassdoor için Vercel’e Adzuna/Jooble API key ekle (doğrudan RSS engellenir). Otomatik tarama: her gece 05:00 (İstanbul).',
       runNow: 'İlanları şimdi ara',
       running: 'İlanlar aranıyor…',
+      summary: '{scanned} ilan tarandı · {created} yeni paket',
     },
     autofill: {
       run: 'Formu otomatik doldur',
@@ -305,16 +306,28 @@ export const tr: Messages = {
       exclude: 'Engelli şirketler (virgülle)',
       excludeRoles: 'Engellenen rol kelimeleri (ör. senior, manager, director)',
       avoidSenior: 'Senior/lead rolleri atla (şirket alanına uymuyorsa)',
-      requireDomain: 'Şirket veya ilan hedef alanlarla eşleşmeli',
+      requireDomain: 'Sıkı sektör filtresi (maritime/energy/ML eşleşmesi zorunlu — kapalı önerilir)',
       experienceLevel: 'Seviyen (CV için — senior değil)',
       experienceYears: 'İlgili deneyim yılı (opsiyonel)',
       targetCompanies: 'Hedef şirket kariyer URL’leri (virgülle, https://…)',
       keywords: 'Zorunlu kelimeler (opsiyonel — boş = geniş arama)',
       rss: 'RSS feed URL’leri (virgülle, izleme listesine eklenir)',
       nightly: 'Gece keşfini aç',
-      runNightly: 'Gece taramasını şimdi çalıştır',
+      runNightly: 'İlan aramayı şimdi çalıştır',
       nightlyRunning: 'Taranıyor…',
       save: 'Kaydet',
+      scheduleTitle: 'Arama nasıl çalışır?',
+      scheduleBody:
+        'Gece boyunca sürekli çalışan bir arka plan servisi değil. Her çalıştırma tek seferlik (~2–5 dk): kaynakları tara → filtrele → CV/ön yazı paketi üret. Otomatik: “Gece keşfini aç” işaretliyse her gece 05:00 (İstanbul). Manuel: bu buton veya Sabah kutusu → “İlanları şimdi ara”. Koşu başına en fazla 10 yeni paket.',
+      stopTitle: 'Nasıl durdurulur?',
+      stopBody:
+        '“Gece keşfini aç” kutusunu kaldır ve Kaydet — otomatik tarama durur. Devam eden manuel tarama UI’dan iptal edilemez (sekmeyi kapatırsan durur). Autofill daemon (pnpm autofill:daemon) sadece forma tıklayınca doldurur; ilan aramaz.',
+      runsTitle: 'Son çalıştırmalar',
+      runsEmpty: 'Henüz kayıt yok. “İlan aramayı şimdi çalıştır” ile başla.',
+      runsRow: '{scanned} tarandı · {created} paket · {when}',
+      runSummary: 'Son çalıştırma: {scanned} ilan tarandı, {created} paket oluşturuldu.',
+      lowResultsHint:
+        'Az sonuç mu? Min. uyumu düşür (ör. 45), “Alan eşleşmesi zorunlu”yu kapat veya anahtar kelime ekle. Daha önce görülen ilanlar atlanır.',
     },
     watchlist: {
       hint: 'İlan URL, şirket kariyer sayfası (açık başvuru dahil), RSS, kelime alarmları.',

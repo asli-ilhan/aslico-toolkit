@@ -7,10 +7,10 @@ import {
 import {
   adjustFitScore,
   computeDomainFit,
-  DEFAULT_PREFERENCES,
   detectAiRisk,
   isCompanyExcluded,
   matchesKeywords,
+  mergeSearchPreferences,
   type SearchPreferences,
 } from '@/lib/job-agent/types'
 import { collectAggregatorJobs } from '@/lib/job-agent/aggregators'
@@ -31,6 +31,8 @@ import {
 } from '@/lib/job-agent/dedupe'
 import { scrapeJobUrl } from '@/lib/job-agent/scrape'
 import { scrapeCareersPage } from '@/lib/job-agent/careers'
+import { relatedEmployerCareersBatch } from '@/lib/job-agent/related-employers'
+import { relevanceDomains } from '@/lib/job-agent/domain-aliases'
 import {
   boostFitWithAlignment,
   evaluateJobRelevance,
@@ -62,10 +64,9 @@ export async function runNightlyForUser(
     .eq('user_id', userId)
     .maybeSingle()
 
-  const preferences: SearchPreferences = {
-    ...DEFAULT_PREFERENCES,
-    ...(prefsRow?.preferences as Partial<SearchPreferences> | null),
-  }
+  const preferences: SearchPreferences = mergeSearchPreferences(
+    prefsRow?.preferences as Partial<SearchPreferences> | null,
+  )
 
   if (!preferences.nightlyEnabled) {
     log.push({ message: 'Nightly run disabled in preferences.' })
@@ -162,6 +163,24 @@ export async function runNightlyForUser(
     }
   }
 
+  const runDay = new Date().getDate()
+  for (const target of relatedEmployerCareersBatch(runDay, 10)) {
+    if (!target.careersUrl) continue
+    try {
+      const careersJobs = await scrapeCareersPage(target.careersUrl, target.label)
+      rawCandidates.push(...careersJobs)
+      jobsScanned += careersJobs.length
+      log.push({
+        message: `Related employer ${target.label}: ${careersJobs.length} opportunities`,
+      })
+    } catch (err) {
+      log.push({
+        message: `Careers ${target.label} failed: ${err instanceof Error ? err.message : 'error'}`,
+        level: 'warn',
+      })
+    }
+  }
+
   for (const feedUrl of rssSources) {
     try {
       const rssJobs = await parseRssFeed(feedUrl, 'rss')
@@ -226,6 +245,8 @@ export async function runNightlyForUser(
   let skippedFit = 0
 
   const profileDomains = masterProfile.domains ?? preferences.domains ?? []
+  const preferenceDomains = preferences.domains ?? []
+  const scoringDomains = relevanceDomains(profileDomains, preferenceDomains)
   const expNote = experienceNoteForCv(preferences)
 
   const maxPacks = MAX_NIGHTLY_PACKS
@@ -244,7 +265,7 @@ export async function runNightlyForUser(
       continue
     }
 
-    const relevance = evaluateJobRelevance(job, preferences, profileDomains)
+    const relevance = evaluateJobRelevance(job, preferences, profileDomains, preferenceDomains)
     if (!relevance.pass) {
       skippedRelevance++
       if (skippedRelevance <= 10) {
@@ -271,7 +292,7 @@ export async function runNightlyForUser(
 
     const domainFit = computeDomainFit(
       `${job.company} ${job.role} ${job.jobDescription}`,
-      profileDomains,
+      scoringDomains,
       preferences.domainWeights,
     )
 

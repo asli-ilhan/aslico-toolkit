@@ -81,6 +81,16 @@ export const BUILTIN_DISCOVERY_KEYWORDS = [
   'structural engineer',
   'consultant',
   'contractor',
+  'energy',
+  'utilities',
+  'power grid',
+  'oil and gas',
+  'sustainability',
+  'environmental',
+  'hydrogen',
+  'battery storage',
+  'engineering consultancy',
+  'epc',
 ]
 
 const FETCH_HEADERS = {
