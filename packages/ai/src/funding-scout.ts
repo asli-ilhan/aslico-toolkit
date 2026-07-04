@@ -129,7 +129,44 @@ function parseJsonPayload(raw: string): unknown {
   const trimmed = raw.trim()
   const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/)
   const body = fence ? fence[1].trim() : trimmed
-  return JSON.parse(body)
+
+  try {
+    return JSON.parse(body)
+  } catch {
+    const arrayStart = body.indexOf('[')
+    const arrayEnd = body.lastIndexOf(']')
+    if (arrayStart >= 0 && arrayEnd > arrayStart) {
+      try {
+        return JSON.parse(body.slice(arrayStart, arrayEnd + 1))
+      } catch {
+        let partial = body.slice(arrayStart)
+        partial = partial.replace(/,\s*$/, '')
+        if (!partial.endsWith(']')) partial += ']'
+        return JSON.parse(partial)
+      }
+    }
+    const objStart = body.indexOf('{')
+    const objEnd = body.lastIndexOf('}')
+    if (objStart >= 0 && objEnd > objStart) {
+      return JSON.parse(body.slice(objStart, objEnd + 1))
+    }
+    throw new Error('Could not parse funding evaluation JSON')
+  }
+}
+
+async function evaluateChunkSingles(
+  profile: MasterProfileData,
+  settings: FundingSettingsInput,
+  chunk: FundingOppInput[],
+  chunkOffset: number,
+): Promise<FundingProgramEvaluation[]> {
+  const results: FundingProgramEvaluation[] = []
+  for (let i = 0; i < chunk.length; i++) {
+    const ev = await evaluateFundingOpening(profile, chunk[i], settings)
+    ev.index = chunkOffset + i
+    results.push(ev)
+  }
+  return results
 }
 
 export async function evaluateFundingOpeningsBatch(
@@ -140,37 +177,39 @@ export async function evaluateFundingOpeningsBatch(
   if (!openings.length) return []
 
   const safe = profileForApplications(profile)
-  const CHUNK = 4
+  const CHUNK = 2
   const all: FundingProgramEvaluation[] = []
 
   for (let start = 0; start < openings.length; start += CHUNK) {
     const chunk = openings.slice(start, start + CHUNK)
     const chunkOffset = start
-    const raw = await createClaudeMessage({
-      system: `${FUNDING_SCOUT_SYSTEM_PROMPT}\n${JOB_APPLICATION_GUARDRAILS}`,
-      messages: [{
-        role: 'user',
-        content: buildBatchOpeningsTask(safe, settings, chunk),
-      }],
-      maxTokens: 6144,
-      temperature: 0.15,
-    })
 
     try {
-      const parsed = parseJsonPayload(raw)
-      const rows = Array.isArray(parsed) ? parsed : [parsed]
-      for (let i = 0; i < rows.length; i++) {
-        const ev = normalizeEvaluation(rows[i] as Record<string, unknown>)
-        const localIdx = typeof ev.index === 'number' ? ev.index : i
-        ev.index = chunkOffset + localIdx
-        all.push(ev)
+      const raw = await createClaudeMessage({
+        system: `${FUNDING_SCOUT_SYSTEM_PROMPT}\n${JOB_APPLICATION_GUARDRAILS}`,
+        messages: [{
+          role: 'user',
+          content: buildBatchOpeningsTask(safe, settings, chunk),
+        }],
+        maxTokens: 8192,
+        temperature: 0.15,
+      })
+
+      try {
+        const parsed = parseJsonPayload(raw)
+        const rows = Array.isArray(parsed) ? parsed : [parsed]
+        if (!rows.length) throw new Error('Empty evaluation array')
+        for (let i = 0; i < rows.length; i++) {
+          const ev = normalizeEvaluation(rows[i] as Record<string, unknown>)
+          const localIdx = typeof ev.index === 'number' ? ev.index : i
+          ev.index = chunkOffset + localIdx
+          all.push(ev)
+        }
+      } catch {
+        all.push(...await evaluateChunkSingles(profile, settings, chunk, chunkOffset))
       }
     } catch {
-      for (let i = 0; i < chunk.length; i++) {
-        const ev = await evaluateFundingOpening(profile, chunk[i], settings)
-        ev.index = chunkOffset + i
-        all.push(ev)
-      }
+      all.push(...await evaluateChunkSingles(profile, settings, chunk, chunkOffset))
     }
   }
 
@@ -228,10 +267,39 @@ export async function scoreFundingFitBatch(
 ): Promise<Map<number, FundingFitResult>> {
   const evaluations = await evaluateFundingOpeningsBatch(profile, settings, openings)
   const map = new Map<number, FundingFitResult>()
+
   for (const ev of evaluations) {
     const idx = typeof ev.index === 'number' ? ev.index : map.size
     map.set(idx, evaluationToFitResult(ev))
   }
+
+  if (map.size === 0 && openings.length > 0) {
+    for (let i = 0; i < openings.length; i++) {
+      try {
+        const ev = await evaluateFundingOpening(profile, openings[i], settings)
+        ev.index = i
+        map.set(i, evaluationToFitResult(ev))
+      } catch {
+        map.set(i, evaluationToFitResult({
+          name: openings[i].title,
+          score: 35,
+          eligible: true,
+          applicant_type: 'student-direct',
+          eligibility_gates: [],
+          disqualifiers: [],
+          deadline: null,
+          deadline_cycle: null,
+          amount: null,
+          host_geography: openings[i].region,
+          fit_reason: 'AI evaluation failed — review manually',
+          confidence: 'unverified',
+          verify_notes: 'Re-run scan or promote from skipped list',
+          source_url: openings[i].opportunityUrl ?? null,
+        }))
+      }
+    }
+  }
+
   return map
 }
 

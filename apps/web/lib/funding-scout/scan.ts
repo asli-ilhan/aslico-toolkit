@@ -111,6 +111,11 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
   })
   if (isWebSearchAvailable()) {
     log.push({ message: `Web search: ${webSearchProvider()} enabled` })
+  } else {
+    log.push({
+      message: 'TAVILY_API_KEY not detected — Vercel → Settings → Environment Variables → Production → redeploy',
+      level: 'warn',
+    })
   }
 
   const { data: profileRow } = await supabase.from('candidate_profiles').select('master_profile').eq('user_id', userId).maybeSingle()

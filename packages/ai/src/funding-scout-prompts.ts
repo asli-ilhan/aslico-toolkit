@@ -80,16 +80,16 @@ export function buildBatchOpeningsTask(
   openings: FundingOppInput[],
 ): string {
   const payload = openings.map((opp, index) => {
-    const parts: string[] = [opp.description.slice(0, 2500)]
+    const parts: string[] = [opp.description.slice(0, 1200)]
     if (opp.primarySourceText) {
-      parts.push(`PRIMARY SOURCE (${opp.primarySourceFetchedAt ?? 'fetched'}): ${opp.primarySourceText.slice(0, 3500)}`)
+      parts.push(`PRIMARY SOURCE: ${opp.primarySourceText.slice(0, 2000)}`)
     }
     if (opp.searchVerificationSnippets?.length) {
       const verify = opp.searchVerificationSnippets
-        .map((h) => `[${h.title}] ${h.url}\n${h.snippet}`)
+        .map((h) => `[${h.title}] ${h.snippet.slice(0, 300)}`)
         .join('\n')
-        .slice(0, 2000)
-      parts.push(`WEB VERIFICATION: ${verify}`)
+        .slice(0, 800)
+      parts.push(`WEB VERIFY: ${verify}`)
     }
     return {
       index,

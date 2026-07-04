@@ -5,6 +5,20 @@ export interface WebSearchHit {
   source: 'tavily' | 'brave'
 }
 
+/** Trim whitespace — Vercel env paste often adds trailing newline. */
+export function scoutEnv(name: string): string | undefined {
+  const value = process.env[name]?.trim()
+  return value || undefined
+}
+
+export function getTavilyApiKey(): string | undefined {
+  return scoutEnv('TAVILY_API_KEY')
+}
+
+export function getBraveSearchApiKey(): string | undefined {
+  return scoutEnv('BRAVE_SEARCH_API_KEY')
+}
+
 const BLOCKED_HOSTS = [
   'facebook.com',
   'twitter.com',
@@ -46,17 +60,17 @@ function searchHitScore(hit: WebSearchHit): number {
 }
 
 export function isWebSearchAvailable(): boolean {
-  return Boolean(process.env.TAVILY_API_KEY || process.env.BRAVE_SEARCH_API_KEY)
+  return Boolean(getTavilyApiKey() || getBraveSearchApiKey())
 }
 
 export function webSearchProvider(): 'tavily' | 'brave' | null {
-  if (process.env.TAVILY_API_KEY) return 'tavily'
-  if (process.env.BRAVE_SEARCH_API_KEY) return 'brave'
+  if (getTavilyApiKey()) return 'tavily'
+  if (getBraveSearchApiKey()) return 'brave'
   return null
 }
 
 async function tavilySearch(query: string, maxResults: number): Promise<WebSearchHit[]> {
-  const apiKey = process.env.TAVILY_API_KEY
+  const apiKey = getTavilyApiKey()
   if (!apiKey) return []
 
   const res = await fetch('https://api.tavily.com/search', {
@@ -89,7 +103,7 @@ async function tavilySearch(query: string, maxResults: number): Promise<WebSearc
 }
 
 async function braveSearch(query: string, maxResults: number): Promise<WebSearchHit[]> {
-  const apiKey = process.env.BRAVE_SEARCH_API_KEY
+  const apiKey = getBraveSearchApiKey()
   if (!apiKey) return []
 
   const url = new URL('https://api.search.brave.com/res/v1/web/search')

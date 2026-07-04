@@ -121,7 +121,7 @@ export async function discoverLiveOpenings(
     raw.push(...searched.items)
     log.push(...searched.log)
   } else {
-    log.push('Web search: add TAVILY_API_KEY for live discovery')
+    log.push('Web search: TAVILY_API_KEY not set — add in Vercel → Settings → Environment Variables (Production) then redeploy')
   }
 
   return { items: raw, log }
