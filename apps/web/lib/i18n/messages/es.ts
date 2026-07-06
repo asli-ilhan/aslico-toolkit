@@ -478,7 +478,7 @@ export const es: Messages = {
     verifyNotes: 'Qué verificar',
     disqualifiers: 'Descalificadores',
     supervisionModels: { standard: 'Estándar', joint_phd: 'Joint PhD', co_supervision: 'Co-supervisión', cotutelle: 'Cotutelle' },
-    warnings: { tableMissing: 'Ejecutar funding_scout.sql.', eligibilityMigration: 'Ejecutar funding_scout_v2_eligibility.sql.' },
+    warnings: { tableMissing: 'Ejecutar funding_scout.sql.', eligibilityMigration: 'Ejecutar funding_scout_v2_eligibility.sql.', scanFailed: 'Escaneo fallido — ver log.' },
   },
   voiceAssistant: {
     title: 'Asistente de voz',

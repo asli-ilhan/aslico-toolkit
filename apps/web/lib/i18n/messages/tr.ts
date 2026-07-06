@@ -748,6 +748,7 @@ export const tr: Messages = {
     warnings: {
       tableMissing: 'Supabase SQL Editor\'da funding_scout.sql çalıştır.',
       eligibilityMigration: 'Uygunluk ayarları için funding_scout_v2_eligibility.sql çalıştır.',
+      scanFailed: 'Tarama başarısız — ağ veya sunucu hatası. Log kutusuna bak.',
     },
   },
   voiceAssistant: {

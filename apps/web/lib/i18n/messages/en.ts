@@ -750,6 +750,7 @@ export const en: Messages = {
     warnings: {
       tableMissing: 'Run packages/storage/sql/funding_scout.sql in Supabase SQL Editor.',
       eligibilityMigration: 'Run packages/storage/sql/funding_scout_v2_eligibility.sql for eligibility settings.',
+      scanFailed: 'Scan failed — network or server error. Check the log box below.',
     },
   },
   voiceAssistant: {

@@ -634,7 +634,7 @@ export type Messages = {
     verifyNotes: string
     disqualifiers: string
     supervisionModels: Record<string, string>
-    warnings: { tableMissing: string; eligibilityMigration: string }
+    warnings: { tableMissing: string; eligibilityMigration: string; scanFailed: string }
   }
   voiceAssistant: {
     title: string

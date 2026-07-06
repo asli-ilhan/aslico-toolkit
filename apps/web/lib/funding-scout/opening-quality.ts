@@ -41,6 +41,8 @@ function pathDepth(url: string): number {
 
 /** True when this looks like a concrete call / posting, not a generic program catalog entry. */
 export function isSpecificOpening(opp: FundingCandidate): boolean {
+  if (opp.priorityTier === 'turkey_national' || opp.priorityTier === 'home_university') return true
+  if (opp.source.startsWith('curated:turkey-priority')) return true
   if (opp.listingKind === 'live_opening') return true
   if (opp.listingKind === 'program_catalog') return false
   if (opp.source.startsWith('portal:')) return false

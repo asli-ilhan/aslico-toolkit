@@ -73,14 +73,37 @@ export function useFundingScan() {
     try {
       const res = await fetch('/api/modules/funding-scout/scan', { method: 'POST', signal: controller.signal })
       if (controller.signal.aborted) return { ok: false, aborted: true }
-      const data = await res.json()
-      if (data.log?.length) setLog(data.log.map((l: { message: string }) => l.message).join('\n'))
+
+      let data: Record<string, unknown>
+      const raw = await res.text()
+      try {
+        data = JSON.parse(raw) as Record<string, unknown>
+      } catch {
+        setLog(`Scan response error (${res.status}): ${raw.slice(0, 500) || res.statusText}`)
+        setRunning(false)
+        abortRef.current = null
+        return { ok: false, data: { error: 'invalid_json' } }
+      }
+
+      const lines = Array.isArray(data.log)
+        ? data.log.map((l: { message: string }) => l.message)
+        : []
+      if (lines.length) {
+        setLog(lines.join('\n'))
+      } else if (typeof data.error === 'string') {
+        setLog(`Scan failed: ${data.error}`)
+      } else if (!res.ok) {
+        setLog(`Scan failed (HTTP ${res.status})`)
+      } else {
+        setLog('Scan finished but returned no log lines.')
+      }
+
       setSummary({
-        scanned: data.opportunitiesScanned ?? 0,
-        created: data.packsCreated ?? 0,
-        newCandidates: data.candidatesNew,
-        duplicates: data.candidatesDuplicate,
-        skipped: data.skippedCount ?? data.skippedPreview?.length ?? 0,
+        scanned: (data.opportunitiesScanned as number) ?? 0,
+        created: (data.packsCreated as number) ?? 0,
+        newCandidates: data.candidatesNew as number | undefined,
+        duplicates: data.candidatesDuplicate as number | undefined,
+        skipped: (data.skippedCount as number) ?? (Array.isArray(data.skippedPreview) ? data.skippedPreview.length : 0),
       })
       if (Array.isArray(data.skippedPreview)) {
         setSessionSkipped(data.skippedPreview)
@@ -100,7 +123,9 @@ export function useFundingScan() {
         setStopped(true)
         return { ok: false, aborted: true }
       }
-      throw err
+      const msg = err instanceof Error ? err.message : 'unknown error'
+      setLog(`Scan request failed: ${msg}`)
+      return { ok: false, data: { error: msg } }
     }
   }, [])
 

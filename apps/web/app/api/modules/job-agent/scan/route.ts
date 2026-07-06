@@ -66,7 +66,11 @@ export async function POST() {
         warnings: skippedWarning ? [skippedWarning] : [],
       })
     }
-    return NextResponse.json({ error: runError.message }, { status: 500 })
+    return NextResponse.json({
+      ...clientPayload,
+      warning: 'job_agent_run_save_failed',
+      error: runError.message,
+    })
   }
 
   return NextResponse.json({

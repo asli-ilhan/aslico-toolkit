@@ -178,30 +178,38 @@ export function FundingScoutView() {
 
   async function handleScan() {
     setWarning(null)
-    await saveSettings()
-    const { data, aborted } = await runScan()
-    if (!aborted && data) {
-      const warnings = [
-        ...(Array.isArray(data.warnings) ? data.warnings : []),
-        ...(data.warning ? [data.warning] : []),
-      ]
-      if (warnings.includes('funding_scout_table_missing')) {
-        setWarning(fs.warnings.tableMissing)
-      } else if (warnings.includes('scout_skipped_table_missing')) {
-        setWarning(ss.warnings.tableMissing)
-      } else if (warnings.includes('scout_skipped_save_failed')) {
-        setWarning(ss.warnings.saveFailed)
+    try {
+      await saveSettings()
+      const { data, aborted, ok } = await runScan()
+      if (aborted) return
+      if (!ok && data?.error) {
+        setWarning(String(data.error))
       }
-      if (Array.isArray(data.skippedPreview)) {
-        setPanelSkipped(data.skippedPreview)
-        try {
-          localStorage.setItem(PANEL_SKIPPED_KEY, JSON.stringify(data.skippedPreview))
-        } catch {
-          /* quota */
+      if (data) {
+        const warnings = [
+          ...(Array.isArray(data.warnings) ? data.warnings : []),
+          ...(data.warning ? [data.warning] : []),
+        ]
+        if (warnings.includes('funding_scout_table_missing')) {
+          setWarning(fs.warnings.tableMissing)
+        } else if (warnings.includes('scout_skipped_table_missing')) {
+          setWarning(ss.warnings.tableMissing)
+        } else if (warnings.includes('scout_skipped_save_failed')) {
+          setWarning(ss.warnings.saveFailed)
         }
+        if (Array.isArray(data.skippedPreview)) {
+          setPanelSkipped(data.skippedPreview)
+          try {
+            localStorage.setItem(PANEL_SKIPPED_KEY, JSON.stringify(data.skippedPreview))
+          } catch {
+            /* quota */
+          }
+        }
+        await refreshInbox()
+        setSkippedRefresh((n) => n + 1)
       }
-      await refreshInbox()
-      setSkippedRefresh((n) => n + 1)
+    } catch (err) {
+      setWarning(err instanceof Error ? err.message : fs.warnings.scanFailed)
     }
   }
 
@@ -289,6 +297,9 @@ export function FundingScoutView() {
             <Button variant="outline" onClick={saveSettings} disabled={saving}>{saving ? t.common.loading : fs.saveSettings}</Button>
           </div>
           {stopped && <p className="text-xs text-[var(--text-muted)]">{fs.stopped}</p>}
+          {running && !log && (
+            <p className="text-xs text-[var(--text-muted)]">{fs.scanning}…</p>
+          )}
           {summary && (
             <p className="text-sm text-[var(--accent)]">
               {fs.scanSummary

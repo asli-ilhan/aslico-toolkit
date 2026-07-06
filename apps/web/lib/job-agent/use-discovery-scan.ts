@@ -79,16 +79,33 @@ export function useJobDiscoveryScan() {
         return { ok: false, aborted: true }
       }
 
-      const data = await res.json()
-
-      if (data.log?.length) {
-        setLog(data.log.map((l: { message: string }) => l.message).join('\n'))
+      let data: Record<string, unknown>
+      const raw = await res.text()
+      try {
+        data = JSON.parse(raw) as Record<string, unknown>
+      } catch {
+        setLog(`Scan response error (${res.status}): ${raw.slice(0, 500) || res.statusText}`)
+        setRunning(false)
+        abortRef.current = null
+        return { ok: false, data: { error: 'invalid_json' } }
       }
+
+      const lines = Array.isArray(data.log)
+        ? data.log.map((l: { message: string }) => l.message)
+        : []
+      if (lines.length) {
+        setLog(lines.join('\n'))
+      } else if (typeof data.error === 'string') {
+        setLog(`Scan failed: ${data.error}`)
+      } else if (!res.ok) {
+        setLog(`Scan failed (HTTP ${res.status})`)
+      }
+
       if (typeof data.jobsScanned === 'number' || typeof data.packsCreated === 'number') {
         setSummary({
-          scanned: data.jobsScanned ?? 0,
-          created: data.packsCreated ?? 0,
-          skipped: data.skippedCount ?? data.skippedPreview?.length ?? 0,
+          scanned: (data.jobsScanned as number) ?? 0,
+          created: (data.packsCreated as number) ?? 0,
+          skipped: (data.skippedCount as number) ?? (Array.isArray(data.skippedPreview) ? data.skippedPreview.length : 0),
         })
       }
       if (Array.isArray(data.skippedPreview) && data.skippedPreview.length) {
@@ -105,7 +122,9 @@ export function useJobDiscoveryScan() {
         setStopped(true)
         return { ok: false, aborted: true }
       }
-      throw err
+      const msg = err instanceof Error ? err.message : 'unknown error'
+      setLog(`Scan request failed: ${msg}`)
+      return { ok: false, data: { error: msg } }
     }
   }, [])
 

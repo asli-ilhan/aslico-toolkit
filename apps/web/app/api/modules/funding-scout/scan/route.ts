@@ -13,7 +13,23 @@ export async function POST() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const result = await runFundingScan(supabase, user.id)
+  let result: Awaited<ReturnType<typeof runFundingScan>>
+  try {
+    result = await runFundingScan(supabase, user.id)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Scan crashed'
+    return NextResponse.json({
+      opportunitiesScanned: 0,
+      packsCreated: 0,
+      candidatesNew: 0,
+      candidatesDuplicate: 0,
+      regionsScanned: [],
+      log: [{ message: `Scan crashed: ${msg}`, level: 'error' }],
+      skippedPreview: [],
+      skippedCount: 0,
+      error: msg,
+    }, { status: 500 })
+  }
 
   const { data: runRow, error: runError } = await supabase.from('funding_scout_runs').insert({
     user_id: user.id,
