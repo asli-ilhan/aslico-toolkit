@@ -34,6 +34,7 @@ function settingsForAi(settings: FundingSettings) {
     partnerCountries: settings.partnerCountries,
     supervisionModel: settings.supervisionModel,
     partnershipNotes: settings.partnershipNotes,
+    scopeLearnings: settings.scopeLearnings,
     strictEligibility: settings.strictEligibility,
     disciplines: settings.disciplines,
     regions: settings.regions,
@@ -338,7 +339,10 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
     })
   }
 
-  log.push({ message: `Skipped candidates saved for review: ${skipped.length}`, level: skipped.length ? 'info' : undefined })
+  log.push({
+    message: `Skipped for review: ${skipped.length} (saved to DB after scan completes)`,
+    level: skipped.length ? 'info' : undefined,
+  })
 
   return {
     opportunitiesScanned,

@@ -16,6 +16,7 @@ function settingsForAi(settings: ReturnType<typeof settingsFromDbRow>) {
     partnerCountries: settings.partnerCountries,
     supervisionModel: settings.supervisionModel,
     partnershipNotes: settings.partnershipNotes,
+    scopeLearnings: settings.scopeLearnings,
     strictEligibility: settings.strictEligibility,
     disciplines: settings.disciplines,
     regions: settings.regions,
@@ -26,6 +27,34 @@ export async function promoteFundingSkippedToPack(
   supabase: SupabaseClient,
   userId: string,
   item: ScoutSkippedRecord,
+): Promise<{ applicationId: string }> {
+  return promoteFundingFromSkipInput(supabase, userId, {
+    title: item.title,
+    subtitle: item.subtitle ?? undefined,
+    itemUrl: item.item_url ?? undefined,
+    description: item.description ?? undefined,
+    skipReason: item.skip_reason,
+    skipCategory: item.skip_category,
+    fitScore: item.fit_score,
+    candidateData: item.candidate_data,
+  })
+}
+
+export interface PromoteFundingSkipInput {
+  title: string
+  subtitle?: string
+  itemUrl?: string
+  description?: string
+  skipReason: string
+  skipCategory: string
+  fitScore?: number | null
+  candidateData?: Record<string, unknown>
+}
+
+export async function promoteFundingFromSkipInput(
+  supabase: SupabaseClient,
+  userId: string,
+  item: PromoteFundingSkipInput,
 ): Promise<{ applicationId: string }> {
   if (!process.env.ANTHROPIC_API_KEY) {
     throw new Error('ANTHROPIC_API_KEY missing')
@@ -49,7 +78,7 @@ export async function promoteFundingSkippedToPack(
   const settings = settingsFromDbRow(settingsRow)
   const aiSettings = settingsForAi(settings)
 
-  const data = item.candidate_data
+  const data = item.candidateData ?? {}
   const opp = (data.opp ?? data) as FundingCandidate & {
     listingDescription?: string
     primarySourceText?: string
@@ -81,7 +110,7 @@ export async function promoteFundingSkippedToPack(
     fundingType: opp.fundingType ?? 'phd_scholarship',
     region: opp.region ?? 'global',
     description: enriched.listingDescription,
-    opportunityUrl: opp.opportunityUrl ?? item.item_url ?? undefined,
+    opportunityUrl: opp.opportunityUrl ?? item.itemUrl ?? undefined,
     primarySourceText: opp.primarySourceText,
     primarySourceFetchedAt: opp.primarySourceFetchedAt,
     searchVerificationSnippets: opp.searchVerificationSnippets as FundingOppInput['searchVerificationSnippets'],
@@ -99,19 +128,19 @@ export async function promoteFundingSkippedToPack(
       title: opp.title ?? item.title,
       funding_type: opp.fundingType ?? 'phd_scholarship',
       region: opp.region ?? 'global',
-      opportunity_url: opp.opportunityUrl ?? item.item_url ?? null,
-        description: composeEnrichedDescription({
-          ...enriched,
-          listingDescription: enriched.listingDescription,
-          searchVerificationSnippets: undefined,
-        }).slice(0, 20000),
+      opportunity_url: opp.opportunityUrl ?? item.itemUrl ?? null,
+      description: composeEnrichedDescription({
+        ...enriched,
+        listingDescription: enriched.listingDescription,
+        searchVerificationSnippets: undefined,
+      }).slice(0, 20000),
       deadline,
       amount: fit?.amount ?? opp.amount ?? null,
-      fit_score: fit?.score ?? item.fit_score ?? null,
-      fit_reason: fit?.reason ?? item.skip_reason,
+      fit_score: fit?.score ?? item.fitScore ?? null,
+      fit_reason: fit?.reason ?? item.skipReason,
       eligibility_pass: fit?.eligible !== false,
-      eligibility_reason: fit?.eligibilityReason ?? `Manual promote from skipped: ${item.skip_reason}`,
-      eligibility_flags: fit?.eligibilityFlags ?? [`promoted_from_skipped:${item.skip_category}`],
+      eligibility_reason: fit?.eligibilityReason ?? `Manual promote from skipped: ${item.skipReason}`,
+      eligibility_flags: fit?.eligibilityFlags ?? [`promoted_from_skipped:${item.skipCategory}`],
       motivation_letter: pack.motivationLetter,
       research_summary: pack.researchSummary,
       project_outline: pack.projectOutline,

@@ -518,4 +518,12 @@ export const es: Messages = {
     },
     warnings: { tableMissing: 'Ejecutar scout_skipped.sql.' },
   },
+  scoutFeedback: {
+    title: '¿Por qué no encaja?',
+    hint: 'Nota breve — los próximos escaneos afinan el alcance.',
+    placeholder: 'ej. beca salud UK, no marítimo/IA',
+    submit: 'Guardar y quitar',
+    dismissWithout: 'Quitar sin comentario',
+    cancel: 'Cancelar',
+  },
 }

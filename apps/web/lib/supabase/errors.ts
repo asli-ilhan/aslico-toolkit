@@ -110,3 +110,13 @@ export function isMissingScoutSkippedTable(error: {
 }): boolean {
   return isMissingTable(error, 'scout_skipped_items')
 }
+
+export function isMissingScoutScopeFeedbackTable(error: {
+  code?: string
+  message?: string
+}): boolean {
+  return (
+    isMissingTable(error, 'scout_scope_feedback') ||
+    (error.message?.includes('scope_learnings') ?? false)
+  )
+}

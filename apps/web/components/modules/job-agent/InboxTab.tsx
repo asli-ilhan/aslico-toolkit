@@ -7,6 +7,7 @@ import type { ApplicationPack } from './types'
 import { PackDetailPanel } from './PackDetailPanel'
 import { DiscoveryPanel } from './DiscoveryPanel'
 import { ScoutSkippedPanel } from '@/components/scout/ScoutSkippedPanel'
+import { useDismissWithFeedback } from '@/lib/scout/use-dismiss-with-feedback'
 
 interface InboxTabProps {
   onWarning: (msg: string | null) => void
@@ -19,6 +20,7 @@ export function InboxTab({ onWarning }: InboxTabProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [skippedRefresh, setSkippedRefresh] = useState(0)
+  const { openDismiss, dialog: dismissDialog } = useDismissWithFeedback('job-agent')
 
   const selected = items.find((i) => i.id === selectedId) ?? items[0] ?? null
 
@@ -79,6 +81,7 @@ export function InboxTab({ onWarning }: InboxTabProps) {
           refreshKey={skippedRefresh}
           onPromoted={load}
         />
+        {dismissDialog}
       </div>
     )
   }
@@ -135,10 +138,18 @@ export function InboxTab({ onWarning }: InboxTabProps) {
               pack={selected}
               editable
               onUpdate={(patch) => patchPack(selected.id, patch)}
+              onRequestSkip={() => openDismiss({
+                action: 'skip',
+                title: selected.role,
+                subtitle: selected.company,
+                itemUrl: selected.job_url,
+                onConfirm: () => patchPack(selected.id, { status: 'skipped' }),
+              })}
             />
           </GlassPanel>
         )}
       </div>
+      {dismissDialog}
     </div>
   )
 }

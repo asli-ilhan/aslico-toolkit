@@ -801,4 +801,12 @@ export const en: Messages = {
       tableMissing: 'Run packages/storage/sql/scout_skipped.sql in Supabase SQL Editor.',
     },
   },
+  scoutFeedback: {
+    title: 'Why isn’t this a fit?',
+    hint: 'Short note — future scans narrow scope from your rejections.',
+    placeholder: 'e.g. UK health-only grant, not maritime AI; postdoc role too early for me',
+    submit: 'Save & remove',
+    dismissWithout: 'Remove without feedback',
+    cancel: 'Cancel',
+  },
 }

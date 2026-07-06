@@ -39,6 +39,7 @@ export interface PackInput {
   locale?: string
   experienceNote?: string
   applicationType?: 'job_posting' | 'open_application'
+  scopeLearnings?: string
 }
 
 function localeHint(locale: string): string {
@@ -127,7 +128,7 @@ Remote: ${job.remoteType ?? 'unknown'}
 Employment: ${job.employmentType ?? 'unknown'}
 
 Description:
-${job.jobDescription.slice(0, 6000)}`,
+${job.jobDescription.slice(0, 6000)}${job.scopeLearnings?.trim() ? `\n\nUser scope learnings (past rejections — penalize similar):\n${job.scopeLearnings.trim()}` : ''}`,
       },
     ],
     maxTokens: 256,

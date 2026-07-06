@@ -799,4 +799,12 @@ export const tr: Messages = {
       tableMissing: 'Supabase SQL Editor\'da scout_skipped.sql çalıştır.',
     },
   },
+  scoutFeedback: {
+    title: 'Neden uygun değil?',
+    hint: 'Kısa not yaz — sonraki taramalar bu tercihlere göre daralır.',
+    placeholder: 'örn. UK sağlık araştırması, denizcilik/AI ile ilgisi yok; postdoc pozisyonu benim için erken',
+    submit: 'Kaydet ve kaldır',
+    dismissWithout: 'Geri bildirim olmadan',
+    cancel: 'Vazgeç',
+  },
 }

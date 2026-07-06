@@ -13,11 +13,12 @@ interface PackDetailPanelProps {
   editable?: boolean
   onUpdate: (patch: Partial<ApplicationPack> & { status?: string; funnel_stage?: string }) => Promise<void>
   onRemove?: () => void
+  onRequestSkip?: () => void
 }
 
 const FUNNEL_STAGES = ['none', 'applied', 'screening', 'interview', 'offer', 'rejected'] as const
 
-export function PackDetailPanel({ pack, editable = false, onUpdate, onRemove }: PackDetailPanelProps) {
+export function PackDetailPanel({ pack, editable = false, onUpdate, onRemove, onRequestSkip }: PackDetailPanelProps) {
   const { t } = useLocale()
   const ja = t.jobAgent
   const [coverLetter, setCoverLetter] = useState(pack.cover_letter ?? '')
@@ -195,7 +196,7 @@ export function PackDetailPanel({ pack, editable = false, onUpdate, onRemove }: 
             >
               {ja.inbox.markSubmitted}
             </Button>
-            <Button variant="outline" onClick={() => onUpdate({ status: 'skipped' })}>
+            <Button variant="outline" onClick={() => (onRequestSkip ? onRequestSkip() : onUpdate({ status: 'skipped' }))}>
               {ja.inbox.skip}
             </Button>
             <Button variant="outline" onClick={saveEdits} disabled={saving}>

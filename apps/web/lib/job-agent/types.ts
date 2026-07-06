@@ -75,6 +75,8 @@ export interface SearchPreferences {
   nightlyEnabled: boolean
   /** normal = ~12 packs/run; deep = ~18 packs, more feeds & careers pages */
   scanDepth?: ScanDepth
+  /** User rejection notes — injected into fit scoring prompts */
+  scopeLearnings?: string
 }
 
 export const DOMAIN_WEIGHTS: Record<string, number> = {

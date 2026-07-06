@@ -29,6 +29,7 @@ export interface FundingSettingsInput {
   partnerCountries?: string[]
   supervisionModel?: string
   partnershipNotes?: string
+  scopeLearnings?: string
   strictEligibility?: boolean
   disciplines?: string[]
   regions?: string[]

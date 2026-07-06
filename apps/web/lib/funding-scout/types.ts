@@ -46,6 +46,7 @@ export interface FundingSettings {
   partnerCountries: string[]
   supervisionModel: SupervisionModel
   partnershipNotes: string
+  scopeLearnings: string
   strictEligibility: boolean
 }
 
@@ -94,6 +95,7 @@ export const DEFAULT_FUNDING_SETTINGS: FundingSettings = {
   partnerCountries: ['china', 'netherlands'],
   supervisionModel: 'co_supervision',
   partnershipNotes: '',
+  scopeLearnings: '',
   strictEligibility: true,
 }
 
@@ -124,6 +126,7 @@ export function settingsFromDbRow(row: Record<string, unknown> | null | undefine
     partnerCountries: (row.partner_countries as string[]) ?? ['china', 'netherlands'],
     supervisionModel: (row.supervision_model as FundingSettings['supervisionModel']) ?? 'co_supervision',
     partnershipNotes: (row.partnership_notes as string) ?? '',
+    scopeLearnings: (row.scope_learnings as string) ?? '',
     strictEligibility: row.strict_eligibility !== false,
   })
 }
@@ -145,6 +148,7 @@ export function settingsToDbRow(userId: string, s: FundingSettings) {
     supervision_model: s.supervisionModel,
     partnership_notes: s.partnershipNotes,
     strict_eligibility: s.strictEligibility,
+    scope_learnings: s.scopeLearnings,
     updated_at: new Date().toISOString(),
   }
 }

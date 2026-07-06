@@ -361,6 +361,7 @@ export async function runDiscoveryForUser(
       jobDescription: job.jobDescription,
       jobUrl: job.jobUrl,
       experienceNote: expNote,
+      scopeLearnings: preferences.scopeLearnings,
     })
     fit.score = adjustFitScore(fit.score, domainFit, preferences)
     fit.score = boostFitWithAlignment(fit.score, relevance.alignment, preferences)

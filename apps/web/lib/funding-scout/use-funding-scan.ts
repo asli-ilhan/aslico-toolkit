@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useRef, useState } from 'react'
+import type { SessionSkippedItem } from '@/components/scout/ScoutSkippedPanel'
 
 export function useFundingScan() {
   const abortRef = useRef<AbortController | null>(null)
@@ -8,11 +9,17 @@ export function useFundingScan() {
   const [stopped, setStopped] = useState(false)
   const [log, setLog] = useState<string | null>(null)
   const [summary, setSummary] = useState<{ scanned: number; created: number; newCandidates?: number; duplicates?: number } | null>(null)
+  const [sessionSkipped, setSessionSkipped] = useState<SessionSkippedItem[]>([])
+  const [scanWarnings, setScanWarnings] = useState<string[]>([])
 
   const stopScan = useCallback(() => {
     abortRef.current?.abort()
     setStopped(true)
     setRunning(false)
+  }, [])
+
+  const dismissSessionSkipped = useCallback((id: string) => {
+    setSessionSkipped((prev) => prev.filter((s) => s.id !== id))
   }, [])
 
   const runScan = useCallback(async () => {
@@ -23,6 +30,8 @@ export function useFundingScan() {
     setStopped(false)
     setLog(null)
     setSummary(null)
+    setSessionSkipped([])
+    setScanWarnings([])
 
     try {
       const res = await fetch('/api/modules/funding-scout/scan', { method: 'POST', signal: controller.signal })
@@ -35,6 +44,14 @@ export function useFundingScan() {
         newCandidates: data.candidatesNew,
         duplicates: data.candidatesDuplicate,
       })
+      if (Array.isArray(data.skippedPreview)) {
+        setSessionSkipped(data.skippedPreview)
+      }
+      const warnings = [
+        ...(Array.isArray(data.warnings) ? data.warnings : []),
+        ...(data.warning ? [data.warning] : []),
+      ].filter((w, i, arr) => typeof w === 'string' && arr.indexOf(w) === i)
+      setScanWarnings(warnings)
       setRunning(false)
       abortRef.current = null
       return { ok: res.ok, data }
@@ -49,5 +66,15 @@ export function useFundingScan() {
     }
   }, [])
 
-  return { running, stopped, log, summary, runScan, stopScan }
+  return {
+    running,
+    stopped,
+    log,
+    summary,
+    sessionSkipped,
+    scanWarnings,
+    runScan,
+    stopScan,
+    dismissSessionSkipped,
+  }
 }

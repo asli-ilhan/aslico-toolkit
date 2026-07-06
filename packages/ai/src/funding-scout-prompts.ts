@@ -43,6 +43,7 @@ export function buildResearcherProfileBlock(
 - Languages: ${langs}
 - Supervision model: ${settings.supervisionModel ?? 'co_supervision'} (China co-supervisor / NL cotutelle path)
 - Partnership notes: ${settings.partnershipNotes || 'none'}
+${settings.scopeLearnings?.trim() ? `- Scope learnings (user rejections — hard preferences):\n${settings.scopeLearnings.trim()}` : ''}
 - Geographies of interest: ${uniqueGeo.join(', ')}
 - Goal: stackable individual scholarships + PI-led bilateral projects to join as bursiyer/scholar
 - Strict eligibility mode: ${settings.strictEligibility !== false ? 'yes — reject hard disqualifiers' : 'relaxed'}`

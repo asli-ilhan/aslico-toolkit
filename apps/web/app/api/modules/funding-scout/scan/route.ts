@@ -30,16 +30,47 @@ export async function POST() {
   if (result.skipped.length) {
     try {
       skippedSaved = await saveScoutSkippedItems(supabase, user.id, runRow?.id ?? null, result.skipped)
+      result.log.push({
+        message: `Skipped list DB: ${skippedSaved} rows saved`,
+        level: 'info',
+      })
     } catch (err) {
       if (isMissingScoutSkippedTable(err as { code?: string; message?: string })) {
         skippedWarning = 'scout_skipped_table_missing'
+        result.log.push({
+          message: 'Skipped list DB: table missing — run scout_skipped.sql (showing this scan in UI anyway)',
+          level: 'warn',
+        })
       }
     }
   }
 
+  const skippedPreview = result.skipped.map((s, index) => ({
+    id: `session-${index}`,
+    title: s.title,
+    subtitle: s.subtitle ?? null,
+    item_url: s.itemUrl ?? null,
+    skip_reason: s.skipReason,
+    skip_category: s.skipCategory,
+    fit_score: s.fitScore ?? null,
+    candidate_data: s.candidateData ?? {},
+  }))
+
   if (runError && isMissingFundingScoutTable(runError)) {
-    return NextResponse.json({ ...result, skippedSaved, warning: 'funding_scout_table_missing' })
+    return NextResponse.json({
+      ...result,
+      skippedSaved,
+      skippedPreview,
+      warning: 'funding_scout_table_missing',
+      warnings: skippedWarning ? [skippedWarning] : [],
+    })
   }
 
-  return NextResponse.json({ ...result, skippedSaved, warning: skippedWarning })
+  return NextResponse.json({
+    ...result,
+    skippedSaved,
+    skippedPreview,
+    warning: skippedWarning,
+    warnings: skippedWarning ? [skippedWarning] : [],
+  })
 }

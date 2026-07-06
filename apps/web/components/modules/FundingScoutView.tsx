@@ -10,6 +10,7 @@ import { getModuleById } from '@/lib/module-registry'
 import { useFundingScan } from '@/lib/funding-scout/use-funding-scan'
 import { DEFAULT_FUNDING_SETTINGS } from '@/lib/funding-scout/types'
 import { ScoutSkippedPanel } from '@/components/scout/ScoutSkippedPanel'
+import { useDismissWithFeedback } from '@/lib/scout/use-dismiss-with-feedback'
 
 interface FundingApp {
   id: string
@@ -43,8 +44,19 @@ const SUPERVISION_MODELS = ['standard', 'joint_phd', 'co_supervision', 'cotutell
 export function FundingScoutView() {
   const { t, locale } = useLocale()
   const fs = t.fundingScout
+  const ss = t.scoutSkipped
   const mod = getModuleById('funding-scout')!
-  const { running, stopped, log, summary, runScan, stopScan } = useFundingScan()
+  const {
+    running,
+    stopped,
+    log,
+    summary,
+    sessionSkipped,
+    runScan,
+    stopScan,
+    dismissSessionSkipped,
+  } = useFundingScan()
+  const { openDismiss, dialog: dismissDialog } = useDismissWithFeedback('funding-scout')
 
   const [items, setItems] = useState<FundingApp[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -142,8 +154,16 @@ export function FundingScoutView() {
     setWarning(null)
     await saveSettings()
     const { data, aborted } = await runScan()
-    if (!aborted && data?.warning === 'funding_scout_table_missing') setWarning(fs.warnings.tableMissing)
-    if (!aborted) {
+    if (!aborted && data) {
+      const warnings = [
+        ...(Array.isArray(data.warnings) ? data.warnings : []),
+        ...(data.warning ? [data.warning] : []),
+      ]
+      if (warnings.includes('funding_scout_table_missing')) {
+        setWarning(fs.warnings.tableMissing)
+      } else if (warnings.includes('scout_skipped_table_missing')) {
+        setWarning(ss.warnings.tableMissing)
+      }
       load()
       setSkippedRefresh((n) => n + 1)
     }
@@ -434,7 +454,21 @@ export function FundingScoutView() {
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" onClick={() => patchItem(selected.id, { status: 'approved' })}>{fs.approve}</Button>
                 <Button variant="outline" onClick={() => patchItem(selected.id, { status: 'submitted' })}>{fs.markSubmitted}</Button>
-                <Button variant="outline" onClick={() => patchItem(selected.id, { status: 'skipped' })}>{fs.skip}</Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (!selected) return
+                    openDismiss({
+                      action: 'skip',
+                      title: selected.title,
+                      subtitle: selected.funder,
+                      itemUrl: selected.opportunity_url,
+                      onConfirm: () => patchItem(selected.id, { status: 'skipped' }),
+                    })
+                  }}
+                >
+                  {fs.skip}
+                </Button>
               </div>
             </GlassPanel>
           )}
@@ -443,10 +477,13 @@ export function FundingScoutView() {
         <ScoutSkippedPanel
           moduleId="funding-scout"
           refreshKey={skippedRefresh}
+          sessionItems={sessionSkipped}
           onPromoted={load}
+          onSessionDismiss={dismissSessionSkipped}
         />
 
         <p className="text-xs text-[var(--text-muted)]">{fs.profileHint}</p>
+        {dismissDialog}
       </div>
     </ShellLayout>
   )

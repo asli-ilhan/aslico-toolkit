@@ -518,4 +518,12 @@ export const fr: Messages = {
     },
     warnings: { tableMissing: 'Exécuter scout_skipped.sql.' },
   },
+  scoutFeedback: {
+    title: 'Pourquoi pas adapté ?',
+    hint: 'Note courte — les prochains scans affinent le périmètre.',
+    placeholder: 'ex. bourse santé UK, pas maritime/IA',
+    submit: 'Enregistrer et retirer',
+    dismissWithout: 'Retirer sans commentaire',
+    cancel: 'Annuler',
+  },
 }

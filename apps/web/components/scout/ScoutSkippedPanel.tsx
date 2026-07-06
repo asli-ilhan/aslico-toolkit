@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { GlassPanel, Button } from '@aslico/ui'
 import { useLocale } from '@/components/shell/LocaleProvider'
+import { useDismissWithFeedback } from '@/lib/scout/use-dismiss-with-feedback'
 import type { ScoutModuleId } from '@/lib/scout/skipped'
 
 export interface ScoutSkippedItem {
@@ -15,21 +16,60 @@ export interface ScoutSkippedItem {
   skip_category: string
   fit_score: number | null
   created_at: string
+  candidate_data?: Record<string, unknown>
+}
+
+export type SessionSkippedItem = Omit<ScoutSkippedItem, 'module_id' | 'created_at'> & {
+  created_at?: string
 }
 
 interface ScoutSkippedPanelProps {
   moduleId: ScoutModuleId
   refreshKey?: number
+  sessionItems?: SessionSkippedItem[]
   onPromoted?: () => void
+  onSessionDismiss?: (id: string) => void
 }
 
-export function ScoutSkippedPanel({ moduleId, refreshKey = 0, onPromoted }: ScoutSkippedPanelProps) {
+export function ScoutSkippedPanel({
+  moduleId,
+  refreshKey = 0,
+  sessionItems = [],
+  onPromoted,
+  onSessionDismiss,
+}: ScoutSkippedPanelProps) {
   const { t } = useLocale()
   const ss = t.scoutSkipped
   const [items, setItems] = useState<ScoutSkippedItem[]>([])
   const [loading, setLoading] = useState(true)
   const [warning, setWarning] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [dismissedSessionIds, setDismissedSessionIds] = useState<Set<string>>(new Set())
+  const { openDismiss, dialog: dismissDialog } = useDismissWithFeedback(moduleId)
+
+  function requestDismiss(item: ScoutSkippedItem) {
+    openDismiss({
+      action: 'dismiss',
+      title: item.title,
+      subtitle: item.subtitle,
+      itemUrl: item.item_url,
+      skipCategory: item.skip_category,
+      onConfirm: async () => { await dismiss(item.id) },
+    })
+  }
+
+  const displayItems: ScoutSkippedItem[] = (() => {
+    const dbKeys = new Set(items.map((i) => `${i.title}::${i.item_url ?? ''}`))
+    const fromSession = sessionItems
+      .filter((s) => !dismissedSessionIds.has(s.id))
+      .filter((s) => !dbKeys.has(`${s.title}::${s.item_url ?? ''}`))
+      .map((s) => ({
+        ...s,
+        module_id: moduleId,
+        created_at: s.created_at ?? new Date().toISOString(),
+      }))
+    return [...fromSession, ...items]
+  })()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -47,19 +87,47 @@ export function ScoutSkippedPanel({ moduleId, refreshKey = 0, onPromoted }: Scou
 
   async function promote(id: string) {
     setBusyId(id)
-    const res = await fetch(`/api/modules/scout-skipped/${id}`, { method: 'POST' })
+    const item = displayItems.find((i) => i.id === id)
+    let res: Response
+    if (id.startsWith('session-') && moduleId === 'funding-scout' && item) {
+      res = await fetch('/api/modules/funding-scout/promote-skipped', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: item.title,
+          subtitle: item.subtitle,
+          itemUrl: item.item_url,
+          skipReason: item.skip_reason,
+          skipCategory: item.skip_category,
+          fitScore: item.fit_score,
+          candidateData: item.candidate_data ?? {},
+        }),
+      })
+    } else {
+      res = await fetch(`/api/modules/scout-skipped/${id}`, { method: 'POST' })
+    }
     setBusyId(null)
     if (res.ok) {
-      setItems((prev) => prev.filter((i) => i.id !== id))
+      if (id.startsWith('session-')) {
+        setDismissedSessionIds((prev) => new Set(prev).add(id))
+        onSessionDismiss?.(id)
+      } else {
+        setItems((prev) => prev.filter((i) => i.id !== id))
+      }
       onPromoted?.()
     }
   }
 
   async function dismiss(id: string) {
     setBusyId(id)
-    await fetch(`/api/modules/scout-skipped/${id}`, { method: 'DELETE' })
+    if (id.startsWith('session-')) {
+      setDismissedSessionIds((prev) => new Set(prev).add(id))
+      onSessionDismiss?.(id)
+    } else {
+      await fetch(`/api/modules/scout-skipped/${id}`, { method: 'DELETE' })
+      setItems((prev) => prev.filter((i) => i.id !== id))
+    }
     setBusyId(null)
-    setItems((prev) => prev.filter((i) => i.id !== id))
   }
 
   function categoryLabel(cat: string) {
@@ -79,11 +147,11 @@ export function ScoutSkippedPanel({ moduleId, refreshKey = 0, onPromoted }: Scou
       {warning && (
         <p className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent-soft)] px-3 py-2 text-xs">{warning}</p>
       )}
-      {items.length === 0 ? (
+      {displayItems.length === 0 ? (
         <p className="text-xs text-[var(--text-muted)]">{ss.empty}</p>
       ) : (
         <ul className="max-h-72 space-y-2 overflow-auto">
-          {items.map((item) => (
+          {displayItems.map((item) => (
             <li
               key={item.id}
               className="rounded-xl border border-[var(--surface-border)] px-3 py-2 text-sm"
@@ -120,7 +188,7 @@ export function ScoutSkippedPanel({ moduleId, refreshKey = 0, onPromoted }: Scou
                 <Button
                   variant="outline"
                   disabled={busyId === item.id}
-                  onClick={() => dismiss(item.id)}
+                  onClick={() => requestDismiss(item)}
                 >
                   {ss.dismiss}
                 </Button>
@@ -129,6 +197,7 @@ export function ScoutSkippedPanel({ moduleId, refreshKey = 0, onPromoted }: Scou
           ))}
         </ul>
       )}
+      {dismissDialog}
     </GlassPanel>
   )
 }

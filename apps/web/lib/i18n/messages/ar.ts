@@ -516,4 +516,12 @@ export const ar: Messages = {
     },
     warnings: { tableMissing: 'Run scout_skipped.sql.' },
   },
+  scoutFeedback: {
+    title: 'Why isn’t this a fit?',
+    hint: 'Short note — future scans narrow scope.',
+    placeholder: 'e.g. health grant, not maritime AI',
+    submit: 'Save & remove',
+    dismissWithout: 'Remove without feedback',
+    cancel: 'Cancel',
+  },
 }

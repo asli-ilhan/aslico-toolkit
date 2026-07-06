@@ -663,4 +663,12 @@ export type Messages = {
     categories: Record<string, string>
     warnings: { tableMissing: string }
   }
+  scoutFeedback: {
+    title: string
+    hint: string
+    placeholder: string
+    submit: string
+    dismissWithout: string
+    cancel: string
+  }
 }
