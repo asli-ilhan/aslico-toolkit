@@ -10,6 +10,7 @@ import { passesEligibilityGate } from '@/lib/funding-scout/eligibility'
 import { filterLiveOpenings } from '@/lib/funding-scout/opening-quality'
 import { enrichOpeningsBatch, composeEnrichedDescription } from '@/lib/funding-scout/enrich-opening'
 import { isWebSearchAvailable, webSearchProvider } from '@/lib/funding-scout/web-search'
+import { createScanDeadline } from '@/lib/scout/scan-budget'
 import type { ScoutSkippedInput } from '@/lib/scout/skipped'
 import type { FundingFitResult } from '@aslico/ai'
 
@@ -108,9 +109,10 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
   const aiSettings = settingsForAi(settings)
 
   const limits = fundingScanLimits(settings)
+  const clock = createScanDeadline()
   const regionsScanned = settings.regions
   log.push({
-    message: `Live-opening scan (${settings.scanDepth}) — AI scout + primary verify · max ${limits.maxPacks} packs/run`,
+    message: `Live-opening scan (${settings.scanDepth}) — max ${limits.maxPacks} packs · ${clock.budgetMs / 1000}s budget`,
   })
   if (isWebSearchAvailable()) {
     log.push({ message: `Web search: ${webSearchProvider()} enabled` })
@@ -166,7 +168,7 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
     /* scout_skipped table optional */
   }
 
-  const discovered = await discoverLiveOpenings(settings, limits)
+  const discovered = await discoverLiveOpenings(settings, limits, settings.disciplines, clock)
   for (const line of discovered.log) log.push({ message: line })
 
   opportunitiesScanned = discovered.items.length
@@ -226,16 +228,24 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
   let totalEvaluated = 0
 
   while (packsCreated < limits.maxPacks && evalCursor < ranked.length && evalCursor < limits.maxEvaluate) {
+    if (clock.timeUp()) {
+      log.push({ message: 'Time budget reached — returning partial scan results', level: 'warn' })
+      break
+    }
+
     const wave = ranked.slice(evalCursor, evalCursor + limits.evalWindow)
     evalCursor += wave.length
     if (!wave.length) break
 
-    log.push({ message: `Wave: enriching + AI eval for ${wave.length} candidates (${evalCursor}/${Math.min(ranked.length, limits.maxEvaluate)})…` })
+    const fastMode = clock.remainingMs() < 18_000
+    log.push({
+      message: `Wave: ${fastMode ? 'quick AI eval' : 'enrich + AI eval'} for ${wave.length} candidates (${evalCursor}/${Math.min(ranked.length, limits.maxEvaluate)})…`,
+    })
     const toEnrich = wave.map(({ opp }) => opp)
     const enriched = await enrichOpeningsBatch(toEnrich, {
       concurrency: limits.enrichConcurrency,
-      fetchPrimary: true,
-      verifySearch: isWebSearchAvailable(),
+      fetchPrimary: !fastMode,
+      verifySearch: !fastMode && isWebSearchAvailable(),
     })
 
     const openings = enriched.map((opp) => ({
@@ -260,6 +270,10 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
 
     for (let i = 0; i < wave.length; i++) {
       if (packsCreated >= limits.maxPacks) break
+      if (clock.timeUp()) {
+        log.push({ message: 'Time budget reached during pack generation', level: 'warn' })
+        break
+      }
       const { opp, eligibility: ruleElig } = wave[i]
       const enrichedOpp = enriched[i] ?? opp
       const fit = fitMap.get(i)

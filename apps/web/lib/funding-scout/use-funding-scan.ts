@@ -79,10 +79,15 @@ export function useFundingScan() {
       try {
         data = JSON.parse(raw) as Record<string, unknown>
       } catch {
-        setLog(`Scan response error (${res.status}): ${raw.slice(0, 500) || res.statusText}`)
+        const msg =
+          res.status === 504
+            ? `Sunucu zaman aşımı (504) — burs taraması Vercel limitini aştı.\n${raw.slice(0, 600) || 'FUNCTION_INVOCATION_TIMEOUT'}`
+            : `Scan response error (${res.status}): ${raw.slice(0, 500) || res.statusText}`
+        setLog(msg)
+        setSummary({ scanned: 0, created: 0, newCandidates: 0, duplicates: 0, skipped: 0 })
         setRunning(false)
         abortRef.current = null
-        return { ok: false, data: { error: 'invalid_json' } }
+        return { ok: false, data: { error: 'scan_timeout' } }
       }
 
       const lines = Array.isArray(data.log)
@@ -90,6 +95,10 @@ export function useFundingScan() {
         : []
       if (lines.length) {
         setLog(lines.join('\n'))
+      } else if (res.status === 504) {
+        setLog(
+          `Sunucu zaman aşımı (504) — burs taraması Vercel limitini aştı.\n${raw.slice(0, 600) || 'FUNCTION_INVOCATION_TIMEOUT'}`,
+        )
       } else if (typeof data.error === 'string') {
         setLog(`Scan failed: ${data.error}`)
       } else if (!res.ok) {

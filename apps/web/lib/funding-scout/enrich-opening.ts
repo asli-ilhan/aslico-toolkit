@@ -37,6 +37,10 @@ export async function enrichOpening(
     listingDescription: opp.description,
   }
 
+  if (opp.source.startsWith('curated:')) {
+    return enriched
+  }
+
   if (fetchPrimary && opp.opportunityUrl) {
     const primary = await fetchPrimarySource(opp.opportunityUrl)
     if (primary.ok && primary.text) {

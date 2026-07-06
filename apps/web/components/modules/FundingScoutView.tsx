@@ -182,8 +182,14 @@ export function FundingScoutView() {
       await saveSettings()
       const { data, aborted, ok } = await runScan()
       if (aborted) return
-      if (!ok && data?.error) {
-        setWarning(String(data.error))
+      if (!ok) {
+        if (data?.error === 'scan_timeout' || data?.error === 'invalid_json') {
+          setWarning(fs.warnings.scanFailed)
+        } else if (data?.error) {
+          setWarning(String(data.error))
+        } else {
+          setWarning(fs.warnings.scanFailed)
+        }
       }
       if (data) {
         const warnings = [

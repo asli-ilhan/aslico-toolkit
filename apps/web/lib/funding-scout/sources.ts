@@ -8,6 +8,7 @@ import {
 import { isTurkishCandidate, TURKEY_PRIORITY_OPPORTUNITIES } from '@/lib/funding-scout/turkey-priority'
 import { discoverFromWebSearch } from '@/lib/funding-scout/discover-search'
 import { isWebSearchAvailable, webSearchProvider } from '@/lib/funding-scout/web-search'
+import type { ScanDeadline } from '@/lib/scout/scan-budget'
 
 export interface FundingSource {
   id: string
@@ -90,18 +91,21 @@ export async function discoverLiveOpenings(
     rssPerFeed: number
     sourceBatch: number
     announcementsPerPage: number
+    maxAnnouncementPages: number
+    maxRssFeeds: number
     searchQueries: number
     resultsPerQuery: number
   },
   disciplines: string[] = settings.disciplines,
+  clock?: ScanDeadline,
 ): Promise<{ items: FundingCandidate[]; log: string[] }> {
   const log: string[] = []
   const raw: FundingCandidate[] = []
 
-  const pages = announcementPagesForSettings(settings)
+  const pages = announcementPagesForSettings(settings).slice(0, limits.maxAnnouncementPages)
   const { items: scraped, log: announcementLog } = await fetchAllLiveAnnouncements(pages, limits.announcementsPerPage)
   raw.push(...scraped)
-  log.push(`Announcement pages: ${scraped.length} live links`)
+  log.push(`Announcement pages: ${scraped.length} live links (${pages.length} pages)`)
   log.push(...announcementLog)
 
   if (isTurkishCandidate(settings)) {
@@ -109,25 +113,37 @@ export async function discoverLiveOpenings(
     log.push(`Turkey priority programs: ${TURKEY_PRIORITY_OPPORTUNITIES.length} curated (TÜBİTAK/YÖK/KYK)`)
   }
 
-  const sources = sourcesForRegions(settings.regions, limits.sourceBatch)
-  for (const source of sources) {
-    if (!source.rssUrl) continue
-    try {
-      const rss = await parseFundingRss(source.rssUrl, source.region, source.label, limits.rssPerFeed)
-      raw.push(...rss)
-      log.push(`RSS ${source.label}: ${rss.length}`)
-    } catch (err) {
-      log.push(`RSS ${source.label}: ${err instanceof Error ? err.message : 'failed'}`)
+  if (!clock?.timeUp()) {
+    const sources = sourcesForRegions(settings.regions, limits.sourceBatch)
+    let rssCount = 0
+    for (const source of sources) {
+      if (!source.rssUrl || rssCount >= limits.maxRssFeeds) continue
+      if (clock?.timeUp()) {
+        log.push('Time budget reached during RSS fetch')
+        break
+      }
+      try {
+        const rss = await parseFundingRss(source.rssUrl, source.region, source.label, limits.rssPerFeed)
+        raw.push(...rss)
+        rssCount++
+        log.push(`RSS ${source.label}: ${rss.length}`)
+      } catch (err) {
+        log.push(`RSS ${source.label}: ${err instanceof Error ? err.message : 'failed'}`)
+      }
     }
+  } else {
+    log.push('Skipped RSS — time budget after announcements')
   }
 
-  if (isWebSearchAvailable()) {
+  if (!clock?.timeUp() && isWebSearchAvailable()) {
     log.push(`Web search discovery (${webSearchProvider()})`)
     const searched = await discoverFromWebSearch(settings, limits, disciplines)
     raw.push(...searched.items)
     log.push(...searched.log)
-  } else {
+  } else if (!isWebSearchAvailable()) {
     log.push('Web search: TAVILY_API_KEY not set — add in Vercel → Settings → Environment Variables (Production) then redeploy')
+  } else {
+    log.push('Skipped web search — time budget')
   }
 
   return { items: raw, log }
