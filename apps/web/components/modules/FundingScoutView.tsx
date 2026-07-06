@@ -123,6 +123,12 @@ export function FundingScoutView() {
     setLoading(false)
   }, [fs.warnings.tableMissing])
 
+  const refreshInbox = useCallback(async () => {
+    const listRes = await fetch('/api/modules/funding-scout')
+    const listData = await listRes.json()
+    if (listRes.ok) setItems(listData.items ?? [])
+  }, [])
+
   useEffect(() => { load() }, [load])
 
   async function saveSettings() {
@@ -164,7 +170,7 @@ export function FundingScoutView() {
       } else if (warnings.includes('scout_skipped_table_missing')) {
         setWarning(ss.warnings.tableMissing)
       }
-      load()
+      await refreshInbox()
       setSkippedRefresh((n) => n + 1)
     }
   }
@@ -175,7 +181,7 @@ export function FundingScoutView() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(patch),
     })
-    load()
+    await refreshInbox()
   }
 
   function formatDeadline(date: string) {
@@ -260,12 +266,25 @@ export function FundingScoutView() {
                 .replace('{created}', String(summary.created))
                 .replace('{new}', String(summary.newCandidates ?? 0))
                 .replace('{dup}', String(summary.duplicates ?? 0))}
+              {(summary.skipped ?? 0) > 0 && (
+                <span className="block text-xs text-[var(--text-muted)]">
+                  {ss.title}: {summary.skipped} — {ss.hint}
+                </span>
+              )}
             </p>
           )}
           {log && (
             <pre className="max-h-40 overflow-auto rounded-xl border border-[var(--surface-border)] bg-[var(--background-alt)]/50 p-3 text-xs text-[var(--text-muted)]">{log}</pre>
           )}
         </GlassPanel>
+
+        <ScoutSkippedPanel
+          moduleId="funding-scout"
+          refreshKey={skippedRefresh}
+          sessionItems={sessionSkipped}
+          onPromoted={refreshInbox}
+          onSessionDismiss={dismissSessionSkipped}
+        />
 
         <GlassPanel className="space-y-4 p-6">
           <h2 className="text-sm font-semibold text-[var(--text)]">{fs.eligibilityTitle}</h2>
@@ -473,14 +492,6 @@ export function FundingScoutView() {
             </GlassPanel>
           )}
         </div>
-
-        <ScoutSkippedPanel
-          moduleId="funding-scout"
-          refreshKey={skippedRefresh}
-          sessionItems={sessionSkipped}
-          onPromoted={load}
-          onSessionDismiss={dismissSessionSkipped}
-        />
 
         <p className="text-xs text-[var(--text-muted)]">{fs.profileHint}</p>
         {dismissDialog}

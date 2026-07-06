@@ -59,8 +59,22 @@ export function ScoutSkippedPanel({
   }
 
   const displayItems: ScoutSkippedItem[] = (() => {
+    const storageKey = `aslico:${moduleId}:session-skipped`
+    let fromStorage: SessionSkippedItem[] = []
+    if (!sessionItems.length && typeof window !== 'undefined') {
+      try {
+        const raw = sessionStorage.getItem(storageKey)
+        if (raw) {
+          const parsed = JSON.parse(raw) as SessionSkippedItem[]
+          if (Array.isArray(parsed)) fromStorage = parsed
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    const effectiveSession = sessionItems.length ? sessionItems : fromStorage
     const dbKeys = new Set(items.map((i) => `${i.title}::${i.item_url ?? ''}`))
-    const fromSession = sessionItems
+    const fromSession = effectiveSession
       .filter((s) => !dismissedSessionIds.has(s.id))
       .filter((s) => !dbKeys.has(`${s.title}::${s.item_url ?? ''}`))
       .map((s) => ({
@@ -134,18 +148,26 @@ export function ScoutSkippedPanel({
     return ss.categories[cat as keyof typeof ss.categories] ?? cat
   }
 
-  if (loading) {
+  if (loading && displayItems.length === 0) {
     return <p className="text-xs text-[var(--text-muted)]">{t.common.loading}</p>
   }
 
   return (
     <GlassPanel className="space-y-3 p-4">
       <div>
-        <h2 className="text-sm font-semibold text-[var(--text)]">{ss.title}</h2>
+        <h2 className="text-sm font-semibold text-[var(--text)]">
+          {ss.title}
+          {displayItems.length > 0 && (
+            <span className="ml-2 text-xs font-normal text-[var(--accent)]">({displayItems.length})</span>
+          )}
+        </h2>
         <p className="text-xs text-[var(--text-muted)]">{ss.hint}</p>
       </div>
       {warning && (
         <p className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent-soft)] px-3 py-2 text-xs">{warning}</p>
+      )}
+      {loading && displayItems.length > 0 && (
+        <p className="text-xs text-[var(--text-muted)]">{t.common.loading}</p>
       )}
       {displayItems.length === 0 ? (
         <p className="text-xs text-[var(--text-muted)]">{ss.empty}</p>

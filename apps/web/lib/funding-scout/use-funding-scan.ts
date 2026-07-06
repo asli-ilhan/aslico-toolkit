@@ -1,16 +1,50 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { SessionSkippedItem } from '@/components/scout/ScoutSkippedPanel'
+
+const STORAGE_KEY = 'aslico:funding-scout:session-skipped'
+
+function readStoredSkipped(): SessionSkippedItem[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as SessionSkippedItem[]
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function writeStoredSkipped(items: SessionSkippedItem[]) {
+  if (typeof window === 'undefined') return
+  try {
+    if (items.length) sessionStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+    else sessionStorage.removeItem(STORAGE_KEY)
+  } catch {
+    /* quota */
+  }
+}
 
 export function useFundingScan() {
   const abortRef = useRef<AbortController | null>(null)
   const [running, setRunning] = useState(false)
   const [stopped, setStopped] = useState(false)
   const [log, setLog] = useState<string | null>(null)
-  const [summary, setSummary] = useState<{ scanned: number; created: number; newCandidates?: number; duplicates?: number } | null>(null)
-  const [sessionSkipped, setSessionSkipped] = useState<SessionSkippedItem[]>([])
+  const [summary, setSummary] = useState<{
+    scanned: number
+    created: number
+    newCandidates?: number
+    duplicates?: number
+    skipped?: number
+  } | null>(null)
+  const [sessionSkipped, setSessionSkipped] = useState<SessionSkippedItem[]>(readStoredSkipped)
   const [scanWarnings, setScanWarnings] = useState<string[]>([])
+
+  useEffect(() => {
+    writeStoredSkipped(sessionSkipped)
+  }, [sessionSkipped])
 
   const stopScan = useCallback(() => {
     abortRef.current?.abort()
@@ -30,7 +64,6 @@ export function useFundingScan() {
     setStopped(false)
     setLog(null)
     setSummary(null)
-    setSessionSkipped([])
     setScanWarnings([])
 
     try {
@@ -43,8 +76,9 @@ export function useFundingScan() {
         created: data.packsCreated ?? 0,
         newCandidates: data.candidatesNew,
         duplicates: data.candidatesDuplicate,
+        skipped: data.skippedCount ?? data.skippedPreview?.length ?? 0,
       })
-      if (Array.isArray(data.skippedPreview)) {
+      if (Array.isArray(data.skippedPreview) && data.skippedPreview.length) {
         setSessionSkipped(data.skippedPreview)
       }
       const warnings = [

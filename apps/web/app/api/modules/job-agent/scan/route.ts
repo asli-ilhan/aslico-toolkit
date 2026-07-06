@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isMissingJobAgentV2, isMissingScoutSkippedTable } from '@/lib/supabase/errors'
 import { runDiscoveryForUser } from '@/lib/job-agent/nightly'
-import { saveScoutSkippedItems } from '@/lib/scout/skipped'
+import { saveScoutSkippedItems, buildSkippedPreview } from '@/lib/scout/skipped'
 
 /** Manual job discovery — user starts/stops from the UI. No schedule required. */
 export const maxDuration = 300
@@ -43,12 +43,31 @@ export async function POST() {
     }
   }
 
+  const skippedPreview = buildSkippedPreview(result.skipped)
+  const clientPayload = {
+    jobsScanned: result.jobsScanned,
+    packsCreated: result.packsCreated,
+    log: result.log,
+    skippedSaved,
+    skippedPreview,
+    skippedCount: result.skipped.length,
+  }
+
   if (runError) {
     if (isMissingJobAgentV2(runError)) {
-      return NextResponse.json({ ...result, skippedSaved, warning: 'job_agent_v2_missing' })
+      return NextResponse.json({
+        ...clientPayload,
+        warning: 'job_agent_v2_missing',
+        warnings: skippedWarning ? [skippedWarning] : [],
+      })
     }
     return NextResponse.json({ error: runError.message }, { status: 500 })
   }
 
-  return NextResponse.json({ run, ...result, skippedSaved, warning: skippedWarning })
+  return NextResponse.json({
+    run,
+    ...clientPayload,
+    warning: skippedWarning,
+    warnings: skippedWarning ? [skippedWarning] : [],
+  })
 }

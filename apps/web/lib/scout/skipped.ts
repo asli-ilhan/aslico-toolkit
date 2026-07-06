@@ -119,3 +119,60 @@ export async function markScoutSkippedPromoted(
 
   if (error) throw error
 }
+
+export interface ClientSkippedPreview {
+  id: string
+  title: string
+  subtitle: string | null
+  item_url: string | null
+  skip_reason: string
+  skip_category: string
+  fit_score: number | null
+  candidate_data: Record<string, unknown>
+}
+
+function slimCandidateData(data?: Record<string, unknown>): Record<string, unknown> {
+  if (!data) return {}
+  const opp = data.opp as Record<string, unknown> | undefined
+  const job = data.job as Record<string, unknown> | undefined
+  const fit = data.fit
+  if (job) {
+    return {
+      job: {
+        company: job.company,
+        role: job.role,
+        jobUrl: job.jobUrl,
+        jobDescription: typeof job.jobDescription === 'string' ? job.jobDescription.slice(0, 4000) : '',
+        source: job.source,
+      },
+      fit,
+    }
+  }
+  if (!opp) return fit ? { fit } : {}
+  return {
+    opp: {
+      funder: opp.funder,
+      title: opp.title,
+      fundingType: opp.fundingType,
+      region: opp.region,
+      opportunityUrl: opp.opportunityUrl,
+      description: typeof opp.description === 'string' ? opp.description.slice(0, 4000) : '',
+      listingDescription: typeof opp.listingDescription === 'string' ? opp.listingDescription.slice(0, 4000) : undefined,
+      source: opp.source,
+    },
+    fit,
+  }
+}
+
+export function buildSkippedPreview(items: ScoutSkippedInput[]): ClientSkippedPreview[] {
+  return items.map((s, index) => ({
+    id: `session-${index}`,
+    title: s.title,
+    subtitle: s.subtitle ?? null,
+    item_url: s.itemUrl ?? null,
+    skip_reason: s.skipReason,
+    skip_category: s.skipCategory,
+    fit_score: s.fitScore ?? null,
+    candidate_data: slimCandidateData(s.candidateData),
+  }))
+}

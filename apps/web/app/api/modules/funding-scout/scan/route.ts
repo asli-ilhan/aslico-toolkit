@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isMissingFundingScoutTable, isMissingScoutSkippedTable } from '@/lib/supabase/errors'
 import { runFundingScan } from '@/lib/funding-scout/scan'
-import { saveScoutSkippedItems } from '@/lib/scout/skipped'
+import { saveScoutSkippedItems, buildSkippedPreview } from '@/lib/scout/skipped'
 
 export const maxDuration = 300
 export const dynamic = 'force-dynamic'
@@ -45,31 +45,30 @@ export async function POST() {
     }
   }
 
-  const skippedPreview = result.skipped.map((s, index) => ({
-    id: `session-${index}`,
-    title: s.title,
-    subtitle: s.subtitle ?? null,
-    item_url: s.itemUrl ?? null,
-    skip_reason: s.skipReason,
-    skip_category: s.skipCategory,
-    fit_score: s.fitScore ?? null,
-    candidate_data: s.candidateData ?? {},
-  }))
+  const skippedPreview = buildSkippedPreview(result.skipped)
+
+  const clientPayload = {
+    opportunitiesScanned: result.opportunitiesScanned,
+    packsCreated: result.packsCreated,
+    candidatesNew: result.candidatesNew,
+    candidatesDuplicate: result.candidatesDuplicate,
+    regionsScanned: result.regionsScanned,
+    log: result.log,
+    skippedSaved,
+    skippedPreview,
+    skippedCount: result.skipped.length,
+  }
 
   if (runError && isMissingFundingScoutTable(runError)) {
     return NextResponse.json({
-      ...result,
-      skippedSaved,
-      skippedPreview,
+      ...clientPayload,
       warning: 'funding_scout_table_missing',
       warnings: skippedWarning ? [skippedWarning] : [],
     })
   }
 
   return NextResponse.json({
-    ...result,
-    skippedSaved,
-    skippedPreview,
+    ...clientPayload,
     warning: skippedWarning,
     warnings: skippedWarning ? [skippedWarning] : [],
   })
