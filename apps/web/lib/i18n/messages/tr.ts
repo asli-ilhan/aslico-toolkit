@@ -797,6 +797,7 @@ export const tr: Messages = {
     },
     warnings: {
       tableMissing: 'Supabase SQL Editor\'da scout_skipped.sql çalıştır.',
+      saveFailed: 'Atlananlar veritabanına yazılamadı — tarama logundaki DB hatasına bak. Bu oturumdaki liste yine de görünmeli.',
     },
   },
   scoutFeedback: {

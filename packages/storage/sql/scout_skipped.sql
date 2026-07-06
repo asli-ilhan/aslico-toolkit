@@ -24,5 +24,6 @@ create index if not exists scout_skipped_user_module_idx
 
 alter table public.scout_skipped_items enable row level security;
 
+drop policy if exists "own scout_skipped_items" on public.scout_skipped_items;
 create policy "own scout_skipped_items" on public.scout_skipped_items
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

@@ -661,7 +661,7 @@ export type Messages = {
     generatePack: string
     dismiss: string
     categories: Record<string, string>
-    warnings: { tableMissing: string }
+    warnings: { tableMissing: string; saveFailed: string }
   }
   scoutFeedback: {
     title: string

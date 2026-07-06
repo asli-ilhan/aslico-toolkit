@@ -35,11 +35,18 @@ export async function POST() {
         level: 'info',
       })
     } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err)
       if (isMissingScoutSkippedTable(err as { code?: string; message?: string })) {
         skippedWarning = 'scout_skipped_table_missing'
         result.log.push({
           message: 'Skipped list DB: table missing — run scout_skipped.sql (showing this scan in UI anyway)',
           level: 'warn',
+        })
+      } else {
+        skippedWarning = 'scout_skipped_save_failed'
+        result.log.push({
+          message: `Skipped list DB: save failed — ${errMsg}`,
+          level: 'error',
         })
       }
     }

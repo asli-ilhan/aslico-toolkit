@@ -514,7 +514,7 @@ export const ar: Messages = {
       excluded: 'Blocklist',
       pack_limit: 'Scan limit',
     },
-    warnings: { tableMissing: 'Run scout_skipped.sql.' },
+    warnings: { tableMissing: 'Run scout_skipped.sql.', saveFailed: 'DB save failed — check scan log.' },
   },
   scoutFeedback: {
     title: 'Why isn’t this a fit?',

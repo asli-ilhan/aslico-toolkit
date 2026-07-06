@@ -799,6 +799,7 @@ export const en: Messages = {
     },
     warnings: {
       tableMissing: 'Run packages/storage/sql/scout_skipped.sql in Supabase SQL Editor.',
+      saveFailed: 'Could not save skipped items to DB — check scan log. Session list should still appear below.',
     },
   },
   scoutFeedback: {

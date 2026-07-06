@@ -36,9 +36,14 @@ export async function POST() {
   if (result.skipped.length) {
     try {
       skippedSaved = await saveScoutSkippedItems(supabase, user.id, run?.id ?? null, result.skipped)
+      result.log.push({ message: `Skipped list DB: ${skippedSaved} rows saved`, level: 'info' })
     } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err)
       if (isMissingScoutSkippedTable(err as { code?: string; message?: string })) {
         skippedWarning = 'scout_skipped_table_missing'
+      } else {
+        skippedWarning = 'scout_skipped_save_failed'
+        result.log.push({ message: `Skipped list DB: save failed — ${errMsg}`, level: 'error' })
       }
     }
   }

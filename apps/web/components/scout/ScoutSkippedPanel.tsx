@@ -23,6 +23,22 @@ export type SessionSkippedItem = Omit<ScoutSkippedItem, 'module_id' | 'created_a
   created_at?: string
 }
 
+function storageKeyFor(moduleId: ScoutModuleId) {
+  return `aslico:${moduleId}:session-skipped`
+}
+
+function readSessionFromStorage(moduleId: ScoutModuleId): SessionSkippedItem[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = sessionStorage.getItem(storageKeyFor(moduleId))
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as SessionSkippedItem[]
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
 interface ScoutSkippedPanelProps {
   moduleId: ScoutModuleId
   refreshKey?: number
@@ -41,38 +57,33 @@ export function ScoutSkippedPanel({
   const { t } = useLocale()
   const ss = t.scoutSkipped
   const [items, setItems] = useState<ScoutSkippedItem[]>([])
+  const [storedSession, setStoredSession] = useState<SessionSkippedItem[]>([])
+  const [hydrated, setHydrated] = useState(false)
   const [loading, setLoading] = useState(true)
   const [warning, setWarning] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [dismissedSessionIds, setDismissedSessionIds] = useState<Set<string>>(new Set())
   const { openDismiss, dialog: dismissDialog } = useDismissWithFeedback(moduleId)
 
-  function requestDismiss(item: ScoutSkippedItem) {
-    openDismiss({
-      action: 'dismiss',
-      title: item.title,
-      subtitle: item.subtitle,
-      itemUrl: item.item_url,
-      skipCategory: item.skip_category,
-      onConfirm: async () => { await dismiss(item.id) },
-    })
-  }
+  useEffect(() => {
+    setStoredSession(readSessionFromStorage(moduleId))
+    setHydrated(true)
+  }, [moduleId, refreshKey])
 
-  const displayItems: ScoutSkippedItem[] = (() => {
-    const storageKey = `aslico:${moduleId}:session-skipped`
-    let fromStorage: SessionSkippedItem[] = []
-    if (!sessionItems.length && typeof window !== 'undefined') {
+  useEffect(() => {
+    if (sessionItems.length) {
+      setStoredSession(sessionItems)
       try {
-        const raw = sessionStorage.getItem(storageKey)
-        if (raw) {
-          const parsed = JSON.parse(raw) as SessionSkippedItem[]
-          if (Array.isArray(parsed)) fromStorage = parsed
-        }
+        sessionStorage.setItem(storageKeyFor(moduleId), JSON.stringify(sessionItems))
       } catch {
-        /* ignore */
+        /* quota */
       }
     }
-    const effectiveSession = sessionItems.length ? sessionItems : fromStorage
+  }, [moduleId, sessionItems])
+
+  const effectiveSession = sessionItems.length ? sessionItems : storedSession
+
+  const displayItems: ScoutSkippedItem[] = (() => {
     const dbKeys = new Set(items.map((i) => `${i.title}::${i.item_url ?? ''}`))
     const fromSession = effectiveSession
       .filter((s) => !dismissedSessionIds.has(s.id))
@@ -85,6 +96,17 @@ export function ScoutSkippedPanel({
     return [...fromSession, ...items]
   })()
 
+  function requestDismiss(item: ScoutSkippedItem) {
+    openDismiss({
+      action: 'dismiss',
+      title: item.title,
+      subtitle: item.subtitle,
+      itemUrl: item.item_url,
+      skipCategory: item.skip_category,
+      onConfirm: async () => { await dismiss(item.id) },
+    })
+  }
+
   const load = useCallback(async () => {
     setLoading(true)
     setWarning(null)
@@ -92,6 +114,8 @@ export function ScoutSkippedPanel({
     const data = await res.json()
     if (data.warning === 'scout_skipped_table_missing') {
       setWarning(ss.warnings.tableMissing)
+    } else if (!res.ok && data.error) {
+      setWarning(data.error)
     }
     if (res.ok) setItems(data.items ?? [])
     setLoading(false)
@@ -148,7 +172,7 @@ export function ScoutSkippedPanel({
     return ss.categories[cat as keyof typeof ss.categories] ?? cat
   }
 
-  if (loading && displayItems.length === 0) {
+  if (!hydrated && displayItems.length === 0) {
     return <p className="text-xs text-[var(--text-muted)]">{t.common.loading}</p>
   }
 

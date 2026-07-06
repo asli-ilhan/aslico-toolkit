@@ -516,7 +516,7 @@ export const es: Messages = {
       excluded: 'Bloqueado',
       pack_limit: 'Límite scan',
     },
-    warnings: { tableMissing: 'Ejecutar scout_skipped.sql.' },
+    warnings: { tableMissing: 'Ejecutar scout_skipped.sql.', saveFailed: 'Error al guardar en DB — ver log.' },
   },
   scoutFeedback: {
     title: '¿Por qué no encaja?',

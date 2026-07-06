@@ -169,6 +169,8 @@ export function FundingScoutView() {
         setWarning(fs.warnings.tableMissing)
       } else if (warnings.includes('scout_skipped_table_missing')) {
         setWarning(ss.warnings.tableMissing)
+      } else if (warnings.includes('scout_skipped_save_failed')) {
+        setWarning(ss.warnings.saveFailed)
       }
       await refreshInbox()
       setSkippedRefresh((n) => n + 1)

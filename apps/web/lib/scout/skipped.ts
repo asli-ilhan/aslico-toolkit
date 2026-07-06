@@ -63,7 +63,7 @@ export async function saveScoutSkippedItems(
     description: item.description?.slice(0, 8000) ?? null,
     skip_reason: item.skipReason.slice(0, 500),
     skip_category: item.skipCategory,
-    fit_score: item.fitScore ?? null,
+    fit_score: item.fitScore != null ? Math.round(item.fitScore) : null,
     candidate_data: item.candidateData ?? {},
   }))
 

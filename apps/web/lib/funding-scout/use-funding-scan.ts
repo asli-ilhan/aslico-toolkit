@@ -39,8 +39,12 @@ export function useFundingScan() {
     duplicates?: number
     skipped?: number
   } | null>(null)
-  const [sessionSkipped, setSessionSkipped] = useState<SessionSkippedItem[]>(readStoredSkipped)
+  const [sessionSkipped, setSessionSkipped] = useState<SessionSkippedItem[]>([])
   const [scanWarnings, setScanWarnings] = useState<string[]>([])
+
+  useEffect(() => {
+    setSessionSkipped(readStoredSkipped())
+  }, [])
 
   useEffect(() => {
     writeStoredSkipped(sessionSkipped)
