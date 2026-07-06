@@ -13,6 +13,7 @@ export type SkipCategory =
   | 'remote'
   | 'excluded'
   | 'pack_limit'
+  | 'pack_failed'
 
 export interface ScoutSkippedInput {
   moduleId: ScoutModuleId

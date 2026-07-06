@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { GlassPanel, Button } from '@aslico/ui'
 import { useLocale } from '@/components/shell/LocaleProvider'
 import { useDismissWithFeedback } from '@/lib/scout/use-dismiss-with-feedback'
@@ -63,6 +63,7 @@ export function ScoutSkippedPanel({
   const [loading, setLoading] = useState(true)
   const [warning, setWarning] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [dismissedSessionIds, setDismissedSessionIds] = useState<Set<string>>(new Set())
   const { openDismiss, dialog: dismissDialog } = useDismissWithFeedback(moduleId)
 
@@ -100,6 +101,16 @@ export function ScoutSkippedPanel({
       }))
     return [...fromSession, ...items]
   })()
+
+  const categoriesPresent = useMemo(
+    () => [...new Set(displayItems.map((i) => i.skip_category))].sort(),
+    [displayItems],
+  )
+
+  const filteredItems = useMemo(
+    () => (categoryFilter === 'all' ? displayItems : displayItems.filter((i) => i.skip_category === categoryFilter)),
+    [categoryFilter, displayItems],
+  )
 
   function requestDismiss(item: ScoutSkippedItem) {
     openDismiss({
@@ -201,8 +212,42 @@ export function ScoutSkippedPanel({
       {displayItems.length === 0 ? (
         <p className="text-xs text-[var(--text-muted)]">{ss.empty}</p>
       ) : (
-        <ul className="max-h-72 space-y-2 overflow-auto">
-          {displayItems.map((item) => (
+        <>
+          {categoriesPresent.length > 1 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-[var(--text-muted)]">{ss.filterLabel}:</span>
+              <button
+                type="button"
+                onClick={() => setCategoryFilter('all')}
+                className={`rounded-full px-2.5 py-0.5 text-xs transition-colors ${
+                  categoryFilter === 'all'
+                    ? 'bg-[var(--accent)] text-white'
+                    : 'bg-[var(--background-alt)] text-[var(--text-muted)] hover:text-[var(--text)]'
+                }`}
+              >
+                {ss.filterAll} ({displayItems.length})
+              </button>
+              {categoriesPresent.map((cat) => {
+                const count = displayItems.filter((i) => i.skip_category === cat).length
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setCategoryFilter(cat)}
+                    className={`rounded-full px-2.5 py-0.5 text-xs transition-colors ${
+                      categoryFilter === cat
+                        ? 'bg-[var(--accent)] text-white'
+                        : 'bg-[var(--background-alt)] text-[var(--text-muted)] hover:text-[var(--text)]'
+                    }`}
+                  >
+                    {categoryLabel(cat)} ({count})
+                  </button>
+                )
+              })}
+            </div>
+          )}
+          <ul className="max-h-72 space-y-2 overflow-auto">
+          {filteredItems.map((item) => (
             <li
               key={item.id}
               className="rounded-xl border border-[var(--surface-border)] px-3 py-2 text-sm"
@@ -247,6 +292,7 @@ export function ScoutSkippedPanel({
             </li>
           ))}
         </ul>
+        </>
       )}
       {dismissDialog}
     </GlassPanel>

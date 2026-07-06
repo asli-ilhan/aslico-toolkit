@@ -783,6 +783,8 @@ export const tr: Messages = {
     openLink: 'Linki aç →',
     generatePack: 'Paket üret',
     dismiss: 'Kaldır',
+    filterLabel: 'Filtre',
+    filterAll: 'Tümü',
     categories: {
       duplicate: 'Zaten kayıtlı',
       rules: 'Kural filtresi',
@@ -794,6 +796,7 @@ export const tr: Messages = {
       remote: 'Remote değil',
       excluded: 'Engelli şirket',
       pack_limit: 'Tarama limiti',
+      pack_failed: 'Paket üretilemedi',
     },
     warnings: {
       tableMissing: 'Supabase SQL Editor\'da scout_skipped.sql çalıştır.',

@@ -137,15 +137,21 @@ export async function scrapeAnnouncementPage(page: AnnouncementPage, limit = 20)
   return results
 }
 
-export async function fetchAllLiveAnnouncements(pages: AnnouncementPage[], perPage = 15): Promise<FundingCandidate[]> {
+export async function fetchAllLiveAnnouncements(
+  pages: AnnouncementPage[],
+  perPage = 15,
+): Promise<{ items: FundingCandidate[]; log: string[] }> {
   const all: FundingCandidate[] = []
+  const log: string[] = []
   for (const page of pages) {
     try {
       const items = await scrapeAnnouncementPage(page, perPage)
       all.push(...items)
-    } catch {
-      // skip failed pages
+      log.push(`  ${page.funder}: ${items.length} links`)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'failed'
+      log.push(`  ${page.funder}: scrape failed — ${msg}`)
     }
   }
-  return all
+  return { items: all, log }
 }

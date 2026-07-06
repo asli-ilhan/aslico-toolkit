@@ -412,16 +412,19 @@ export async function runDiscoveryForUser(
 
       if (error) {
         log.push({ message: `Save failed: ${error.message}`, level: 'error' })
+        recordJobSkip(skipped, job, 'pack_failed', `DB save failed: ${error.message}`, fit)
       } else {
         packsCreated++
         dedupeIndex.remember(job)
         log.push({ message: `Pack created: ${job.company} · ${job.role} (${fit.score}%)` })
       }
     } catch (err) {
+      const msg = err instanceof Error ? err.message : 'error'
       log.push({
-        message: `Generation failed for ${job.company}: ${err instanceof Error ? err.message : 'error'}`,
+        message: `Generation failed for ${job.company}: ${msg}`,
         level: 'error',
       })
+      recordJobSkip(skipped, job, 'pack_failed', `Pack generation failed: ${msg}`, fit)
     }
   }
 

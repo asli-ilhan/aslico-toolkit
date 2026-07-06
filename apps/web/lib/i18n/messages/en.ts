@@ -785,6 +785,8 @@ export const en: Messages = {
     openLink: 'Open link →',
     generatePack: 'Generate pack',
     dismiss: 'Dismiss',
+    filterLabel: 'Filter',
+    filterAll: 'All',
     categories: {
       duplicate: 'Already saved',
       rules: 'Rule filter',
@@ -796,6 +798,7 @@ export const en: Messages = {
       remote: 'Not remote',
       excluded: 'Blocklist',
       pack_limit: 'Scan limit',
+      pack_failed: 'Pack failed',
     },
     warnings: {
       tableMissing: 'Run packages/storage/sql/scout_skipped.sql in Supabase SQL Editor.',

@@ -5,7 +5,7 @@ import {
   fetchAllLiveAnnouncements,
   type AnnouncementPage,
 } from '@/lib/funding-scout/opening-quality'
-import { isTurkishCandidate } from '@/lib/funding-scout/turkey-priority'
+import { isTurkishCandidate, TURKEY_PRIORITY_OPPORTUNITIES } from '@/lib/funding-scout/turkey-priority'
 import { discoverFromWebSearch } from '@/lib/funding-scout/discover-search'
 import { isWebSearchAvailable, webSearchProvider } from '@/lib/funding-scout/web-search'
 
@@ -99,9 +99,15 @@ export async function discoverLiveOpenings(
   const raw: FundingCandidate[] = []
 
   const pages = announcementPagesForSettings(settings)
-  const scraped = await fetchAllLiveAnnouncements(pages, limits.announcementsPerPage)
+  const { items: scraped, log: announcementLog } = await fetchAllLiveAnnouncements(pages, limits.announcementsPerPage)
   raw.push(...scraped)
   log.push(`Announcement pages: ${scraped.length} live links`)
+  log.push(...announcementLog)
+
+  if (isTurkishCandidate(settings)) {
+    raw.push(...TURKEY_PRIORITY_OPPORTUNITIES)
+    log.push(`Turkey priority programs: ${TURKEY_PRIORITY_OPPORTUNITIES.length} curated (TÜBİTAK/YÖK/KYK)`)
+  }
 
   const sources = sourcesForRegions(settings.regions, limits.sourceBatch)
   for (const source of sources) {

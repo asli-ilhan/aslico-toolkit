@@ -660,6 +660,8 @@ export type Messages = {
     openLink: string
     generatePack: string
     dismiss: string
+    filterLabel: string
+    filterAll: string
     categories: Record<string, string>
     warnings: { tableMissing: string; saveFailed: string }
   }

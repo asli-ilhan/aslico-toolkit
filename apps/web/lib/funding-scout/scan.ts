@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateFundingPack, scoreFundingFitBatch, type MasterProfileData } from '@aslico/ai'
 import { discoverLiveOpenings } from '@/lib/funding-scout/sources'
 import { fundingScanLimits } from '@/lib/funding-scout/scan-limits'
-import { rankFundingCandidates } from '@/lib/funding-scout/relevance'
+import { partitionFundingCandidates } from '@/lib/funding-scout/relevance'
 import { settingsFromDbRow, type FundingCandidate, type FundingSettings } from '@/lib/funding-scout/types'
 import { parseDeadlineFromText } from '@/lib/funding-scout/deadline'
 import { upsertFundingDeadlineEvent } from '@/lib/funding-scout/calendar-sync'
@@ -50,6 +50,8 @@ function resolveDeadline(opp: FundingCandidate, aiDeadline?: string | null): str
 function dedupeKey(opp: FundingCandidate): string {
   return `${opp.funder}::${opp.title}::${opp.opportunityUrl ?? ''}`.toLowerCase()
 }
+
+const ACTIVE_FUNDING_STATUSES = new Set(['pending_review', 'approved', 'submitted', 'awarded'])
 
 function minFitScore(opp: FundingCandidate): number {
   if (opp.listingKind === 'live_opening' || opp.source.startsWith('search:')) return 40
@@ -128,10 +130,17 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
 
   const { data: existing } = await supabase
     .from('funding_applications')
-    .select('funder, title, opportunity_url')
+    .select('funder, title, opportunity_url, status')
     .eq('user_id', userId)
-  const seen = new Set((existing ?? []).map((r) => `${r.funder}::${r.title}::${r.opportunity_url ?? ''}`.toLowerCase()))
-  log.push({ message: `Already in your list: ${seen.size} funding applications` })
+  const seen = new Set(
+    (existing ?? [])
+      .filter((r) => ACTIVE_FUNDING_STATUSES.has(r.status ?? 'pending_review'))
+      .map((r) => `${r.funder}::${r.title}::${r.opportunity_url ?? ''}`.toLowerCase()),
+  )
+  const dismissedCount = (existing ?? []).filter((r) => r.status === 'skipped' || r.status === 'rejected').length
+  log.push({
+    message: `Already in active list: ${seen.size} funding applications${dismissedCount ? ` (${dismissedCount} skipped/rejected not blocking rediscovery)` : ''}`,
+  })
 
   try {
     const { data: skippedRows } = await supabase
@@ -199,12 +208,15 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
     return { opportunitiesScanned, packsCreated, candidatesNew, candidatesDuplicate, skippedSaved: skipped.length, regionsScanned, skipped, log }
   }
 
-  const ranked = rankFundingCandidates([...unique.values()], settings)
+  const { ranked, filtered: ruleFiltered } = partitionFundingCandidates([...unique.values()], settings)
+  for (const { opp, reason } of ruleFiltered) {
+    recordFundingSkip(skipped, opp, 'rules', reason)
+  }
   log.push({ message: `Rule-filtered: ${ranked.length} / ${unique.size} new candidates pass relevance` })
 
   if (!ranked.length) {
     log.push({ message: 'New openings found but none passed relevance/eligibility rules.', level: 'warn' })
-    return { opportunitiesScanned, packsCreated, candidatesNew, candidatesDuplicate, skippedSaved: 0, regionsScanned, skipped, log }
+    return { opportunitiesScanned, packsCreated, candidatesNew, candidatesDuplicate, skippedSaved: skipped.length, regionsScanned, skipped, log }
   }
 
   let skippedIneligible = 0
@@ -322,6 +334,7 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
 
         if (error) {
           log.push({ message: `DB insert failed: ${opp.title.slice(0, 40)} — ${error.message}`, level: 'error' })
+          recordFundingSkip(skipped, opp, 'pack_failed', `DB save failed: ${error.message}`, fit, enrichedOpp)
           continue
         }
 
@@ -342,7 +355,9 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
           }
         }
       } catch (err) {
-        log.push({ message: `Failed: ${err instanceof Error ? err.message : 'error'}`, level: 'error' })
+        const msg = err instanceof Error ? err.message : 'error'
+        log.push({ message: `Failed: ${msg}`, level: 'error' })
+        recordFundingSkip(skipped, opp, 'pack_failed', `Pack generation failed: ${msg}`, fit, enrichedOpp)
       }
     }
   }

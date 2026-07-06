@@ -502,6 +502,8 @@ export const ar: Messages = {
     openLink: 'Open →',
     generatePack: 'Generate pack',
     dismiss: 'Dismiss',
+    filterLabel: 'Filter',
+    filterAll: 'All',
     categories: {
       duplicate: 'Already saved',
       rules: 'Rules',
@@ -513,6 +515,7 @@ export const ar: Messages = {
       remote: 'Not remote',
       excluded: 'Blocklist',
       pack_limit: 'Scan limit',
+      pack_failed: 'Pack failed',
     },
     warnings: { tableMissing: 'Run scout_skipped.sql.', saveFailed: 'DB save failed — check scan log.' },
   },

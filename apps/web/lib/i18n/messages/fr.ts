@@ -504,6 +504,8 @@ export const fr: Messages = {
     openLink: 'Ouvrir →',
     generatePack: 'Générer pack',
     dismiss: 'Retirer',
+    filterLabel: 'Filtre',
+    filterAll: 'Tous',
     categories: {
       duplicate: 'Déjà enregistré',
       rules: 'Règles',
@@ -515,6 +517,7 @@ export const fr: Messages = {
       remote: 'Pas remote',
       excluded: 'Bloqué',
       pack_limit: 'Limite scan',
+      pack_failed: 'Échec pack',
     },
     warnings: { tableMissing: 'Exécuter scout_skipped.sql.', saveFailed: 'Échec enregistrement DB — voir le log.' },
   },

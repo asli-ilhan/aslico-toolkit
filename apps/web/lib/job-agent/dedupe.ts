@@ -48,10 +48,12 @@ export class JobDedupeIndex {
 
   constructor(records: StoredJob[]) {
     for (const row of records) {
+      if (row.status === 'skipped' || row.status === 'rejected') continue
+
       const urlKey = normalizeJobUrl(row.jobUrl)
+      const key = normalizeJobKey(row.company, row.role)
       if (urlKey) this.byUrl.add(urlKey)
 
-      const key = normalizeJobKey(row.company, row.role)
       if (row.submittedAt || row.status === 'submitted') {
         this.appliedKeys.add(key)
         if (urlKey) this.byUrl.add(urlKey)

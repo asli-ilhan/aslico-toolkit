@@ -108,3 +108,28 @@ export function rankFundingCandidates(candidates: FundingCandidate[], settings: 
     .filter((x): x is NonNullable<typeof x> => x !== null)
     .sort((a, b) => b.priority - a.priority)
 }
+
+export function partitionFundingCandidates(
+  candidates: FundingCandidate[],
+  settings: FundingSettings,
+): {
+  ranked: ReturnType<typeof rankFundingCandidates>
+  filtered: { opp: FundingCandidate; reason: string }[]
+} {
+  const filtered: { opp: FundingCandidate; reason: string }[] = []
+  const passed: FundingCandidate[] = []
+  for (const opp of candidates) {
+    const v = passesFundingRelevance(opp, settings)
+    if (v.pass === false) {
+      filtered.push({ opp, reason: v.reason })
+      continue
+    }
+    const eligibility = checkFundingEligibility(opp, settings)
+    if (eligibility.hardBlock) {
+      filtered.push({ opp, reason: eligibility.reasons.join('; ') || 'Eligibility block' })
+      continue
+    }
+    passed.push(opp)
+  }
+  return { ranked: rankFundingCandidates(passed, settings), filtered }
+}
