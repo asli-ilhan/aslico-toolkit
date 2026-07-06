@@ -373,7 +373,7 @@ export async function runDiscoveryForUser(
       continue
     }
 
-    if (preferences.remoteRequired && job.source !== 'careers_open') {
+    if (preferences.remoteRequired && job.source !== 'careers_open' && job.source !== 'careers_page') {
       const hay = `${job.jobDescription} ${job.role} ${job.jobUrl ?? ''}`.toLowerCase()
       const remoteish = ['remote', 'hybrid', 'work from home', 'distributed', 'worldwide', 'anywhere'].some(
         (w) => hay.includes(w),

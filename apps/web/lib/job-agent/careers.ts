@@ -40,6 +40,28 @@ function guessCompanyFromUrl(url: string, label?: string): string {
   }
 }
 
+const CAREERS_JUNK_TITLE_RE =
+  /\b(why |life at |inclusion at |working at |recruitment process|early careers|our culture|meet our|diversity and|belonging|graduate programme overview|about us|contact us|search jobs|job search|talent community)\b/i
+
+const CAREERS_JUNK_PATH_RE =
+  /\/(why-|life-at|inclusion|culture|diversity|early-careers|recruitment-process|about|our-people|stories|news|blog|events|search)(\/|$|\?)/i
+
+const STRONG_JOB_URL_RE =
+  /jobs\.lever\.co|boards\.greenhouse\.io|jobs\.ashbyhq\.com|myworkdayjobs\.com|workdayjobs\.com|\/jobs\/[^/]+|\/positions?\/[^/]+|jobid=|\/requisition\//i
+
+function isCareersJunk(role: string, jobUrl: string): boolean {
+  const hay = `${role} ${jobUrl}`.toLowerCase()
+  if (CAREERS_JUNK_TITLE_RE.test(hay)) return true
+  if (CAREERS_JUNK_PATH_RE.test(jobUrl)) return true
+  if (STRONG_JOB_URL_RE.test(jobUrl)) return false
+  const slug = jobUrl.split('/').filter(Boolean).pop() ?? ''
+  if (slug.length < 8) return true
+  if (/\b(engineer|scientist|researcher|analyst|developer|phd|intern|graduate|data|software|naval|maritime)\b/i.test(role)) {
+    return false
+  }
+  return role.split(/\s+/).length <= 4 && !/\d/.test(slug)
+}
+
 function titleFromUrl(jobUrl: string): string {
   const slug = jobUrl.split('/').filter(Boolean).pop() ?? 'Role'
   return slug
@@ -75,8 +97,9 @@ export async function scrapeCareersPage(
     const abs = absoluteUrl(careersUrl, match[1])
     if (!abs || seen.has(abs)) continue
     if (abs === careersUrl) continue
-    seen.add(abs)
     const role = titleFromUrl(abs)
+    if (isCareersJunk(role, abs)) continue
+    seen.add(abs)
     jobs.push({
       company,
       role,

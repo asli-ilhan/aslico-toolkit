@@ -22,7 +22,7 @@ export function scanLimits(preferences: SearchPreferences): ScanLimits {
     maritimeBatch: deep ? 6 : 2,
     remoteOkLimit: deep ? 100 : 60,
     remotiveLimit: deep ? 80 : 50,
-    maxRankedEval: deep ? 30 : 12,
+    maxRankedEval: deep ? 30 : 20,
     maxRssFeeds: deep ? 12 : 5,
   }
 }
