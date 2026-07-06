@@ -78,13 +78,11 @@ export interface AnnouncementPage {
 }
 
 export const ANNOUNCEMENT_PAGES: AnnouncementPage[] = [
-  { funder: 'TÜBİTAK', url: 'https://www.tubitak.gov.tr/tr/duyurular', region: 'turkey' },
-  { funder: 'TÜBİTAK', url: 'https://www.tubitak.gov.tr/tr/burslar/lisansustu-burs-programlari', region: 'turkey' },
-  { funder: 'YÖK 100/2000', url: 'https://1002000.yok.gov.tr/tr/announcements', region: 'turkey' },
-  { funder: 'YÖK 100/2000', url: 'https://1002000.yok.gov.tr/', region: 'turkey' },
+  { funder: 'TÜBİTAK', url: 'https://tubitak.gov.tr/tr/burslar/lisansustu/egitim-burs-programlari/2211-yurt-ici-doktora-burs-programlari', region: 'turkey' },
+  { funder: 'TÜBİTAK', url: 'https://tubitak.gov.tr/tr/duyuru/2211-yurt-ici-doktora-burs-programlari-2026-yili-1-donem-cagrilari-basvuruya-acildi', region: 'turkey' },
+  { funder: 'TÜBİTAK', url: 'https://tubitak.gov.tr/tr/burslar/lisansustu/arastirma-burs-programlari/2214-yurt-disi-doktora-sirasi-arastirma-burs-programi', region: 'turkey' },
   { funder: 'Fulbright Turkey', url: 'https://fulbright.org.tr/burslar/', region: 'turkey' },
-  { funder: 'İTÜ', url: 'https://lee.itu.edu.tr/lee/duyurular', region: 'turkey' },
-  { funder: 'İTÜ', url: 'https://www.itu.edu.tr/itu-arastirma-gorevlisi-ve-doktora-bursiyeri-alimlari', region: 'turkey' },
+  { funder: 'İTÜ', url: 'https://www.itu.edu.tr/duyurular', region: 'turkey' },
   { funder: 'UKRI', url: 'https://www.ukri.org/opportunity/', region: 'uk' },
   { funder: 'Marie Skłodowska-Curie', url: 'https://marie-sklodowska-curie-actions.ec.europa.eu/actions/doctoral-networks', region: 'eu' },
   { funder: 'FindAPhD', url: 'https://www.findaphd.com/phds/maritime/?PG=1', region: 'uk' },

@@ -94,6 +94,9 @@ export function rankFundingCandidates(candidates: FundingCandidate[], settings: 
         relevance: v.relevance,
         eligibility,
         priority:
+          (opp.source.startsWith('curated:turkey-priority') ? 150 : 0) +
+          (opp.priorityTier === 'turkey_national' ? 90 : 0) +
+          (opp.priorityTier === 'home_university' ? 80 : 0) +
           (opp.source.startsWith('announcement:') ? 80 : 0) +
           (opp.region === 'turkey' ? 35 : 0) +
           (DISCIPLINE_RE.test(opp.title) ? 30 : 0) +
