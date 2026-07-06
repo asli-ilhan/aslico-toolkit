@@ -31,6 +31,7 @@ function readSessionFromStorage(moduleId: ScoutModuleId): SessionSkippedItem[] {
   if (typeof window === 'undefined') return []
   try {
     const raw = sessionStorage.getItem(storageKeyFor(moduleId))
+      ?? localStorage.getItem(`aslico:${moduleId}:panel-skipped`)
     if (!raw) return []
     const parsed = JSON.parse(raw) as SessionSkippedItem[]
     return Array.isArray(parsed) ? parsed : []
@@ -68,13 +69,14 @@ export function ScoutSkippedPanel({
   useEffect(() => {
     setStoredSession(readSessionFromStorage(moduleId))
     setHydrated(true)
-  }, [moduleId, refreshKey])
+  }, [moduleId])
 
   useEffect(() => {
     if (sessionItems.length) {
       setStoredSession(sessionItems)
       try {
         sessionStorage.setItem(storageKeyFor(moduleId), JSON.stringify(sessionItems))
+        localStorage.setItem(`aslico:${moduleId}:panel-skipped`, JSON.stringify(sessionItems))
       } catch {
         /* quota */
       }
@@ -83,11 +85,14 @@ export function ScoutSkippedPanel({
 
   const effectiveSession = sessionItems.length ? sessionItems : storedSession
 
+  const itemKey = (title: string, subtitle: string | null, url: string | null) =>
+    `${subtitle ?? ''}::${title}::${url ?? ''}`.toLowerCase()
+
   const displayItems: ScoutSkippedItem[] = (() => {
-    const dbKeys = new Set(items.map((i) => `${i.title}::${i.item_url ?? ''}`))
+    const dbKeys = new Set(items.map((i) => itemKey(i.title, i.subtitle, i.item_url)))
     const fromSession = effectiveSession
       .filter((s) => !dismissedSessionIds.has(s.id))
-      .filter((s) => !dbKeys.has(`${s.title}::${s.item_url ?? ''}`))
+      .filter((s) => !dbKeys.has(itemKey(s.title, s.subtitle ?? null, s.item_url)))
       .map((s) => ({
         ...s,
         module_id: moduleId,

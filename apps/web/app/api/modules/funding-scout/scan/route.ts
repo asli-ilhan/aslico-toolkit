@@ -53,6 +53,12 @@ export async function POST() {
   }
 
   const skippedPreview = buildSkippedPreview(result.skipped)
+  if (skippedPreview.length) {
+    result.log.push({
+      message: `Skipped panel: sending ${skippedPreview.length} items to UI`,
+      level: 'info',
+    })
+  }
 
   const clientPayload = {
     opportunitiesScanned: result.opportunitiesScanned,

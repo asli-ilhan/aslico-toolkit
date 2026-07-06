@@ -82,7 +82,7 @@ export function useFundingScan() {
         duplicates: data.candidatesDuplicate,
         skipped: data.skippedCount ?? data.skippedPreview?.length ?? 0,
       })
-      if (Array.isArray(data.skippedPreview) && data.skippedPreview.length) {
+      if (Array.isArray(data.skippedPreview)) {
         setSessionSkipped(data.skippedPreview)
       }
       const warnings = [

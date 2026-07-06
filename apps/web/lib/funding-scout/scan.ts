@@ -133,6 +133,30 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
   const seen = new Set((existing ?? []).map((r) => `${r.funder}::${r.title}::${r.opportunity_url ?? ''}`.toLowerCase()))
   log.push({ message: `Already in your list: ${seen.size} funding applications` })
 
+  try {
+    const { data: skippedRows } = await supabase
+      .from('scout_skipped_items')
+      .select('title, subtitle, item_url')
+      .eq('user_id', userId)
+      .eq('module_id', 'funding-scout')
+      .is('dismissed_at', null)
+      .is('promoted_at', null)
+      .limit(200)
+    let skippedInDb = 0
+    for (const row of skippedRows ?? []) {
+      const key = `${row.subtitle ?? ''}::${row.title}::${row.item_url ?? ''}`.toLowerCase()
+      if (!seen.has(key)) {
+        seen.add(key)
+        skippedInDb++
+      }
+    }
+    if (skippedInDb) {
+      log.push({ message: `Also skipping ${skippedInDb} already in your Skipped panel (DB)` })
+    }
+  } catch {
+    /* scout_skipped table optional */
+  }
+
   const discovered = await discoverLiveOpenings(settings, limits)
   for (const line of discovered.log) log.push({ message: line })
 
@@ -167,10 +191,12 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
 
   if (!candidatesNew) {
     log.push({
-      message: 'Nothing new to add — same openings as your saved list. Try Deep scan or wait for new announcements.',
+      message: skipped.length
+        ? `Tüm bulunanlar zaten kayıtlı (${skipped.length} atlanan — panelde görüntüle). Yeni ilan için duyuru/Tavily kaynaklarını bekle veya Skipped panelden uygun olanı "Paket üret".`
+        : 'Yeni ilan yok — kaynaklar aynı sonuçları döndürüyor. Deep scan veya birkaç gün sonra tekrar dene.',
       level: 'warn',
     })
-    return { opportunitiesScanned, packsCreated, candidatesNew, candidatesDuplicate, skippedSaved: 0, regionsScanned, skipped, log }
+    return { opportunitiesScanned, packsCreated, candidatesNew, candidatesDuplicate, skippedSaved: skipped.length, regionsScanned, skipped, log }
   }
 
   const ranked = rankFundingCandidates([...unique.values()], settings)
@@ -340,7 +366,7 @@ export async function runFundingScan(supabase: SupabaseClient, userId: string): 
   }
 
   log.push({
-    message: `Skipped for review: ${skipped.length} (saved to DB after scan completes)`,
+    message: `Skipped for review: ${skipped.length} (UI preview: ${skipped.length})`,
     level: skipped.length ? 'info' : undefined,
   })
 

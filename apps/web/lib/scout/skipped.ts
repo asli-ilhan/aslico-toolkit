@@ -64,12 +64,18 @@ export async function saveScoutSkippedItems(
     skip_reason: item.skipReason.slice(0, 500),
     skip_category: item.skipCategory,
     fit_score: item.fitScore != null ? Math.round(item.fitScore) : null,
-    candidate_data: item.candidateData ?? {},
+    candidate_data: slimCandidateData(item.candidateData),
   }))
 
-  const { error } = await supabase.from('scout_skipped_items').insert(rows)
-  if (error) throw error
-  return rows.length
+  const BATCH = 12
+  let saved = 0
+  for (let i = 0; i < rows.length; i += BATCH) {
+    const chunk = rows.slice(i, i + BATCH)
+    const { error } = await supabase.from('scout_skipped_items').insert(chunk)
+    if (error) throw error
+    saved += chunk.length
+  }
+  return saved
 }
 
 export async function listScoutSkippedItems(
@@ -131,7 +137,7 @@ export interface ClientSkippedPreview {
   candidate_data: Record<string, unknown>
 }
 
-function slimCandidateData(data?: Record<string, unknown>): Record<string, unknown> {
+export function slimCandidateData(data?: Record<string, unknown>): Record<string, unknown> {
   if (!data) return {}
   const opp = data.opp as Record<string, unknown> | undefined
   const job = data.job as Record<string, unknown> | undefined

@@ -9,7 +9,7 @@ import { ModuleGlyph } from '@/components/canvas/ModuleGlyph'
 import { getModuleById } from '@/lib/module-registry'
 import { useFundingScan } from '@/lib/funding-scout/use-funding-scan'
 import { DEFAULT_FUNDING_SETTINGS } from '@/lib/funding-scout/types'
-import { ScoutSkippedPanel } from '@/components/scout/ScoutSkippedPanel'
+import { ScoutSkippedPanel, type SessionSkippedItem } from '@/components/scout/ScoutSkippedPanel'
 import { useDismissWithFeedback } from '@/lib/scout/use-dismiss-with-feedback'
 
 interface FundingApp {
@@ -40,6 +40,19 @@ function flagValue(flags: string[] | null | undefined, key: string): string | nu
 const REGIONS = ['uk', 'eu', 'turkey', 'china', 'japan', 'korea', 'gulf', 'americas', 'australia', 'global'] as const
 const PARTNER_COUNTRIES = ['china', 'netherlands', 'uk', 'germany', 'japan', 'usa'] as const
 const SUPERVISION_MODELS = ['standard', 'joint_phd', 'co_supervision', 'cotutelle'] as const
+const PANEL_SKIPPED_KEY = 'aslico:funding-scout:panel-skipped'
+
+function readPanelSkipped(): SessionSkippedItem[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = localStorage.getItem(PANEL_SKIPPED_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as SessionSkippedItem[]
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
 
 export function FundingScoutView() {
   const { t, locale } = useLocale()
@@ -75,6 +88,13 @@ export function FundingScoutView() {
   const [saving, setSaving] = useState(false)
   const [deadlineDraft, setDeadlineDraft] = useState('')
   const [skippedRefresh, setSkippedRefresh] = useState(0)
+  const [panelSkipped, setPanelSkipped] = useState<SessionSkippedItem[]>([])
+
+  const skippedForPanel = panelSkipped.length > 0 ? panelSkipped : sessionSkipped
+
+  useEffect(() => {
+    setPanelSkipped(readPanelSkipped())
+  }, [])
 
   const selected = items.find((i) => i.id === selectedId) ?? items[0] ?? null
   const selectedConfidence = selected ? flagValue(selected.eligibility_flags, 'confidence') : null
@@ -171,6 +191,14 @@ export function FundingScoutView() {
         setWarning(ss.warnings.tableMissing)
       } else if (warnings.includes('scout_skipped_save_failed')) {
         setWarning(ss.warnings.saveFailed)
+      }
+      if (Array.isArray(data.skippedPreview)) {
+        setPanelSkipped(data.skippedPreview)
+        try {
+          localStorage.setItem(PANEL_SKIPPED_KEY, JSON.stringify(data.skippedPreview))
+        } catch {
+          /* quota */
+        }
       }
       await refreshInbox()
       setSkippedRefresh((n) => n + 1)
@@ -281,11 +309,22 @@ export function FundingScoutView() {
         </GlassPanel>
 
         <ScoutSkippedPanel
+          key={`skipped-${skippedRefresh}-${skippedForPanel.length}`}
           moduleId="funding-scout"
           refreshKey={skippedRefresh}
-          sessionItems={sessionSkipped}
+          sessionItems={skippedForPanel}
           onPromoted={refreshInbox}
-          onSessionDismiss={dismissSessionSkipped}
+          onSessionDismiss={(id) => {
+            dismissSessionSkipped(id)
+            setPanelSkipped((prev) => {
+              const next = prev.filter((s) => s.id !== id)
+              try {
+                if (next.length) localStorage.setItem(PANEL_SKIPPED_KEY, JSON.stringify(next))
+                else localStorage.removeItem(PANEL_SKIPPED_KEY)
+              } catch { /* */ }
+              return next
+            })
+          }}
         />
 
         <GlassPanel className="space-y-4 p-6">
