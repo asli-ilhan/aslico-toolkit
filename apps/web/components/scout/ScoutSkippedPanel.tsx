@@ -73,6 +73,12 @@ export function ScoutSkippedPanel({
   }, [moduleId])
 
   useEffect(() => {
+    if (!sessionItems.length) {
+      setStoredSession(readSessionFromStorage(moduleId))
+    }
+  }, [moduleId, refreshKey, sessionItems.length])
+
+  useEffect(() => {
     if (sessionItems.length) {
       setStoredSession(sessionItems)
       try {

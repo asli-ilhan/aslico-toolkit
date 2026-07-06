@@ -226,6 +226,7 @@ export type Messages = {
       stop: string
       stopped: string
       summary: string
+      scanFailed: string
     }
     autofill: {
       run: string

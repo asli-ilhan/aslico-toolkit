@@ -9,16 +9,20 @@ export interface ScanLimits {
   maritimeBatch: number
   remoteOkLimit: number
   remotiveLimit: number
+  maxRankedEval: number
+  maxRssFeeds: number
 }
 
 export function scanLimits(preferences: SearchPreferences): ScanLimits {
   const deep = preferences.scanDepth === 'deep'
   return {
-    maxPacks: deep ? 18 : 12,
-    rssPerFeed: deep ? 50 : 35,
-    employerBatch: deep ? 18 : 12,
-    maritimeBatch: deep ? 15 : 8,
-    remoteOkLimit: deep ? 150 : 120,
-    remotiveLimit: deep ? 120 : 100,
+    maxPacks: deep ? 8 : 3,
+    rssPerFeed: deep ? 25 : 10,
+    employerBatch: deep ? 8 : 3,
+    maritimeBatch: deep ? 6 : 2,
+    remoteOkLimit: deep ? 100 : 60,
+    remotiveLimit: deep ? 80 : 50,
+    maxRankedEval: deep ? 30 : 12,
+    maxRssFeeds: deep ? 12 : 5,
   }
 }

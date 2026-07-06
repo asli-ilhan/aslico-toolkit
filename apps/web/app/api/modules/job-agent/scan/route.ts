@@ -16,7 +16,20 @@ export async function POST() {
   } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const result = await runDiscoveryForUser(supabase, user.id, { trigger: 'manual' })
+  let result: Awaited<ReturnType<typeof runDiscoveryForUser>>
+  try {
+    result = await runDiscoveryForUser(supabase, user.id, { trigger: 'manual' })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Scan crashed'
+    return NextResponse.json({
+      jobsScanned: 0,
+      packsCreated: 0,
+      log: [{ message: `Scan crashed: ${msg}`, level: 'error' }],
+      skippedPreview: [],
+      skippedCount: 0,
+      error: msg,
+    }, { status: 500 })
+  }
 
   const { data: run, error: runError } = await supabase
     .from('job_agent_runs')

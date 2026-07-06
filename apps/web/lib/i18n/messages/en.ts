@@ -264,6 +264,7 @@ export const en: Messages = {
       stop: 'Stop',
       stopped: 'Stopped on your side. Partial results may still land in inbox if the server was already generating packs.',
       summary: '{scanned} jobs scanned · {created} new packs',
+      scanFailed: 'Scan failed or timed out — check the log box. Vercel Hobby limits scans to ~60s.',
     },
     autofill: {
       run: 'Autofill application form',

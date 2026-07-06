@@ -95,20 +95,24 @@ export function useJobDiscoveryScan() {
         : []
       if (lines.length) {
         setLog(lines.join('\n'))
+      } else if (res.status === 504) {
+        setLog(
+          `Sunucu zaman aşımı (504) — tarama Vercel limitini aştı.\n${raw.slice(0, 600) || 'An error occurred.'}`,
+        )
       } else if (typeof data.error === 'string') {
         setLog(`Scan failed: ${data.error}`)
       } else if (!res.ok) {
-        setLog(`Scan failed (HTTP ${res.status})`)
+        setLog(`Scan failed (HTTP ${res.status}): ${raw.slice(0, 600) || res.statusText}`)
+      } else {
+        setLog('Scan finished but returned no log lines.')
       }
 
-      if (typeof data.jobsScanned === 'number' || typeof data.packsCreated === 'number') {
-        setSummary({
-          scanned: (data.jobsScanned as number) ?? 0,
-          created: (data.packsCreated as number) ?? 0,
-          skipped: (data.skippedCount as number) ?? (Array.isArray(data.skippedPreview) ? data.skippedPreview.length : 0),
-        })
-      }
-      if (Array.isArray(data.skippedPreview) && data.skippedPreview.length) {
+      setSummary({
+        scanned: (data.jobsScanned as number) ?? 0,
+        created: (data.packsCreated as number) ?? 0,
+        skipped: (data.skippedCount as number) ?? (Array.isArray(data.skippedPreview) ? data.skippedPreview.length : 0),
+      })
+      if (Array.isArray(data.skippedPreview)) {
         setSessionSkipped(data.skippedPreview)
       }
 

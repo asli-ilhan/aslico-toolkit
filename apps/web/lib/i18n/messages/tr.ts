@@ -265,6 +265,7 @@ export const tr: Messages = {
       stop: 'Durdur',
       stopped: 'Senin tarafında durduruldu. Sunucu zaten üretime başladıysa kısmi sonuçlar kutuya düşebilir.',
       summary: '{scanned} ilan tarandı · {created} yeni paket',
+      scanFailed: 'Tarama başarısız veya zaman aşımı — log kutusuna bak. Vercel Hobby planda tarama ~60 sn ile sınırlı.',
     },
     autofill: {
       run: 'Formu otomatik doldur',

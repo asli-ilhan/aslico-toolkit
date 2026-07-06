@@ -10,6 +10,7 @@ interface DiscoveryScanControlsProps {
   onWarning?: (msg: string | null) => void
   compact?: boolean
   onRunFinished?: () => void
+  discovery?: ReturnType<typeof useJobDiscoveryScan>
 }
 
 export function DiscoveryScanControls({
@@ -17,27 +18,38 @@ export function DiscoveryScanControls({
   onWarning,
   compact,
   onRunFinished,
+  discovery: discoveryProp,
 }: DiscoveryScanControlsProps) {
   const { t } = useLocale()
   const ja = t.jobAgent
-  const { running, stopped, log, summary, runScan, stopScan } = useJobDiscoveryScan()
+  const internal = useJobDiscoveryScan()
+  const discovery = discoveryProp ?? internal
+  const { running, stopped, log, summary, runScan, stopScan } = discovery
 
   const handleRun = useCallback(async () => {
     onWarning?.(null)
-    const { ok, aborted, data } = await runScan()
+    try {
+      const { ok, aborted, data } = await runScan()
 
-    if (aborted) return
+      if (aborted) return
 
-    if (data?.warning === 'job_agent_v2_missing') {
-      onWarning?.(ja.warnings.v2Missing)
-      return
+      if (data?.warning === 'job_agent_v2_missing') {
+        onWarning?.(ja.warnings.v2Missing)
+        return
+      }
+
+      if (!ok) {
+        onWarning?.(ja.discovery.scanFailed)
+      }
+
+      if (ok && typeof data?.packsCreated === 'number' && data.packsCreated > 0) {
+        onComplete?.()
+      }
+      onRunFinished?.()
+    } catch (err) {
+      onWarning?.(err instanceof Error ? err.message : ja.discovery.scanFailed)
     }
-
-    if (ok && typeof data?.packsCreated === 'number' && data.packsCreated > 0) {
-      onComplete?.()
-    }
-    onRunFinished?.()
-  }, [ja.warnings.v2Missing, onComplete, onRunFinished, onWarning, runScan])
+  }, [ja.discovery.scanFailed, ja.warnings.v2Missing, onComplete, onRunFinished, onWarning, runScan])
 
   return (
     <div className={compact ? 'space-y-2' : 'space-y-3'}>
@@ -54,6 +66,9 @@ export function DiscoveryScanControls({
       </div>
       {stopped && (
         <p className="text-xs text-[var(--text-muted)]">{ja.discovery.stopped}</p>
+      )}
+      {running && !log && (
+        <p className="text-xs text-[var(--text-muted)]">{ja.discovery.running}…</p>
       )}
       {summary && (
         <p className="text-sm font-medium text-[var(--accent)]">

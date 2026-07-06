@@ -8,6 +8,7 @@ import { PackDetailPanel } from './PackDetailPanel'
 import { DiscoveryPanel } from './DiscoveryPanel'
 import { ScoutSkippedPanel } from '@/components/scout/ScoutSkippedPanel'
 import { useDismissWithFeedback } from '@/lib/scout/use-dismiss-with-feedback'
+import { useJobDiscoveryScan } from '@/lib/job-agent/use-discovery-scan'
 
 interface InboxTabProps {
   onWarning: (msg: string | null) => void
@@ -20,6 +21,7 @@ export function InboxTab({ onWarning }: InboxTabProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [skippedRefresh, setSkippedRefresh] = useState(0)
+  const discovery = useJobDiscoveryScan()
   const { openDismiss, dialog: dismissDialog } = useDismissWithFeedback('job-agent')
 
   const selected = items.find((i) => i.id === selectedId) ?? items[0] ?? null
@@ -71,6 +73,7 @@ export function InboxTab({ onWarning }: InboxTabProps) {
         <GlassPanel className="space-y-4 p-8">
           <p className="text-center text-sm text-[var(--text-muted)]">{ja.inbox.empty}</p>
           <DiscoveryPanel
+            discovery={discovery}
             onComplete={load}
             onWarning={onWarning}
             onRunFinished={() => setSkippedRefresh((n) => n + 1)}
@@ -79,6 +82,7 @@ export function InboxTab({ onWarning }: InboxTabProps) {
         <ScoutSkippedPanel
           moduleId="job-agent"
           refreshKey={skippedRefresh}
+          sessionItems={discovery.sessionSkipped}
           onPromoted={load}
         />
         {dismissDialog}
@@ -90,6 +94,7 @@ export function InboxTab({ onWarning }: InboxTabProps) {
     <div className="space-y-4">
       <GlassPanel className="p-4">
         <DiscoveryPanel
+          discovery={discovery}
           onComplete={load}
           onWarning={onWarning}
           compact
@@ -100,6 +105,7 @@ export function InboxTab({ onWarning }: InboxTabProps) {
       <ScoutSkippedPanel
         moduleId="job-agent"
         refreshKey={skippedRefresh}
+        sessionItems={discovery.sessionSkipped}
         onPromoted={load}
       />
 

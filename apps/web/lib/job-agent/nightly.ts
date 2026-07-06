@@ -32,6 +32,7 @@ import { scrapeCareersPage } from '@/lib/job-agent/careers'
 import { maritimeBatchForRun } from '@/lib/job-agent/maritime-targets'
 import { relatedEmployerCareersBatch } from '@/lib/job-agent/related-employers'
 import { scanLimits } from '@/lib/job-agent/scan-limits'
+import { createScanDeadline } from '@/lib/job-agent/scan-budget'
 import { relevanceDomains } from '@/lib/job-agent/domain-aliases'
 import {
   boostFitWithAlignment,
@@ -93,8 +94,9 @@ export async function runDiscoveryForUser(
     prefsRow?.preferences as Partial<SearchPreferences> | null,
   )
   const limits = scanLimits(preferences)
+  const clock = createScanDeadline()
   log.push({
-    message: `Scan mode: ${preferences.scanDepth ?? 'normal'} (max ${limits.maxPacks} packs, ${limits.employerBatch} employer + ${limits.maritimeBatch} maritime careers)`,
+    message: `Scan mode: ${preferences.scanDepth ?? 'normal'} (max ${limits.maxPacks} packs, ${limits.employerBatch} employer + ${limits.maritimeBatch} maritime careers, ${clock.budgetMs / 1000}s budget)`,
   })
 
   if (trigger === 'scheduled' && !preferences.nightlyEnabled) {
@@ -152,6 +154,10 @@ export async function runDiscoveryForUser(
   const rawCandidates: JobCandidate[] = []
 
   for (const item of watchlist ?? []) {
+    if (clock.timeUp()) {
+      log.push({ message: 'Time budget reached during watchlist — continuing with collected jobs', level: 'warn' })
+      break
+    }
     try {
       if (item.kind === 'url') {
         const scraped = await scrapeJobUrl(item.value)
@@ -180,6 +186,7 @@ export async function runDiscoveryForUser(
   }
 
   for (const entry of preferences.targetCompanies ?? []) {
+    if (clock.timeUp()) break
     if (!entry.startsWith('http')) continue
     try {
       const careersJobs = await scrapeCareersPage(entry)
@@ -196,6 +203,10 @@ export async function runDiscoveryForUser(
 
   const runDay = new Date().getDate()
   for (const target of relatedEmployerCareersBatch(runDay, limits.employerBatch)) {
+    if (clock.timeUp()) {
+      log.push({ message: 'Time budget reached during employer careers scrape', level: 'warn' })
+      break
+    }
     if (!target.careersUrl) continue
     try {
       const careersJobs = await scrapeCareersPage(target.careersUrl, target.label)
@@ -213,6 +224,7 @@ export async function runDiscoveryForUser(
   }
 
   for (const target of maritimeBatchForRun(runDay, limits.maritimeBatch)) {
+    if (clock.timeUp()) break
     try {
       const careersJobs = await scrapeCareersPage(target.careersUrl, target.company)
       rawCandidates.push(...careersJobs)
@@ -228,7 +240,11 @@ export async function runDiscoveryForUser(
     }
   }
 
-  for (const feedUrl of rssSources) {
+  for (const feedUrl of rssSources.slice(0, limits.maxRssFeeds)) {
+    if (clock.timeUp()) {
+      log.push({ message: 'Time budget reached during RSS fetch', level: 'warn' })
+      break
+    }
     try {
       const rssJobs = await parseRssFeed(feedUrl, 'rss')
       const slice = rssJobs.slice(0, limits.rssPerFeed)
@@ -243,38 +259,46 @@ export async function runDiscoveryForUser(
     }
   }
 
-  try {
-    const jobicyJobs = await collectJobicyPool(searchTerms)
-    rawCandidates.push(...jobicyJobs)
-    jobsScanned += jobicyJobs.length
-    log.push({ message: `Jobicy API: ${jobicyJobs.length} jobs` })
-  } catch (err) {
-    log.push({
-      message: `Jobicy API failed: ${err instanceof Error ? err.message : 'error'}`,
-      level: 'warn',
-    })
+  if (!clock.timeUp()) {
+    try {
+      const jobicyJobs = await collectJobicyPool(searchTerms)
+      rawCandidates.push(...jobicyJobs)
+      jobsScanned += jobicyJobs.length
+      log.push({ message: `Jobicy API: ${jobicyJobs.length} jobs` })
+    } catch (err) {
+      log.push({
+        message: `Jobicy API failed: ${err instanceof Error ? err.message : 'error'}`,
+        level: 'warn',
+      })
+    }
   }
 
-  try {
-    const arbeitnowJobs = await fetchArbeitnowJobs()
-    rawCandidates.push(...arbeitnowJobs)
-    jobsScanned += arbeitnowJobs.length
-    log.push({ message: `Arbeitnow API: ${arbeitnowJobs.length} remote jobs` })
-  } catch (err) {
-    log.push({
-      message: `Arbeitnow API failed: ${err instanceof Error ? err.message : 'error'}`,
-      level: 'warn',
-    })
+  if (!clock.timeUp()) {
+    try {
+      const arbeitnowJobs = await fetchArbeitnowJobs()
+      rawCandidates.push(...arbeitnowJobs)
+      jobsScanned += arbeitnowJobs.length
+      log.push({ message: `Arbeitnow API: ${arbeitnowJobs.length} remote jobs` })
+    } catch (err) {
+      log.push({
+        message: `Arbeitnow API failed: ${err instanceof Error ? err.message : 'error'}`,
+        level: 'warn',
+      })
+    }
   }
 
-  const agg = await collectAggregatorJobs(searchTerms, limits)
-  rawCandidates.push(...agg.jobs)
-  jobsScanned += agg.jobs.length
-  for (const line of agg.logs) {
-    log.push({ message: line })
-  }
-  for (const w of agg.warnings) {
-    log.push({ message: w, level: 'warn' })
+  if (!clock.timeUp()) {
+    const agg = await collectAggregatorJobs(searchTerms, limits)
+    rawCandidates.push(...agg.jobs)
+    jobsScanned += agg.jobs.length
+    for (const line of agg.logs) {
+      log.push({ message: line })
+    }
+    for (const w of agg.warnings) {
+      log.push({ message: w, level: 'warn' })
+    }
+  } else {
+    log.push({ message: 'Skipped aggregator APIs — time budget', level: 'warn' })
   }
 
   let candidates = dedupeCandidates(rawCandidates)
@@ -310,7 +334,19 @@ export async function runDiscoveryForUser(
   const expNote = experienceNoteForCv(preferences)
   const maxPacks = limits.maxPacks
 
+  let evalCount = 0
+
   for (const { job, alignment: preAlignment } of ranked) {
+    if (clock.timeUp()) {
+      log.push({ message: `Time budget reached after ${evalCount} AI evaluations — partial results returned`, level: 'warn' })
+      break
+    }
+    if (evalCount >= limits.maxRankedEval) {
+      log.push({ message: `Eval limit (${limits.maxRankedEval}) reached for this scan`, level: 'info' })
+      break
+    }
+    evalCount++
+
     if (packsCreated >= maxPacks) {
       recordJobSkip(skipped, job, 'pack_limit', `Max ${maxPacks} packs per scan reached`)
       continue

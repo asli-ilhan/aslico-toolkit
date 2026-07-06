@@ -5,21 +5,24 @@ import { launchAutofill } from '@/lib/job-agent/autofill-client'
 import { useLocale } from '@/components/shell/LocaleProvider'
 import { useState } from 'react'
 import { Button } from '@aslico/ui'
+import type { useJobDiscoveryScan } from '@/lib/job-agent/use-discovery-scan'
 
 interface DiscoveryPanelProps {
   onComplete: () => void
   onWarning: (msg: string | null) => void
   onRunFinished?: () => void
   compact?: boolean
+  discovery?: ReturnType<typeof useJobDiscoveryScan>
 }
 
-export function DiscoveryPanel({ onComplete, onWarning, onRunFinished, compact }: DiscoveryPanelProps) {
+export function DiscoveryPanel({ onComplete, onWarning, onRunFinished, compact, discovery }: DiscoveryPanelProps) {
   return (
     <DiscoveryScanControls
       compact={compact}
       onComplete={onComplete}
       onWarning={onWarning}
       onRunFinished={onRunFinished}
+      discovery={discovery}
     />
   )
 }
