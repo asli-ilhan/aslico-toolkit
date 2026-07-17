@@ -191,6 +191,8 @@ export const ar: Messages = {
       uploadFailed: 'فشل النسخ.',
       noAnthropicKey: 'أضف ANTHROPIC_API_KEY في apps/web/.env.local.',
       noDeepgramKey: 'الصوت يحتاج DEEPGRAM_API_KEY (Claude لا يقرأ الصوت). أو الصق النص.',
+      fileTooLarge: 'الملف كبير جداً (حد أقصى 25 ميغابايت). شغّل transcription_audio_storage.sql للملفات الكبيرة.',
+      storageMissing: 'شغّل packages/storage/sql/transcription_audio_storage.sql في Supabase.',
     },
     paste: {
       tab: 'لصق النص',

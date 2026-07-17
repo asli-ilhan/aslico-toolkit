@@ -162,6 +162,8 @@ export type Messages = {
       uploadFailed: string
       noAnthropicKey: string
       noDeepgramKey: string
+      fileTooLarge: string
+      storageMissing: string
     }
     paste: {
       tab: string

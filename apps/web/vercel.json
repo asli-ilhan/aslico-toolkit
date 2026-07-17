@@ -56,6 +56,9 @@
     "app/api/modules/funding-scout/scan/route.ts": {
       "maxDuration": 300
     },
+    "app/api/modules/transcription/route.ts": {
+      "maxDuration": 120
+    },
     "app/api/modules/language-tutor/report/route.ts": {
       "maxDuration": 60
     }

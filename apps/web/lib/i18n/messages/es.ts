@@ -193,6 +193,8 @@ export const es: Messages = {
       noAnthropicKey: 'Añade ANTHROPIC_API_KEY en apps/web/.env.local.',
       noDeepgramKey:
         'El audio requiere DEEPGRAM_API_KEY (Claude no lee audio). O pega el texto.',
+      fileTooLarge: 'Archivo demasiado grande (máx. 25 MB). Ejecuta transcription_audio_storage.sql para archivos grandes.',
+      storageMissing: 'Ejecuta packages/storage/sql/transcription_audio_storage.sql en Supabase.',
     },
     paste: {
       tab: 'Pegar texto',

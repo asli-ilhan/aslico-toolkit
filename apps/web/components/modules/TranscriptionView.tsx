@@ -7,6 +7,12 @@ import { GlassPanel, Button, cn } from '@aslico/ui'
 import { useLocale } from '@/components/shell/LocaleProvider'
 import { ModuleGlyph } from '@/components/canvas/ModuleGlyph'
 import { getModuleById } from '@/lib/module-registry'
+import { createClient } from '@/lib/supabase/client'
+
+/** Under Vercel ~4.5 MB body limit — larger files go via Supabase Storage. */
+const DIRECT_UPLOAD_MAX = 3.5 * 1024 * 1024
+const MAX_FILE_BYTES = 25 * 1024 * 1024
+const STORAGE_BUCKET = 'transcription-audio'
 
 interface TranscriptionItem {
   id: string
@@ -16,6 +22,18 @@ interface TranscriptionItem {
   source_filename: string | null
   language: string | null
   created_at: string
+}
+
+async function parseJsonSafe(res: Response): Promise<Record<string, unknown>> {
+  const raw = await res.text()
+  try {
+    return JSON.parse(raw) as Record<string, unknown>
+  } catch {
+    return {
+      error: res.status === 413 ? 'payload_too_large' : `HTTP ${res.status}`,
+      hint: raw.slice(0, 300),
+    }
+  }
 }
 
 export function TranscriptionView() {
@@ -41,17 +59,18 @@ export function TranscriptionView() {
     setError(null)
     try {
       const res = await fetch('/api/modules/transcription')
-      const data = await res.json()
+      const data = await parseJsonSafe(res)
       if (!res.ok) {
-        setError(data.error ?? tx.errors.loadFailed)
+        setError(String(data.error ?? tx.errors.loadFailed))
         return
       }
       if (data.warning === 'transcriptions_table_missing') {
         setWarning(tx.warnings.tableMissing)
       }
-      setItems(data.items ?? [])
-      if (data.items?.length && !selectedId) {
-        setSelectedId(data.items[0].id)
+      const list = (data.items as TranscriptionItem[] | undefined) ?? []
+      setItems(list)
+      if (list.length && !selectedId) {
+        setSelectedId(list[0].id)
       }
     } catch {
       setError(tx.errors.loadFailed)
@@ -64,59 +83,123 @@ export function TranscriptionView() {
     loadItems()
   }, [loadItems])
 
+  function applyResult(data: Record<string, unknown>, file: File) {
+    if (data.warning === 'transcriptions_table_missing') {
+      setWarning(tx.warnings.tableMissing)
+      if (typeof data.transcript === 'string') {
+        const temp: TranscriptionItem = {
+          id: `temp-${Date.now()}`,
+          title: file.name.replace(/\.[^.]+$/, '') || 'Recording',
+          transcript: data.transcript,
+          summary: (data.summary as string | null) ?? null,
+          source_filename: file.name,
+          language: (data.language as string | null) ?? null,
+          created_at: new Date().toISOString(),
+        }
+        setItems((prev) => [temp, ...prev])
+        setSelectedId(temp.id)
+      }
+      return
+    }
+    if (data.item) {
+      const item = data.item as TranscriptionItem
+      setItems((prev) => [item, ...prev])
+      setSelectedId(item.id)
+    }
+  }
+
+  function mapUploadError(res: Response, data: Record<string, unknown>): string {
+    if (res.status === 413 || data.error === 'payload_too_large') {
+      return tx.errors.fileTooLarge
+    }
+    if (data.error === 'transcription_storage_missing') {
+      return tx.errors.storageMissing
+    }
+    if (res.status === 503) {
+      return String(data.error ?? '').includes('DEEPGRAM')
+        ? tx.errors.noDeepgramKey
+        : tx.errors.noAnthropicKey
+    }
+    return String(data.error ?? tx.errors.uploadFailed)
+  }
+
+  async function uploadViaStorage(file: File) {
+    const supabase = createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) throw new Error(tx.errors.uploadFailed)
+
+    const safeName = file.name.replace(/[^\w.\-()+ ]+/g, '_').slice(0, 120)
+    const path = `${user.id}/${Date.now()}-${safeName}`
+
+    const { error: upError } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(path, file, {
+        contentType: file.type || 'audio/mp4',
+        upsert: false,
+      })
+
+    if (upError) {
+      if (/bucket|not found|does not exist/i.test(upError.message)) {
+        throw new Error(tx.errors.storageMissing)
+      }
+      throw new Error(upError.message)
+    }
+
+    const res = await fetch('/api/modules/transcription', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        storagePath: path,
+        filename: file.name,
+        locale,
+      }),
+    })
+    const data = await parseJsonSafe(res)
+    if (!res.ok) {
+      throw new Error(mapUploadError(res, data))
+    }
+    applyResult(data, file)
+  }
+
+  async function uploadDirect(file: File) {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('locale', locale)
+
+    const res = await fetch('/api/modules/transcription', {
+      method: 'POST',
+      body: formData,
+    })
+    const data = await parseJsonSafe(res)
+    if (!res.ok) {
+      if (res.status === 413 || data.error === 'payload_too_large') {
+        await uploadViaStorage(file)
+        return
+      }
+      throw new Error(mapUploadError(res, data))
+    }
+    applyResult(data, file)
+  }
+
   async function handleFile(file: File) {
     setUploading(true)
     setError(null)
     setWarning(null)
 
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('locale', locale)
-
     try {
-      const res = await fetch('/api/modules/transcription', {
-        method: 'POST',
-        body: formData,
-      })
-      const data = await res.json()
-
-      if (!res.ok) {
-        if (res.status === 503) {
-          setError(
-            data.error?.includes('DEEPGRAM')
-              ? tx.errors.noDeepgramKey
-              : tx.errors.noAnthropicKey,
-          )
-        } else {
-          setError(data.error ?? tx.errors.uploadFailed)
-        }
+      if (file.size > MAX_FILE_BYTES) {
+        setError(tx.errors.fileTooLarge)
         return
       }
-
-      if (data.warning === 'transcriptions_table_missing') {
-        setWarning(tx.warnings.tableMissing)
-        if (data.transcript) {
-          const temp: TranscriptionItem = {
-            id: `temp-${Date.now()}`,
-            title: file.name.replace(/\.[^.]+$/, '') || 'Recording',
-            transcript: data.transcript,
-            summary: data.summary ?? null,
-            source_filename: file.name,
-            language: data.language ?? null,
-            created_at: new Date().toISOString(),
-          }
-          setItems((prev) => [temp, ...prev])
-          setSelectedId(temp.id)
-        }
-        return
+      if (file.size > DIRECT_UPLOAD_MAX) {
+        await uploadViaStorage(file)
+      } else {
+        await uploadDirect(file)
       }
-
-      if (data.item) {
-        setItems((prev) => [data.item, ...prev])
-        setSelectedId(data.item.id)
-      }
-    } catch {
-      setError(tx.errors.uploadFailed)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : tx.errors.uploadFailed)
     } finally {
       setUploading(false)
     }
@@ -140,13 +223,13 @@ export function TranscriptionView() {
           locale,
         }),
       })
-      const data = await res.json()
+      const data = await parseJsonSafe(res)
 
       if (!res.ok) {
         if (res.status === 503) {
           setError(tx.errors.noAnthropicKey)
         } else {
-          setError(data.error ?? tx.errors.uploadFailed)
+          setError(String(data.error ?? tx.errors.uploadFailed))
         }
         return
       }
@@ -156,8 +239,8 @@ export function TranscriptionView() {
         const temp: TranscriptionItem = {
           id: `temp-${Date.now()}`,
           title: pastedTitle.trim() || tx.paste.titlePlaceholder,
-          transcript: data.transcript ?? transcript,
-          summary: data.summary ?? null,
+          transcript: String(data.transcript ?? transcript),
+          summary: (data.summary as string | null) ?? null,
           source_filename: null,
           language: null,
           created_at: new Date().toISOString(),
@@ -169,8 +252,9 @@ export function TranscriptionView() {
       }
 
       if (data.item) {
-        setItems((prev) => [data.item, ...prev])
-        setSelectedId(data.item.id)
+        const item = data.item as TranscriptionItem
+        setItems((prev) => [item, ...prev])
+        setSelectedId(item.id)
         setPastedText('')
       }
     } catch {
@@ -292,7 +376,7 @@ export function TranscriptionView() {
           <input
             ref={fileInputRef}
             type="file"
-            accept="audio/*,video/webm"
+            accept="audio/*,video/webm,.m4a,.mp3,.wav,.webm,.ogg"
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0]

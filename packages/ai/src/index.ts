@@ -8,7 +8,7 @@ export interface LLMClient {
 }
 
 export { createClaudeMessage, type ClaudeMessage } from './claude'
-export { transcribeAudio, type TranscribeOptions } from './transcribe'
+export { transcribeAudio, transcribeAudioFromUrl, type TranscribeOptions } from './transcribe'
 export { summarizeTranscript } from './summarize'
 export { chatWithAssistant, type ToolkitContext } from './assistant'
 export { generateNewsletterIssue, type NewsletterInput, type NewsletterSections } from './newsletter'

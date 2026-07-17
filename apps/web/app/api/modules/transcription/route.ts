@@ -1,9 +1,16 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { transcribeAudio, summarizeTranscript } from '@aslico/ai'
+import { transcribeAudio, transcribeAudioFromUrl, summarizeTranscript } from '@aslico/ai'
 import { createClient } from '@/lib/supabase/server'
 import { isMissingTranscriptionsTable } from '@/lib/supabase/errors'
 
+export const maxDuration = 120
+export const dynamic = 'force-dynamic'
+
+/** Stay under Vercel Hobby ~4.5 MB gateway body limit for multipart uploads. */
+const DIRECT_UPLOAD_MAX = 3.5 * 1024 * 1024
 const MAX_BYTES = 25 * 1024 * 1024
+const STORAGE_BUCKET = 'transcription-audio'
+
 const ALLOWED_TYPES = new Set([
   'audio/mpeg',
   'audio/mp3',
@@ -78,6 +85,51 @@ async function saveTranscription(
   return { item: saved }
 }
 
+async function finishTranscription(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  opts: {
+    text: string
+    language?: string
+    filename: string | null
+    locale: string
+    withSummary: boolean
+  },
+) {
+  let summary: string | null = null
+  if (opts.withSummary) {
+    try {
+      summary = await summarizeTranscript(opts.text, opts.locale)
+    } catch {
+      summary = null
+    }
+  }
+
+  const title =
+    (opts.filename ? opts.filename.replace(/\.[^.]+$/, '') : null) ||
+    'Untitled recording'
+
+  const result = await saveTranscription(supabase, userId, {
+    title,
+    transcript: opts.text,
+    summary,
+    source_filename: opts.filename,
+    language: opts.language ?? null,
+  })
+
+  if ('warning' in result) {
+    return NextResponse.json({
+      transcript: opts.text,
+      summary,
+      language: opts.language,
+      warning: result.warning,
+      hint: result.hint,
+    })
+  }
+
+  return NextResponse.json({ item: result.item })
+}
+
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
   const {
@@ -100,12 +152,68 @@ export async function POST(request: NextRequest) {
 
   const contentType = request.headers.get('content-type') ?? ''
 
-  // JSON: pre-transcribed text → Claude summary only
+  // JSON: pasted text summary OR large-file path after Storage upload
   if (contentType.includes('application/json')) {
     const body = await request.json()
-    const transcript = String(body.transcript ?? '').trim()
     const locale = String(body.locale ?? 'en')
     const withSummary = body.summary !== false
+
+    // Large audio: client uploaded to Supabase Storage, we ask Deepgram to fetch URL
+    if (body.storagePath) {
+      if (!process.env.DEEPGRAM_API_KEY) {
+        return NextResponse.json(
+          {
+            error: 'DEEPGRAM_API_KEY missing',
+            hint: 'Claude cannot transcribe audio directly. Add DEEPGRAM_API_KEY (free tier) or paste transcript as text.',
+          },
+          { status: 503 },
+        )
+      }
+
+      const storagePath = String(body.storagePath)
+      const filename = String(body.filename ?? storagePath.split('/').pop() ?? 'audio.m4a')
+      if (!storagePath.startsWith(`${user.id}/`)) {
+        return NextResponse.json({ error: 'Invalid storage path' }, { status: 403 })
+      }
+
+      const { data: signed, error: signError } = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .createSignedUrl(storagePath, 3600)
+
+      if (signError || !signed?.signedUrl) {
+        const msg = signError?.message ?? 'Could not create signed URL'
+        if (/bucket|not found|does not exist/i.test(msg)) {
+          return NextResponse.json(
+            {
+              error: 'transcription_storage_missing',
+              hint: 'Run packages/storage/sql/transcription_audio_storage.sql in Supabase SQL Editor',
+            },
+            { status: 503 },
+          )
+        }
+        return NextResponse.json({ error: msg }, { status: 500 })
+      }
+
+      try {
+        const { text, language } = await transcribeAudioFromUrl(signed.signedUrl)
+        const response = await finishTranscription(supabase, user.id, {
+          text,
+          language,
+          filename,
+          locale,
+          withSummary,
+        })
+        // Best-effort cleanup
+        void supabase.storage.from(STORAGE_BUCKET).remove([storagePath])
+        return response
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Transcription failed'
+        return NextResponse.json({ error: message }, { status: 500 })
+      }
+    }
+
+    // Pasted transcript → Claude summary only
+    const transcript = String(body.transcript ?? '').trim()
     const title = String(body.title ?? 'Pasted transcript').trim() || 'Pasted transcript'
 
     if (!transcript) {
@@ -138,7 +246,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Multipart: audio file → Deepgram STT → Claude summary
+  // Multipart: small audio file → Deepgram STT → Claude summary
   if (!process.env.DEEPGRAM_API_KEY) {
     return NextResponse.json(
       {
@@ -149,7 +257,19 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const formData = await request.formData()
+  let formData: FormData
+  try {
+    formData = await request.formData()
+  } catch {
+    return NextResponse.json(
+      {
+        error: 'payload_too_large',
+        hint: 'File exceeds Vercel upload limit (~4.5 MB). Use the app — large files go via Storage automatically after running transcription_audio_storage.sql.',
+      },
+      { status: 413 },
+    )
+  }
+
   const file = formData.get('file')
   const locale = String(formData.get('locale') ?? 'en')
   const withSummary = formData.get('summary') !== 'false'
@@ -162,6 +282,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'File too large (max 25 MB)' }, { status: 400 })
   }
 
+  if (file.size > DIRECT_UPLOAD_MAX) {
+    return NextResponse.json(
+      {
+        error: 'payload_too_large',
+        hint: 'Use Storage upload path for files over 3.5 MB',
+      },
+      { status: 413 },
+    )
+  }
+
   if (file.type && !ALLOWED_TYPES.has(file.type)) {
     return NextResponse.json(
       { error: `Unsupported file type: ${file.type}` },
@@ -172,36 +302,13 @@ export async function POST(request: NextRequest) {
   try {
     const buffer = await file.arrayBuffer()
     const { text, language } = await transcribeAudio(buffer, file.name)
-
-    let summary: string | null = null
-    if (withSummary) {
-      try {
-        summary = await summarizeTranscript(text, locale)
-      } catch {
-        summary = null
-      }
-    }
-
-    const title = file.name.replace(/\.[^.]+$/, '') || 'Untitled recording'
-    const result = await saveTranscription(supabase, user.id, {
-      title,
-      transcript: text,
-      summary,
-      source_filename: file.name,
-      language: language ?? null,
+    return finishTranscription(supabase, user.id, {
+      text,
+      language,
+      filename: file.name,
+      locale,
+      withSummary,
     })
-
-    if ('warning' in result) {
-      return NextResponse.json({
-        transcript: text,
-        summary,
-        language,
-        warning: result.warning,
-        hint: result.hint,
-      })
-    }
-
-    return NextResponse.json({ item: result.item })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Transcription failed'
     return NextResponse.json({ error: message }, { status: 500 })
