@@ -9,8 +9,7 @@ import { ModuleGlyph } from '@/components/canvas/ModuleGlyph'
 import { getModuleById } from '@/lib/module-registry'
 import { createClient } from '@/lib/supabase/client'
 
-/** Under Vercel ~4.5 MB body limit — larger files go via Supabase Storage. */
-const DIRECT_UPLOAD_MAX = 3.5 * 1024 * 1024
+/** Always upload audio via Supabase Storage — Vercel Hobby rejects bodies ≳4.5 MB (413). */
 const MAX_FILE_BYTES = 25 * 1024 * 1024
 const STORAGE_BUCKET = 'transcription-audio'
 
@@ -163,26 +162,6 @@ export function TranscriptionView() {
     applyResult(data, file)
   }
 
-  async function uploadDirect(file: File) {
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('locale', locale)
-
-    const res = await fetch('/api/modules/transcription', {
-      method: 'POST',
-      body: formData,
-    })
-    const data = await parseJsonSafe(res)
-    if (!res.ok) {
-      if (res.status === 413 || data.error === 'payload_too_large') {
-        await uploadViaStorage(file)
-        return
-      }
-      throw new Error(mapUploadError(res, data))
-    }
-    applyResult(data, file)
-  }
-
   async function handleFile(file: File) {
     setUploading(true)
     setError(null)
@@ -193,11 +172,8 @@ export function TranscriptionView() {
         setError(tx.errors.fileTooLarge)
         return
       }
-      if (file.size > DIRECT_UPLOAD_MAX) {
-        await uploadViaStorage(file)
-      } else {
-        await uploadDirect(file)
-      }
+      // Never POST the audio blob to Vercel — always Storage → JSON path.
+      await uploadViaStorage(file)
     } catch (err) {
       setError(err instanceof Error ? err.message : tx.errors.uploadFailed)
     } finally {
