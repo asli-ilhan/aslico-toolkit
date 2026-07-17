@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { transcribeAudio, transcribeAudioFromUrl, summarizeTranscript } from '@aslico/ai'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { isMissingTranscriptionsTable } from '@/lib/supabase/errors'
 
 export const maxDuration = 120
@@ -176,9 +177,14 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid storage path' }, { status: 403 })
       }
 
-      const { data: signed, error: signError } = await supabase.storage
-        .from(STORAGE_BUCKET)
-        .createSignedUrl(storagePath, 3600)
+      const { data: signed, error: signError } = await (() => {
+        try {
+          const admin = createAdminClient()
+          return admin.storage.from(STORAGE_BUCKET).createSignedUrl(storagePath, 3600)
+        } catch {
+          return supabase.storage.from(STORAGE_BUCKET).createSignedUrl(storagePath, 3600)
+        }
+      })()
 
       if (signError || !signed?.signedUrl) {
         const msg = signError?.message ?? 'Could not create signed URL'
@@ -208,7 +214,15 @@ export async function POST(request: NextRequest) {
         return response
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Transcription failed'
-        return NextResponse.json({ error: message }, { status: 500 })
+        return NextResponse.json(
+          {
+            error: message,
+            hint: /DEEPGRAM|Deepgram/i.test(message)
+              ? 'Check DEEPGRAM_API_KEY in Vercel Production env'
+              : undefined,
+          },
+          { status: 500 },
+        )
       }
     }
 

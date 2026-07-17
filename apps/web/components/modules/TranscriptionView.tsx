@@ -13,6 +13,25 @@ import { createClient } from '@/lib/supabase/client'
 const MAX_FILE_BYTES = 25 * 1024 * 1024
 const STORAGE_BUCKET = 'transcription-audio'
 
+function mimeFromFilename(name: string): string {
+  const ext = name.split('.').pop()?.toLowerCase()
+  switch (ext) {
+    case 'mp3':
+    case 'mpeg':
+      return 'audio/mpeg'
+    case 'wav':
+      return 'audio/wav'
+    case 'm4a':
+      return 'audio/mp4'
+    case 'webm':
+      return 'audio/webm'
+    case 'ogg':
+      return 'audio/ogg'
+    default:
+      return 'application/octet-stream'
+  }
+}
+
 interface TranscriptionItem {
   id: string
   title: string
@@ -108,42 +127,61 @@ export function TranscriptionView() {
   }
 
   function mapUploadError(res: Response, data: Record<string, unknown>): string {
-    if (res.status === 413 || data.error === 'payload_too_large') {
+    const err = String(data.error ?? '')
+    const hint = typeof data.hint === 'string' ? data.hint : ''
+    if (res.status === 413 || err === 'payload_too_large') {
       return tx.errors.fileTooLarge
     }
-    if (data.error === 'transcription_storage_missing') {
+    if (err === 'transcription_storage_missing') {
       return tx.errors.storageMissing
     }
     if (res.status === 503) {
-      return String(data.error ?? '').includes('DEEPGRAM')
-        ? tx.errors.noDeepgramKey
-        : tx.errors.noAnthropicKey
+      if (err.includes('DEEPGRAM') || hint.toLowerCase().includes('deepgram')) {
+        return tx.errors.noDeepgramKey
+      }
+      if (err.includes('ANTHROPIC') || hint.toLowerCase().includes('anthropic')) {
+        return tx.errors.noAnthropicKey
+      }
+      return [err || tx.errors.uploadFailed, hint].filter(Boolean).join(' — ')
     }
-    return String(data.error ?? tx.errors.uploadFailed)
+    return [err || tx.errors.uploadFailed, hint].filter(Boolean).join(' — ')
   }
 
   async function uploadViaStorage(file: File) {
     const supabase = createClient()
     const {
       data: { user },
+      error: userError,
     } = await supabase.auth.getUser()
-    if (!user) throw new Error(tx.errors.uploadFailed)
+    if (userError) {
+      throw new Error(`${tx.errors.uploadFailed} (auth: ${userError.message})`)
+    }
+    if (!user) {
+      throw new Error(`${tx.errors.uploadFailed} (oturum yok — tekrar giriş yap)`)
+    }
 
     const safeName = file.name.replace(/[^\w.\-()+ ]+/g, '_').slice(0, 120)
     const path = `${user.id}/${Date.now()}-${safeName}`
+    const contentType = file.type && file.type !== 'application/octet-stream'
+      ? file.type
+      : mimeFromFilename(file.name)
 
     const { error: upError } = await supabase.storage
       .from(STORAGE_BUCKET)
       .upload(path, file, {
-        contentType: file.type || 'audio/mp4',
+        contentType,
         upsert: false,
       })
 
     if (upError) {
-      if (/bucket|not found|does not exist/i.test(upError.message)) {
+      const msg = upError.message || String(upError)
+      if (/bucket|not found|does not exist/i.test(msg)) {
         throw new Error(tx.errors.storageMissing)
       }
-      throw new Error(upError.message)
+      if (/mime|content.type|not allowed/i.test(msg)) {
+        throw new Error(`${tx.errors.uploadFailed} (MIME: ${contentType} — ${msg})`)
+      }
+      throw new Error(`${tx.errors.uploadFailed} (Storage: ${msg})`)
     }
 
     const res = await fetch('/api/modules/transcription', {

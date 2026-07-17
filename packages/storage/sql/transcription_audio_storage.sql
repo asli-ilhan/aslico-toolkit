@@ -1,5 +1,6 @@
 -- Run in Supabase SQL Editor (Dashboard → SQL → New query)
 -- Large audio uploads bypass Vercel’s ~4.5 MB request body limit via Storage.
+-- Re-run safe: clears MIME whitelist (m4a browsers often send empty/odd content-types).
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
@@ -7,23 +8,11 @@ values (
   'transcription-audio',
   false,
   26214400,
-  array[
-    'audio/mpeg',
-    'audio/mp3',
-    'audio/wav',
-    'audio/x-wav',
-    'audio/webm',
-    'audio/mp4',
-    'audio/m4a',
-    'audio/x-m4a',
-    'audio/ogg',
-    'video/webm',
-    'application/octet-stream'
-  ]
+  null
 )
 on conflict (id) do update set
   file_size_limit = excluded.file_size_limit,
-  allowed_mime_types = excluded.allowed_mime_types;
+  allowed_mime_types = null;
 
 drop policy if exists "Users upload own transcription audio" on storage.objects;
 create policy "Users upload own transcription audio"
