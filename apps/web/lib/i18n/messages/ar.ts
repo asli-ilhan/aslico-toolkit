@@ -177,7 +177,7 @@ export const ar: Messages = {
   },
   transcription: {
     dropzone: 'أسقط ملف صوتي هنا',
-    formats: 'MP3, WAV, M4A, WebM — حتى 25 ميغابايت',
+    formats: 'MP3, WAV, M4A, WebM — حتى 50 ميغابايت',
     upload: 'اختر ملف صوتي',
     transcribing: 'جاري النسخ…',
     history: 'السجل',
@@ -195,7 +195,7 @@ export const ar: Messages = {
       uploadFailed: 'فشل النسخ.',
       noAnthropicKey: 'أضف ANTHROPIC_API_KEY في apps/web/.env.local.',
       noDeepgramKey: 'الصوت يحتاج DEEPGRAM_API_KEY (Claude لا يقرأ الصوت). أو الصق النص.',
-      fileTooLarge: 'الملف كبير جداً (حد أقصى 25 ميغابايت). شغّل transcription_audio_storage.sql للملفات الكبيرة.',
+      fileTooLarge: 'الملف كبير جداً (حد أقصى 50 ميغابايت). شغّل transcription_audio_storage.sql للملفات الكبيرة.',
       storageMissing: 'شغّل packages/storage/sql/transcription_audio_storage.sql في Supabase.',
     },
     paste: {

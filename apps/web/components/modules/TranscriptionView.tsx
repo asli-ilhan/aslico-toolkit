@@ -10,7 +10,7 @@ import { getModuleById } from '@/lib/module-registry'
 import { createClient } from '@/lib/supabase/client'
 
 /** Always upload audio via Supabase Storage — Vercel Hobby rejects bodies ≳4.5 MB (413). */
-const MAX_FILE_BYTES = 25 * 1024 * 1024
+const MAX_FILE_BYTES = 50 * 1024 * 1024
 const STORAGE_BUCKET = 'transcription-audio'
 
 function mimeFromFilename(name: string): string {

@@ -178,7 +178,7 @@ export const fr: Messages = {
   },
   transcription: {
     dropzone: 'Déposez un fichier audio ici',
-    formats: 'MP3, WAV, M4A, WebM — max 25 Mo',
+    formats: 'MP3, WAV, M4A, WebM — max 50 Mo',
     upload: 'Choisir un fichier audio',
     transcribing: 'Transcription…',
     history: 'Historique',
@@ -197,7 +197,7 @@ export const fr: Messages = {
       noAnthropicKey: 'Ajoutez ANTHROPIC_API_KEY dans apps/web/.env.local.',
       noDeepgramKey:
         'L’audio nécessite DEEPGRAM_API_KEY (Claude ne lit pas l’audio). Ou collez le texte.',
-      fileTooLarge: 'Fichier trop volumineux (max 25 Mo). Exécutez transcription_audio_storage.sql pour les gros fichiers.',
+      fileTooLarge: 'Fichier trop volumineux (max 50 Mo). Exécutez transcription_audio_storage.sql pour les gros fichiers.',
       storageMissing: 'Exécutez packages/storage/sql/transcription_audio_storage.sql dans Supabase.',
     },
     paste: {

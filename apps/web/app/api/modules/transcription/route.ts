@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 
 /** Stay under Vercel Hobby ~4.5 MB gateway body limit for multipart uploads. */
 const DIRECT_UPLOAD_MAX = 3.5 * 1024 * 1024
-const MAX_BYTES = 25 * 1024 * 1024
+const MAX_BYTES = 50 * 1024 * 1024
 const STORAGE_BUCKET = 'transcription-audio'
 
 const ALLOWED_TYPES = new Set([
@@ -293,7 +293,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (file.size > MAX_BYTES) {
-    return NextResponse.json({ error: 'File too large (max 25 MB)' }, { status: 400 })
+    return NextResponse.json({ error: 'File too large (max 50 MB)' }, { status: 400 })
   }
 
   if (file.size > DIRECT_UPLOAD_MAX) {

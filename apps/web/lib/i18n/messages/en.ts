@@ -185,7 +185,7 @@ export const en: Messages = {
   },
   transcription: {
     dropzone: 'Drop an audio file here',
-    formats: 'MP3, WAV, M4A, WebM — up to 25 MB (large files via Storage)',
+    formats: 'MP3, WAV, M4A, WebM — up to 50 MB (large files via Storage)',
     upload: 'Choose audio file',
     transcribing: 'Transcribing…',
     history: 'History',
@@ -205,7 +205,7 @@ export const en: Messages = {
       noDeepgramKey:
         'Audio needs DEEPGRAM_API_KEY (Claude cannot read audio). Or paste transcript as text.',
       fileTooLarge:
-        'File too large (max 25 MB). Direct upload is capped ~3.5 MB on Vercel — large files need the Storage bucket.',
+        'File too large (max 50 MB). Direct upload is capped ~3.5 MB on Vercel — large files need the Storage bucket.',
       storageMissing:
         'For large audio, run packages/storage/sql/transcription_audio_storage.sql in Supabase SQL Editor.',
     },

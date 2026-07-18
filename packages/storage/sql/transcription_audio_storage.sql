@@ -7,7 +7,7 @@ values (
   'transcription-audio',
   'transcription-audio',
   false,
-  26214400,
+  52428800,
   null
 )
 on conflict (id) do update set

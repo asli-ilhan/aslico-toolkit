@@ -186,7 +186,7 @@ export const tr: Messages = {
   },
   transcription: {
     dropzone: 'Ses dosyasını buraya sürükle',
-    formats: 'MP3, WAV, M4A, WebM — en fazla 25 MB (büyük dosyalar Storage üzerinden)',
+    formats: 'MP3, WAV, M4A, WebM — en fazla 50 MB (büyük dosyalar Storage üzerinden)',
     upload: 'Ses dosyası seç',
     transcribing: 'Transkribe ediliyor…',
     history: 'Geçmiş',
@@ -206,7 +206,7 @@ export const tr: Messages = {
       noDeepgramKey:
         'Ses dosyası için DEEPGRAM_API_KEY gerekli (Claude sesi okuyamaz). Veya metin yapıştır.',
       fileTooLarge:
-        'Dosya çok büyük (max 25 MB). Vercel doğrudan yükleme ~3.5 MB ile sınırlı — büyük dosyalar için Storage bucket gerekir.',
+        'Dosya çok büyük (max 50 MB). Vercel doğrudan yükleme ~3.5 MB ile sınırlı — büyük dosyalar için Storage bucket gerekir.',
       storageMissing:
         'Büyük ses dosyası için Supabase SQL Editor’da packages/storage/sql/transcription_audio_storage.sql çalıştır.',
     },
