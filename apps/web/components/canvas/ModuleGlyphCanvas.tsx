@@ -100,6 +100,19 @@ function GlyphMesh({ moduleId, primary, glow }: GlyphMeshProps) {
           <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.45} metalness={0.5} roughness={0.25} wireframe />
         </mesh>
       )
+    case 'self-therapy':
+      return (
+        <group ref={groupRef}>
+          <mesh position={[0, 0, 0]}>
+            <sphereGeometry args={[0.42, 24, 24]} />
+            <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.55} metalness={0.35} roughness={0.4} transparent opacity={0.85} />
+          </mesh>
+          <mesh position={[0, 0, 0]} scale={1.35}>
+            <torusGeometry args={[0.38, 0.04, 12, 48]} />
+            <meshStandardMaterial color={glow} emissive={emissive} emissiveIntensity={0.35} metalness={0.5} roughness={0.3} />
+          </mesh>
+        </group>
+      )
     default:
       return (
         <mesh ref={meshRef}>

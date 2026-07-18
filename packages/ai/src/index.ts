@@ -62,10 +62,18 @@ export {
   type FundingProgramEvaluation,
 } from './funding-scout'
 export { FUNDING_SCOUT_SYSTEM_PROMPT, buildResearcherProfileBlock } from './funding-scout-prompts'
+export {
+  generateTherapyScript,
+  type TherapyScriptInput,
+  type TherapyScriptResult,
+} from './self-therapy'
+export { THERAPY_SCRIPT_EXAMPLES, type TherapyScriptExample } from './self-therapy-examples'
+export { synthesizeSpeech, type SpeakOptions } from './elevenlabs-tts'
 
 export const aiEngine = {
-  version: '0.2.0',
+  version: '0.3.0',
   status: 'beta' as const,
   llm: 'anthropic' as const,
   stt: 'deepgram' as const,
+  tts: 'elevenlabs' as const,
 }

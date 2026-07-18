@@ -29,5 +29,6 @@ export function generateStaticParams() {
     { moduleId: 'travel-scout' },
     { moduleId: 'language-tutor' },
     { moduleId: 'funding-scout' },
+    { moduleId: 'self-therapy' },
   ]
 }

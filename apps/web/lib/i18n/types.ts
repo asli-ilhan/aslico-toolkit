@@ -676,4 +676,38 @@ export type Messages = {
     dismissWithout: string
     cancel: string
   }
+  selfTherapy: {
+    title: string
+    disclaimer: string
+    topicLabel: string
+    topicPlaceholder: string
+    notesLabel: string
+    notesPlaceholder: string
+    durationLabel: string
+    durations: { short: string; medium: string; long: string }
+    generate: string
+    generating: string
+    speak: string
+    speaking: string
+    play: string
+    pause: string
+    sleepMode: string
+    sleepHint: string
+    fadeTimer: string
+    fadeOff: string
+    minutes: string
+    history: string
+    empty: string
+    sections: { induction: string; deepening: string; suggestions: string }
+    status: { draft: string; ready: string; speaking: string; failed: string }
+    warnings: { tableMissing: string; storageMissing: string }
+    errors: {
+      loadFailed: string
+      generateFailed: string
+      speakFailed: string
+      noElevenLabsKey: string
+      storageMissing: string
+      tableRequired: string
+    }
+  }
 }

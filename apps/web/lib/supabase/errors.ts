@@ -120,3 +120,10 @@ export function isMissingScoutScopeFeedbackTable(error: {
     (error.message?.includes('scope_learnings') ?? false)
   )
 }
+
+export function isMissingSelfTherapyTable(error: {
+  code?: string
+  message?: string
+}): boolean {
+  return isMissingTable(error, 'self_therapy_sessions')
+}

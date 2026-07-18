@@ -73,14 +73,14 @@ export function AssistantOrb() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-[max(1.5rem,env(safe-area-inset-right))] z-50">
       <AnimatePresence>
         {open && (
           <motion.div
             initial={{ opacity: 0, y: 12, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.95 }}
-            className="absolute bottom-16 right-0 w-80"
+            className="absolute bottom-16 right-0 w-[min(20rem,calc(100vw-1.5rem))]"
           >
             <GlassPanel className="flex max-h-[min(70vh,420px)] flex-col p-4">
               <div className="flex items-center justify-between gap-2">

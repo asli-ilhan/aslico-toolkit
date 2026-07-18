@@ -129,33 +129,33 @@ export function DailyBriefing() {
 
   return (
     <GlassPanel className="p-6">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 items-center gap-2">
           <span className="text-xl text-[var(--accent)]" aria-hidden>
             ✦
           </span>
           <h2 className="text-lg font-semibold text-[var(--text)]">{b.title}</h2>
         </div>
-        <div className="flex gap-3 text-xs">
-          <Link href="/newsletter" className="text-[var(--accent)] hover:underline">
+        <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs">
+          <Link href="/newsletter" className="min-h-9 inline-flex items-center text-[var(--accent)] hover:underline">
             {b.openNewsletter}
           </Link>
-          <Link href="/calendar" className="text-[var(--accent)] hover:underline">
+          <Link href="/calendar" className="min-h-9 inline-flex items-center text-[var(--accent)] hover:underline">
             {b.openCalendar}
           </Link>
-          <Link href="/job-agent" className="text-[var(--accent)] hover:underline">
+          <Link href="/job-agent" className="min-h-9 inline-flex items-center text-[var(--accent)] hover:underline">
             {b.openJobAgent}
           </Link>
-          <Link href="/language-tutor" className="text-[var(--accent)] hover:underline">
+          <Link href="/language-tutor" className="min-h-9 inline-flex items-center text-[var(--accent)] hover:underline">
             {b.openLanguageTutor}
           </Link>
-          <Link href="/culture-tracker" className="text-[var(--accent)] hover:underline">
+          <Link href="/culture-tracker" className="min-h-9 inline-flex items-center text-[var(--accent)] hover:underline">
             {b.openCultureTracker}
           </Link>
-          <Link href="/travel-scout" className="text-[var(--accent)] hover:underline">
+          <Link href="/travel-scout" className="min-h-9 inline-flex items-center text-[var(--accent)] hover:underline">
             {b.openTravelScout}
           </Link>
-          <Link href="/funding-scout" className="text-[var(--accent)] hover:underline">
+          <Link href="/funding-scout" className="min-h-9 inline-flex items-center text-[var(--accent)] hover:underline">
             {b.openFundingScout}
           </Link>
         </div>

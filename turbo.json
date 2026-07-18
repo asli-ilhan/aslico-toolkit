@@ -24,7 +24,9 @@
     "JOOBLE_API_KEY",
     "FINDWORK_API_KEY",
     "DATABASE_URL",
-    "DEEPGRAM_API_KEY"
+    "DEEPGRAM_API_KEY",
+    "ELEVENLABS_API_KEY",
+    "ELEVENLABS_VOICE_ID"
   ],
   "tasks": {
     "build": {
@@ -61,7 +63,9 @@
         "GMAIL_REFRESH_TOKEN",
         "CRON_SECRET",
         "DATABASE_URL",
-        "DEEPGRAM_API_KEY"
+        "DEEPGRAM_API_KEY",
+        "ELEVENLABS_API_KEY",
+        "ELEVENLABS_VOICE_ID"
       ]
     },
     "dev": {

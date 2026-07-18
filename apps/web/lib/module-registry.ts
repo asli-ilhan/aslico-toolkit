@@ -151,6 +151,21 @@ export const moduleRegistry: ModuleManifest[] = [
     status: 'beta',
     href: '/funding-scout',
   },
+  {
+    id: 'self-therapy',
+    name: 'Self Therapy',
+    description: 'Calm evening scripts — induction, deepening, suggestions — with soft spoken audio.',
+    icon: 'self-therapy',
+    category: 'life',
+    accent: {
+      primary: '#67e8f9',
+      secondary: '#a5f3fc',
+      glow: '#22d3ee',
+      canvasMode: 'particles',
+    },
+    status: 'beta',
+    href: '/self-therapy',
+  },
 ]
 
 export function getModuleById(id: string): ModuleManifest | undefined {
