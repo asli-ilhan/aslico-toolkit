@@ -61,6 +61,11 @@ export async function synthesizeSpeech(
           'ELEVENLABS_PAID_VOICE: This voice needs a paid ElevenLabs plan (library voices). Use a premade voice ID or upgrade.',
         )
       }
+      if (/quota_exceeded|credits remaining/i.test(body)) {
+        throw new Error(
+          'ELEVENLABS_QUOTA: ElevenLabs credits exhausted. Use local TTS (TTS_PROVIDER=local + tools/local-voice server) on localhost.',
+        )
+      }
       throw new Error(`ElevenLabs TTS error (${res.status}): ${body.slice(0, 400)}`)
     }
 

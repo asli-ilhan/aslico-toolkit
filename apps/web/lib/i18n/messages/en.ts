@@ -868,6 +868,8 @@ export const en: Messages = {
       noElevenLabsKey: 'Add ELEVENLABS_API_KEY in Vercel (optional ELEVENLABS_VOICE_ID).',
       paidVoiceRequired:
         'This is an ElevenLabs Library voice — free plans cannot use it via API. Switch to a premade voice or upgrade.',
+      elevenLabsQuota:
+        'ElevenLabs credits are empty. For local voice: start tools/local-voice and use http://localhost:3000 (production still uses ElevenLabs).',
       localTtsUnavailable:
         'Local voice server is down. In tools/local-voice: source .venv/bin/activate && python server.py',
       storageMissing: 'Audio storage bucket missing.',

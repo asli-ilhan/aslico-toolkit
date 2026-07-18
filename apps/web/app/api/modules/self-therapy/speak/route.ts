@@ -142,6 +142,15 @@ export async function POST(request: Request) {
         { status: 402 },
       )
     }
+    if (message.startsWith('ELEVENLABS_QUOTA')) {
+      return NextResponse.json(
+        {
+          error: 'ELEVENLABS_QUOTA',
+          hint: 'ElevenLabs free credits are empty. Run locally: TTS_PROVIDER=local + tools/local-voice server, open http://localhost:3000',
+        },
+        { status: 402 },
+      )
+    }
     if (/Local TTS error|ECONNREFUSED|fetch failed/i.test(message)) {
       return NextResponse.json(
         {

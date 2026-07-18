@@ -866,6 +866,8 @@ export const tr: Messages = {
       noElevenLabsKey: 'Vercel’e ELEVENLABS_API_KEY ekle (isteğe bağlı ELEVENLABS_VOICE_ID).',
       paidVoiceRequired:
         'Bu ses ElevenLabs Library sesi — ücretsiz planda API ile kullanılamaz. Premade ses kullan veya planı yükselt.',
+      elevenLabsQuota:
+        'ElevenLabs kredisi bitti. Yerel ses için: local-voice sunucusunu aç ve http://localhost:3000 üzerinden dene (Vercel production ElevenLabs kullanır).',
       localTtsUnavailable:
         'Yerel ses sunucusu kapalı. tools/local-voice içinde: source .venv/bin/activate && python server.py',
       storageMissing: 'Ses depolama bucket’ı eksik.',

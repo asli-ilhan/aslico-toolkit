@@ -578,6 +578,8 @@ export const ar: Messages = {
       noElevenLabsKey: 'أضف ELEVENLABS_API_KEY في Vercel.',
       paidVoiceRequired:
         'صوت مكتبة ElevenLabs — الخطة المجانية لا تسمح به عبر API. استخدم صوتًا جاهزًا أو رقِّ الخطة.',
+      elevenLabsQuota:
+        'انتهت أرصدة ElevenLabs. للصوت المحلي: شغّل tools/local-voice وافتح http://localhost:3000.',
       localTtsUnavailable:
         'خادم الصوت المحلي متوقف. في tools/local-voice: source .venv/bin/activate && python server.py',
       storageMissing: 'مجلد الصوت مفقود.',

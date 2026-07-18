@@ -205,6 +205,8 @@ export function SelfTherapyView() {
         setError(st.errors.noElevenLabsKey)
       } else if (data.error === 'ELEVENLABS_PAID_VOICE') {
         setError(st.errors.paidVoiceRequired)
+      } else if (data.error === 'ELEVENLABS_QUOTA') {
+        setError(st.errors.elevenLabsQuota)
       } else if (data.error === 'LOCAL_TTS_UNAVAILABLE') {
         setError(st.errors.localTtsUnavailable)
       } else if (data.error === 'self_therapy_storage_missing') {
