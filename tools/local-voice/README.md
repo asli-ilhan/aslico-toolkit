@@ -30,8 +30,18 @@ Agree to Coqui’s non-commercial CPML for personal use (or buy a commercial lic
 ```bash
 cd tools/local-voice
 source .venv/bin/activate
-python server.py
+LOCAL_TTS_GPU=0 python server.py
 # → http://127.0.0.1:8765
+```
+
+Progress API (used by the web UI):
+
+```bash
+curl -X POST http://127.0.0.1:8765/jobs -H 'Content-Type: application/json' \
+  -d '{"text":"…","language":"tr","ref":"ref_1.wav"}'
+# → {"id":"…"}
+curl http://127.0.0.1:8765/jobs/<id>   # { status, progress }
+curl -o out.wav http://127.0.0.1:8765/jobs/<id>/audio
 ```
 
 Health: `curl http://127.0.0.1:8765/health`
