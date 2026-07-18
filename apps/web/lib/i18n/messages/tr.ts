@@ -864,6 +864,8 @@ export const tr: Messages = {
       generateFailed: 'Metin üretilemedi.',
       speakFailed: 'Seslendirme başarısız.',
       noElevenLabsKey: 'Vercel’e ELEVENLABS_API_KEY ekle (isteğe bağlı ELEVENLABS_VOICE_ID).',
+      paidVoiceRequired:
+        'Bu ses ElevenLabs Library sesi — ücretsiz planda API ile kullanılamaz. Premade ses kullan veya planı yükselt.',
       storageMissing: 'Ses depolama bucket’ı eksik.',
       tableRequired: 'Önce SQL tablosunu oluşturup metni kaydet.',
     },

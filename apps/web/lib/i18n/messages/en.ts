@@ -866,6 +866,8 @@ export const en: Messages = {
       generateFailed: 'Could not generate script.',
       speakFailed: 'Speech synthesis failed.',
       noElevenLabsKey: 'Add ELEVENLABS_API_KEY in Vercel (optional ELEVENLABS_VOICE_ID).',
+      paidVoiceRequired:
+        'This is an ElevenLabs Library voice — free plans cannot use it via API. Switch to a premade voice or upgrade.',
       storageMissing: 'Audio storage bucket missing.',
       tableRequired: 'Create the SQL table and save a script first.',
     },

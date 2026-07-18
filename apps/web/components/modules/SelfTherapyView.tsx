@@ -203,6 +203,8 @@ export function SelfTherapyView() {
     if (!res.ok) {
       if (data.error === 'ELEVENLABS_API_KEY missing') {
         setError(st.errors.noElevenLabsKey)
+      } else if (data.error === 'ELEVENLABS_PAID_VOICE') {
+        setError(st.errors.paidVoiceRequired)
       } else if (data.error === 'self_therapy_storage_missing') {
         setWarning(st.warnings.storageMissing)
         setError(st.errors.storageMissing)

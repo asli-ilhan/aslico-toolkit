@@ -706,6 +706,7 @@ export type Messages = {
       generateFailed: string
       speakFailed: string
       noElevenLabsKey: string
+      paidVoiceRequired: string
       storageMissing: string
       tableRequired: string
     }

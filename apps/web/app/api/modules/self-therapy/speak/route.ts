@@ -125,6 +125,15 @@ export async function POST(request: Request) {
       .eq('user_id', user.id)
 
     const message = err instanceof Error ? err.message : 'TTS failed'
+    if (message.startsWith('ELEVENLABS_PAID_VOICE')) {
+      return NextResponse.json(
+        {
+          error: 'ELEVENLABS_PAID_VOICE',
+          hint: 'Library voices need a paid ElevenLabs plan. Set ELEVENLABS_VOICE_ID to a premade voice (e.g. EXAVITQu4vr4xnSDxMaL) or upgrade.',
+        },
+        { status: 402 },
+      )
+    }
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

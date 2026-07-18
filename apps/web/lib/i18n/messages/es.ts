@@ -578,6 +578,8 @@ export const es: Messages = {
       generateFailed: 'No se pudo generar el guion.',
       speakFailed: 'Falló la síntesis de voz.',
       noElevenLabsKey: 'Añade ELEVENLABS_API_KEY en Vercel.',
+      paidVoiceRequired:
+        'Voz Library de ElevenLabs — el plan gratis no la permite por API. Usa una voz premade o mejora el plan.',
       storageMissing: 'Falta el bucket de audio.',
       tableRequired: 'Crea primero la tabla SQL.',
     },

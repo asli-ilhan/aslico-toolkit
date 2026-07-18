@@ -56,6 +56,11 @@ export async function synthesizeSpeech(
 
     if (!res.ok) {
       const body = await res.text()
+      if (res.status === 402 || /paid_plan_required|library voices/i.test(body)) {
+        throw new Error(
+          'ELEVENLABS_PAID_VOICE: This voice needs a paid ElevenLabs plan (library voices). Use a premade voice ID or upgrade.',
+        )
+      }
       throw new Error(`ElevenLabs TTS error (${res.status}): ${body.slice(0, 400)}`)
     }
 

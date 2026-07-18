@@ -576,6 +576,8 @@ export const ar: Messages = {
       generateFailed: 'تعذّر إنشاء النص.',
       speakFailed: 'فشل التحويل الصوتي.',
       noElevenLabsKey: 'أضف ELEVENLABS_API_KEY في Vercel.',
+      paidVoiceRequired:
+        'صوت مكتبة ElevenLabs — الخطة المجانية لا تسمح به عبر API. استخدم صوتًا جاهزًا أو رقِّ الخطة.',
       storageMissing: 'مجلد الصوت مفقود.',
       tableRequired: 'أنشئ جدول SQL أولاً.',
     },

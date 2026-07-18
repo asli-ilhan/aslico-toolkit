@@ -578,6 +578,8 @@ export const fr: Messages = {
       generateFailed: 'Génération échouée.',
       speakFailed: 'Synthèse vocale échouée.',
       noElevenLabsKey: 'Ajoutez ELEVENLABS_API_KEY sur Vercel.',
+      paidVoiceRequired:
+        'Voix Library ElevenLabs — plan gratuit interdit via API. Utilisez une voix premade ou passez au plan payant.',
       storageMissing: 'Bucket audio manquant.',
       tableRequired: 'Créez d’abord la table SQL.',
     },
