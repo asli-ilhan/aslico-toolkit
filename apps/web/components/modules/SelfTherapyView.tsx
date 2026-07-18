@@ -60,6 +60,7 @@ export function SelfTherapyView() {
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const autoplayAfterSpeakRef = useRef(false)
 
   const applySession = useCallback((s: TherapySession | null) => {
     setActive(s)
@@ -188,41 +189,69 @@ export function SelfTherapyView() {
     }
     setSpeaking(true)
     setError(null)
-    const res = await fetch('/api/modules/self-therapy/speak', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sessionId: active.id,
-        induction,
-        deepening,
-        suggestions,
-      }),
-    })
-    const data = await res.json()
-    setSpeaking(false)
-    if (!res.ok) {
-      if (data.error === 'ELEVENLABS_API_KEY missing') {
-        setError(st.errors.noElevenLabsKey)
-      } else if (data.error === 'ELEVENLABS_PAID_VOICE') {
-        setError(st.errors.paidVoiceRequired)
-      } else if (data.error === 'ELEVENLABS_QUOTA') {
-        setError(st.errors.elevenLabsQuota)
-      } else if (data.error === 'LOCAL_TTS_UNAVAILABLE') {
-        setError(st.errors.localTtsUnavailable)
-      } else if (data.error === 'self_therapy_storage_missing') {
-        setWarning(st.warnings.storageMissing)
-        setError(st.errors.storageMissing)
-      } else {
-        setError(data.error ?? st.errors.speakFailed)
+    setAudioUrl(null)
+    try {
+      const res = await fetch('/api/modules/self-therapy/speak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: active.id,
+          induction,
+          deepening,
+          suggestions,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        if (data.error === 'ELEVENLABS_API_KEY missing') {
+          setError(st.errors.noElevenLabsKey)
+        } else if (data.error === 'ELEVENLABS_PAID_VOICE') {
+          setError(st.errors.paidVoiceRequired)
+        } else if (data.error === 'ELEVENLABS_QUOTA') {
+          setError(st.errors.elevenLabsQuota)
+        } else if (data.error === 'LOCAL_TTS_UNAVAILABLE') {
+          setError(st.errors.localTtsUnavailable)
+        } else if (data.error === 'self_therapy_storage_missing') {
+          setWarning(st.warnings.storageMissing)
+          setError(st.errors.storageMissing)
+        } else {
+          setError(data.error ?? st.errors.speakFailed)
+        }
+        return
       }
-      return
+      if (data.item) {
+        setActive(data.item)
+        setInduction(data.item.induction)
+        setDeepening(data.item.deepening)
+        setSuggestions(data.item.suggestions)
+        setSessions((prev) => prev.map((s) => (s.id === data.item.id ? data.item : s)))
+      }
+      const url = data.audioUrl as string | null
+      if (!url) {
+        setError(st.errors.speakFailed)
+        return
+      }
+      autoplayAfterSpeakRef.current = true
+      setAudioUrl(url)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : st.errors.speakFailed)
+    } finally {
+      setSpeaking(false)
     }
-    if (data.item) {
-      applySession(data.item)
-      setSessions((prev) => prev.map((s) => (s.id === data.item.id ? data.item : s)))
-    }
-    if (data.audioUrl) setAudioUrl(data.audioUrl)
   }
+
+  // After speak sets audioUrl, <audio> mounts — then play once
+  useEffect(() => {
+    if (!audioUrl || speaking || !autoplayAfterSpeakRef.current) return
+    autoplayAfterSpeakRef.current = false
+    const el = audioRef.current
+    if (!el) return
+    el.load()
+    void el.play().then(
+      () => setPlaying(true),
+      () => setPlaying(false),
+    )
+  }, [audioUrl, speaking])
 
   async function removeSession(id: string) {
     if (id === 'preview') {
@@ -408,10 +437,18 @@ export function SelfTherapyView() {
             >
               {speaking ? st.speaking : st.speak}
             </Button>
+            {speaking && (
+              <p className="text-center text-xs text-[var(--muted)]">{st.speakingHint}</p>
+            )}
 
             {audioUrl && (
               <div className="flex flex-col gap-3 border-t border-[var(--border)]/50 pt-4">
-                <audio ref={audioRef} src={audioUrl} preload="metadata" />
+                <audio
+                  ref={audioRef}
+                  src={audioUrl}
+                  preload="auto"
+                  onError={() => setError(st.errors.audioPlayFailed)}
+                />
                 <div className="flex items-center gap-3">
                   <button
                     type="button"

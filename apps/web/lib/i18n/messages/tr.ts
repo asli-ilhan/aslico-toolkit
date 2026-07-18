@@ -835,6 +835,8 @@ export const tr: Messages = {
     generating: 'Üretiliyor…',
     speak: 'Seslendir',
     speaking: 'Seslendiriliyor…',
+    speakingHint:
+      'Yerel klon uzun sürebilir (birkaç dakika). Bitince otomatik çalar — sesi açık tut.',
     play: 'Oynat',
     pause: 'Duraklat',
     sleepMode: 'Uyku modu',
@@ -870,6 +872,7 @@ export const tr: Messages = {
         'ElevenLabs kredisi bitti. Yerel ses için: local-voice sunucusunu aç ve http://localhost:3000 üzerinden dene (Vercel production ElevenLabs kullanır).',
       localTtsUnavailable:
         'Yerel ses sunucusu kapalı. tools/local-voice içinde: source .venv/bin/activate && python server.py',
+      audioPlayFailed: 'Ses dosyası oynatılamadı. Tekrar Seslendir dene.',
       storageMissing: 'Ses depolama bucket’ı eksik.',
       tableRequired: 'Önce SQL tablosunu oluşturup metni kaydet.',
     },

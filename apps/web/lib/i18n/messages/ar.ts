@@ -547,6 +547,7 @@ export const ar: Messages = {
     generating: 'جاري الإنشاء…',
     speak: 'تحويل لصوت',
     speaking: 'جاري التحويل…',
+    speakingHint: 'الاستنساخ المحلي قد يستغرق دقائق. سيشغّل تلقائياً عند الانتهاء.',
     play: 'تشغيل',
     pause: 'إيقاف',
     sleepMode: 'وضع النوم',
@@ -582,6 +583,7 @@ export const ar: Messages = {
         'انتهت أرصدة ElevenLabs. للصوت المحلي: شغّل tools/local-voice وافتح http://localhost:3000.',
       localTtsUnavailable:
         'خادم الصوت المحلي متوقف. في tools/local-voice: source .venv/bin/activate && python server.py',
+      audioPlayFailed: 'تعذّر تشغيل الصوت. حاول مجدداً.',
       storageMissing: 'مجلد الصوت مفقود.',
       tableRequired: 'أنشئ جدول SQL أولاً.',
     },

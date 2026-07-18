@@ -837,6 +837,7 @@ export const en: Messages = {
     generating: 'Generating…',
     speak: 'Speak aloud',
     speaking: 'Speaking…',
+    speakingHint: 'Local clone can take a few minutes. It will auto-play when ready — keep sound on.',
     play: 'Play',
     pause: 'Pause',
     sleepMode: 'Sleep mode',
@@ -872,6 +873,7 @@ export const en: Messages = {
         'ElevenLabs credits are empty. For local voice: start tools/local-voice and use http://localhost:3000 (production still uses ElevenLabs).',
       localTtsUnavailable:
         'Local voice server is down. In tools/local-voice: source .venv/bin/activate && python server.py',
+      audioPlayFailed: 'Could not play audio. Try Speak again.',
       storageMissing: 'Audio storage bucket missing.',
       tableRequired: 'Create the SQL table and save a script first.',
     },

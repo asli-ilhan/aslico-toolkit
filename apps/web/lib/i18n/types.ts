@@ -709,6 +709,8 @@ export type Messages = {
       paidVoiceRequired: string
       elevenLabsQuota: string
       localTtsUnavailable: string
+      audioPlayFailed: string
+      speakingHint: string
       storageMissing: string
       tableRequired: string
     }

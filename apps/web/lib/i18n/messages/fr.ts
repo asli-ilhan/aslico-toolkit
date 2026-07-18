@@ -549,6 +549,7 @@ export const fr: Messages = {
     generating: 'Génération…',
     speak: 'Narration',
     speaking: 'Narration…',
+    speakingHint: 'Le clone local peut prendre quelques minutes. Lecture auto à la fin.',
     play: 'Lecture',
     pause: 'Pause',
     sleepMode: 'Mode sommeil',
@@ -584,6 +585,7 @@ export const fr: Messages = {
         'Crédits ElevenLabs épuisés. Voix locale : démarrez tools/local-voice et ouvrez http://localhost:3000.',
       localTtsUnavailable:
         'Serveur vocal local arrêté. Dans tools/local-voice : source .venv/bin/activate && python server.py',
+      audioPlayFailed: 'Lecture audio impossible. Réessayez Narration.',
       storageMissing: 'Bucket audio manquant.',
       tableRequired: 'Créez d’abord la table SQL.',
     },
