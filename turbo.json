@@ -26,7 +26,10 @@
     "DATABASE_URL",
     "DEEPGRAM_API_KEY",
     "ELEVENLABS_API_KEY",
-    "ELEVENLABS_VOICE_ID"
+    "ELEVENLABS_VOICE_ID",
+    "TTS_PROVIDER",
+    "LOCAL_TTS_URL",
+    "LOCAL_VOICE_REF"
   ],
   "tasks": {
     "build": {
@@ -65,7 +68,10 @@
         "DATABASE_URL",
         "DEEPGRAM_API_KEY",
         "ELEVENLABS_API_KEY",
-        "ELEVENLABS_VOICE_ID"
+        "ELEVENLABS_VOICE_ID",
+        "TTS_PROVIDER",
+        "LOCAL_TTS_URL",
+        "LOCAL_VOICE_REF"
       ]
     },
     "dev": {

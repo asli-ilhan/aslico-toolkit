@@ -707,6 +707,7 @@ export type Messages = {
       speakFailed: string
       noElevenLabsKey: string
       paidVoiceRequired: string
+      localTtsUnavailable: string
       storageMissing: string
       tableRequired: string
     }

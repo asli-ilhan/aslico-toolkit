@@ -580,6 +580,8 @@ export const fr: Messages = {
       noElevenLabsKey: 'Ajoutez ELEVENLABS_API_KEY sur Vercel.',
       paidVoiceRequired:
         'Voix Library ElevenLabs — plan gratuit interdit via API. Utilisez une voix premade ou passez au plan payant.',
+      localTtsUnavailable:
+        'Serveur vocal local arrêté. Dans tools/local-voice : source .venv/bin/activate && python server.py',
       storageMissing: 'Bucket audio manquant.',
       tableRequired: 'Créez d’abord la table SQL.',
     },

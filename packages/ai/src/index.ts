@@ -69,11 +69,16 @@ export {
 } from './self-therapy'
 export { THERAPY_SCRIPT_EXAMPLES, type TherapyScriptExample } from './self-therapy-examples'
 export { synthesizeSpeech, type SpeakOptions } from './elevenlabs-tts'
+export {
+  synthesizeSpeechLocal,
+  isLocalTtsEnabled,
+  type LocalSpeakOptions,
+} from './local-tts'
 
 export const aiEngine = {
-  version: '0.3.0',
+  version: '0.3.1',
   status: 'beta' as const,
   llm: 'anthropic' as const,
   stt: 'deepgram' as const,
-  tts: 'elevenlabs' as const,
+  tts: 'local-or-elevenlabs' as const,
 }

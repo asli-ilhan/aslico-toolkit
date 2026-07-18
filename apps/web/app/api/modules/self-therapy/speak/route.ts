@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { synthesizeSpeech } from '@aslico/ai'
+import { synthesizeSpeech, synthesizeSpeechLocal, isLocalTtsEnabled } from '@aslico/ai'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isMissingSelfTherapyTable } from '@/lib/supabase/errors'
@@ -16,11 +16,12 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  if (!process.env.ELEVENLABS_API_KEY) {
+  const useLocal = isLocalTtsEnabled()
+  if (!useLocal && !process.env.ELEVENLABS_API_KEY) {
     return NextResponse.json(
       {
-        error: 'ELEVENLABS_API_KEY missing',
-        hint: 'Add ELEVENLABS_API_KEY (and optional ELEVENLABS_VOICE_ID) in Vercel env',
+        error: 'TTS not configured',
+        hint: 'Set TTS_PROVIDER=local + LOCAL_TTS_URL (tools/local-voice), or ELEVENLABS_API_KEY',
       },
       { status: 503 },
     )
@@ -68,12 +69,19 @@ export async function POST(request: Request) {
     .eq('user_id', user.id)
 
   try {
-    const { audio, contentType } = await synthesizeSpeech(fullScript)
-    const path = `${user.id}/${sessionId}.mp3`
+    const { audio, contentType } = useLocal
+      ? await synthesizeSpeechLocal(fullScript, {
+          language: session.locale || 'tr',
+          ref: process.env.LOCAL_VOICE_REF || 'ref_1.wav',
+        })
+      : await synthesizeSpeech(fullScript)
+
+    const ext = contentType.includes('wav') ? 'wav' : 'mp3'
+    const path = `${user.id}/${sessionId}.${ext}`
 
     const admin = createAdminClient()
     const { error: upError } = await admin.storage.from(BUCKET).upload(path, audio, {
-      contentType: contentType || 'audio/mpeg',
+      contentType: contentType || (ext === 'wav' ? 'audio/wav' : 'audio/mpeg'),
       upsert: true,
     })
 
@@ -91,7 +99,6 @@ export async function POST(request: Request) {
       throw new Error(msg)
     }
 
-    // Rough duration estimate (~150 Turkish words/min, ~5 chars/word average)
     const durationSeconds = Math.max(30, Math.round(fullScript.length / 12))
 
     const { data: item, error: saveError } = await supabase
@@ -116,6 +123,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       item,
       audioUrl: signed?.signedUrl ?? null,
+      provider: useLocal ? 'local' : 'elevenlabs',
     })
   } catch (err) {
     await supabase
@@ -129,9 +137,19 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error: 'ELEVENLABS_PAID_VOICE',
-          hint: 'Library voices need a paid ElevenLabs plan. Set ELEVENLABS_VOICE_ID to a premade voice (e.g. EXAVITQu4vr4xnSDxMaL) or upgrade.',
+          hint: 'Library voices need a paid ElevenLabs plan — or set TTS_PROVIDER=local',
         },
         { status: 402 },
+      )
+    }
+    if (/Local TTS error|ECONNREFUSED|fetch failed/i.test(message)) {
+      return NextResponse.json(
+        {
+          error: 'LOCAL_TTS_UNAVAILABLE',
+          hint: 'Start tools/local-voice: python server.py (see README)',
+          detail: message,
+        },
+        { status: 503 },
       )
     }
     return NextResponse.json({ error: message }, { status: 500 })
