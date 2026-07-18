@@ -49,6 +49,7 @@ export function SelfTherapyView() {
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [speaking, setSpeaking] = useState(false)
+  const [speakProgress, setSpeakProgress] = useState<number | null>(null)
   const [warning, setWarning] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -188,19 +189,79 @@ export function SelfTherapyView() {
       return
     }
     setSpeaking(true)
+    setSpeakProgress(0)
     setError(null)
     setAudioUrl(null)
     try {
-      const res = await fetch('/api/modules/self-therapy/speak', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: active.id,
-          induction,
-          deepening,
-          suggestions,
-        }),
-      })
+      const localBase = (
+        process.env.NEXT_PUBLIC_LOCAL_TTS_URL ||
+        (process.env.NEXT_PUBLIC_TTS_PROVIDER === 'local' ? 'http://127.0.0.1:8765' : '')
+      ).replace(/\/$/, '')
+
+      let res: Response
+      if (localBase) {
+        const fullScript = [induction, '', '…', '', deepening, '', '…', '', suggestions]
+          .join('\n')
+          .trim()
+        const start = await fetch(`${localBase}/jobs`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: fullScript,
+            language: locale || 'tr',
+            ref: process.env.NEXT_PUBLIC_LOCAL_VOICE_REF || 'ref_1.wav',
+          }),
+        })
+        if (!start.ok) {
+          const detail = await start.text()
+          throw new Error(
+            start.status === 0 || /Failed to fetch/i.test(detail)
+              ? st.errors.localTtsUnavailable
+              : `Local TTS: ${detail.slice(0, 200)}`,
+          )
+        }
+        const { id: jobId } = (await start.json()) as { id: string }
+        let progress = 0
+        for (;;) {
+          await new Promise((r) => setTimeout(r, 800))
+          const stRes = await fetch(`${localBase}/jobs/${jobId}`)
+          if (!stRes.ok) throw new Error(st.errors.localTtsUnavailable)
+          const job = (await stRes.json()) as {
+            status: string
+            progress: number
+            error?: string | null
+          }
+          progress = Math.max(progress, job.progress ?? 0)
+          setSpeakProgress(progress)
+          if (job.status === 'done') break
+          if (job.status === 'error') {
+            throw new Error(job.error || st.errors.speakFailed)
+          }
+        }
+        setSpeakProgress(100)
+        const audioRes = await fetch(`${localBase}/jobs/${jobId}/audio`)
+        if (!audioRes.ok) throw new Error(st.errors.speakFailed)
+        const blob = await audioRes.blob()
+        const form = new FormData()
+        form.set('sessionId', active.id)
+        form.set('induction', induction)
+        form.set('deepening', deepening)
+        form.set('suggestions', suggestions)
+        form.set('audio', blob, 'speak.wav')
+        res = await fetch('/api/modules/self-therapy/speak', { method: 'POST', body: form })
+      } else {
+        res = await fetch('/api/modules/self-therapy/speak', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: active.id,
+            induction,
+            deepening,
+            suggestions,
+          }),
+        })
+      }
+
       const data = await res.json()
       if (!res.ok) {
         if (data.error === 'ELEVENLABS_API_KEY missing') {
@@ -237,6 +298,7 @@ export function SelfTherapyView() {
       setError(err instanceof Error ? err.message : st.errors.speakFailed)
     } finally {
       setSpeaking(false)
+      setSpeakProgress(null)
     }
   }
 
@@ -438,7 +500,22 @@ export function SelfTherapyView() {
               {speaking ? st.speaking : st.speak}
             </Button>
             {speaking && (
-              <p className="text-center text-xs text-[var(--muted)]">{st.speakingHint}</p>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between text-xs text-[var(--muted)]">
+                  <span>{st.speakingHint}</span>
+                  <span className="tabular-nums font-medium text-[var(--text)]">
+                    {speakProgress == null ? '…' : `${Math.min(100, Math.round(speakProgress))}%`}
+                  </span>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--border)]/60">
+                  <div
+                    className="h-full rounded-full bg-[var(--accent)] transition-[width] duration-500 ease-out"
+                    style={{
+                      width: `${speakProgress == null ? 8 : Math.max(4, Math.min(100, speakProgress))}%`,
+                    }}
+                  />
+                </div>
+              </div>
             )}
 
             {audioUrl && (

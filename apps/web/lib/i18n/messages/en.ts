@@ -837,7 +837,7 @@ export const en: Messages = {
     generating: 'Generating…',
     speak: 'Speak aloud',
     speaking: 'Speaking…',
-    speakingHint: 'Local clone can take a few minutes. It will auto-play when ready — keep sound on.',
+    speakingHint: 'Local clone running — auto-plays at 100%. Keep sound on.',
     play: 'Play',
     pause: 'Pause',
     sleepMode: 'Sleep mode',

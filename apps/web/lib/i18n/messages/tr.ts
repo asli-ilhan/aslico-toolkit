@@ -836,7 +836,7 @@ export const tr: Messages = {
     speak: 'Seslendir',
     speaking: 'Seslendiriliyor…',
     speakingHint:
-      'Yerel klon uzun sürebilir (birkaç dakika). Bitince otomatik çalar — sesi açık tut.',
+      'Yerel klon çalışıyor — yüzde dolunca otomatik çalar. Ses açık olsun.',
     play: 'Oynat',
     pause: 'Duraklat',
     sleepMode: 'Uyku modu',

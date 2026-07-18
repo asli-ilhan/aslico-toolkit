@@ -16,8 +16,41 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const contentType = request.headers.get('content-type') || ''
+  const isMultipart = contentType.includes('multipart/form-data')
+
+  let sessionId = ''
+  let induction = ''
+  let deepening = ''
+  let suggestions = ''
+  let prebuiltAudio: ArrayBuffer | null = null
+  let prebuiltContentType = 'audio/wav'
+
+  if (isMultipart) {
+    const form = await request.formData()
+    sessionId = String(form.get('sessionId') ?? '')
+    induction = String(form.get('induction') ?? '')
+    deepening = String(form.get('deepening') ?? '')
+    suggestions = String(form.get('suggestions') ?? '')
+    const file = form.get('audio')
+    if (file instanceof Blob && file.size > 0) {
+      prebuiltAudio = await file.arrayBuffer()
+      prebuiltContentType = file.type || 'audio/wav'
+    }
+  } else {
+    const body = await request.json()
+    sessionId = String(body.sessionId ?? '')
+    induction = String(body.induction ?? '')
+    deepening = String(body.deepening ?? '')
+    suggestions = String(body.suggestions ?? '')
+  }
+
+  if (!sessionId) {
+    return NextResponse.json({ error: 'sessionId required' }, { status: 400 })
+  }
+
   const useLocal = isLocalTtsEnabled()
-  if (!useLocal && !process.env.ELEVENLABS_API_KEY) {
+  if (!prebuiltAudio && !useLocal && !process.env.ELEVENLABS_API_KEY) {
     return NextResponse.json(
       {
         error: 'TTS not configured',
@@ -25,12 +58,6 @@ export async function POST(request: Request) {
       },
       { status: 503 },
     )
-  }
-
-  const body = await request.json()
-  const sessionId = String(body.sessionId ?? '')
-  if (!sessionId) {
-    return NextResponse.json({ error: 'sessionId required' }, { status: 400 })
   }
 
   const { data: session, error: loadError } = await supabase
@@ -48,9 +75,9 @@ export async function POST(request: Request) {
   }
   if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
 
-  const induction = String(body.induction ?? session.induction ?? '')
-  const deepening = String(body.deepening ?? session.deepening ?? '')
-  const suggestions = String(body.suggestions ?? session.suggestions ?? '')
+  induction = induction || String(session.induction ?? '')
+  deepening = deepening || String(session.deepening ?? '')
+  suggestions = suggestions || String(session.suggestions ?? '')
   const fullScript = [induction, '', '…', '', deepening, '', '…', '', suggestions]
     .join('\n')
     .trim()
@@ -69,19 +96,35 @@ export async function POST(request: Request) {
     .eq('user_id', user.id)
 
   try {
-    const { audio, contentType } = useLocal
-      ? await synthesizeSpeechLocal(fullScript, {
-          language: session.locale || 'tr',
-          ref: process.env.LOCAL_VOICE_REF || 'ref_1.wav',
-        })
-      : await synthesizeSpeech(fullScript)
+    let audio: ArrayBuffer
+    let audioType: string
+    let provider: string
 
-    const ext = contentType.includes('wav') ? 'wav' : 'mp3'
+    if (prebuiltAudio) {
+      audio = prebuiltAudio
+      audioType = prebuiltContentType
+      provider = 'local-client'
+    } else if (useLocal) {
+      const result = await synthesizeSpeechLocal(fullScript, {
+        language: session.locale || 'tr',
+        ref: process.env.LOCAL_VOICE_REF || 'ref_1.wav',
+      })
+      audio = result.audio
+      audioType = result.contentType
+      provider = 'local'
+    } else {
+      const result = await synthesizeSpeech(fullScript)
+      audio = result.audio
+      audioType = result.contentType
+      provider = 'elevenlabs'
+    }
+
+    const ext = audioType.includes('wav') ? 'wav' : 'mp3'
     const path = `${user.id}/${sessionId}.${ext}`
 
     const admin = createAdminClient()
     const { error: upError } = await admin.storage.from(BUCKET).upload(path, audio, {
-      contentType: contentType || (ext === 'wav' ? 'audio/wav' : 'audio/mpeg'),
+      contentType: audioType || (ext === 'wav' ? 'audio/wav' : 'audio/mpeg'),
       upsert: true,
     })
 
@@ -123,7 +166,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       item,
       audioUrl: signed?.signedUrl ?? null,
-      provider: useLocal ? 'local' : 'elevenlabs',
+      provider,
     })
   } catch (err) {
     await supabase
@@ -146,7 +189,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error: 'ELEVENLABS_QUOTA',
-          hint: 'ElevenLabs free credits are empty. Run locally: TTS_PROVIDER=local + tools/local-voice server, open http://localhost:3000',
+          hint: 'ElevenLabs free credits are empty. Use local TTS on localhost.',
         },
         { status: 402 },
       )
