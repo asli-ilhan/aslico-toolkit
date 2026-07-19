@@ -26,6 +26,7 @@ export async function GET() {
     language,
     new Date(),
     settings.rotation,
+    settings.sundayBreak,
   )
 
   const { data: grammarRows } = await supabase

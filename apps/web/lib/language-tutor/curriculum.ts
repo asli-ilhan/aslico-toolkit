@@ -70,6 +70,7 @@ export function languageDayIndex(
   language: TutorLanguage,
   today = new Date(),
   rotation: TutorLanguage[] = ['fr', 'es', 'ar'],
+  sundayBreak = false,
 ): number {
   const start = new Date(startDate + 'T12:00:00')
   let count = 0
@@ -78,7 +79,7 @@ export function languageDayIndex(
   const end = new Date(today)
   end.setHours(12, 0, 0, 0)
   while (cur <= end) {
-    if (cur.getDay() !== 0) {
+    if (!(sundayBreak && cur.getDay() === 0)) {
       const weekday = cur.getDay()
       const learningDayIndex = weekday === 0 ? 0 : weekday - 1
       const lang = rotation[learningDayIndex % rotation.length]

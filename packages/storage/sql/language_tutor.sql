@@ -5,7 +5,7 @@ create table if not exists public.language_tutor_settings (
   program_start_date date not null default (timezone('utc', now()))::date,
   goal_days int not null default 90,
   rotation text[] not null default '{fr,es,ar}',
-  sunday_break boolean not null default true,
+  sunday_break boolean not null default false,
   native_language text not null default 'tr',
   level text not null default 'beginner',
   updated_at timestamptz not null default now()

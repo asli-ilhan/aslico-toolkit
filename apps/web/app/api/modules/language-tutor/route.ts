@@ -65,7 +65,7 @@ export async function GET() {
   }
 
   const completedDates = (doneRes.data ?? []).map((d) => d.lesson_date as string)
-  const programDay = programDayIndex(settings.programStartDate)
+  const programDay = programDayIndex(settings.programStartDate, new Date(), settings.sundayBreak)
 
   const langDay =
     schedule.language ?
@@ -74,6 +74,7 @@ export async function GET() {
         schedule.language,
         new Date(),
         settings.rotation,
+        settings.sundayBreak,
       )
     : 1
   const grammarProgress = (grammarRes.data ?? []) as Array<{

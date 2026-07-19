@@ -89,7 +89,7 @@ export async function GET() {
         schedule.language ? languageLabel(schedule.language, explainLocale) : null,
       topic: (languageRes.data?.topic as string | undefined) ?? null,
       status: (languageRes.data?.status as string | undefined) ?? null,
-      programDay: programDayIndex(settings.programStartDate),
+      programDay: programDayIndex(settings.programStartDate, new Date(), settings.sundayBreak),
     }
   } catch {
     languageTutor = null

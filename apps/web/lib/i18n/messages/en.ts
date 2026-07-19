@@ -32,7 +32,7 @@ export const en: Messages = {
     generateNewsletter: 'Generate today\'s newsletter',
     noEventsToday: 'Nothing on the calendar today.',
     languageLessonToday: 'Today\'s language lesson',
-    languageRestDay: 'Sunday rest — optional immersion only.',
+    languageRestDay: 'Optional rest day — immersion only if enabled.',
     cultureScoutReady: 'Culture scout is ready.',
     openLanguageTutor: 'Language Tutor →',
     openCultureTracker: 'Culture Tracker →',
@@ -636,7 +636,7 @@ export const en: Messages = {
   },
   languageTutor: {
     title: 'Language Tutor',
-    subtitle: '90-day program — French, Spanish, Arabic (beginner). Mon–Sat lessons, Sunday rest.',
+    subtitle: '90-day program — French, Spanish, Arabic (beginner). Daily lessons (Sun included).',
     day: 'Day',
     streak: 'Streak',
     restDay: 'Sunday — rest day',

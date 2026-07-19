@@ -32,7 +32,7 @@ export const tr: Messages = {
     generateNewsletter: 'Bugünün bültenini oluştur',
     noEventsToday: 'Bugün takvimde bir şey yok.',
     languageLessonToday: 'Bugünün dil dersi',
-    languageRestDay: 'Pazar — dinlenme günü, isteğe bağlı immersion.',
+    languageRestDay: 'İsteğe bağlı dinlenme günü — ayar açıksa sadece immersion.',
     cultureScoutReady: 'Kültür scout hazır.',
     openLanguageTutor: 'Language Tutor →',
     openCultureTracker: 'Culture Tracker →',
@@ -634,7 +634,7 @@ export const tr: Messages = {
   },
   languageTutor: {
     title: 'Dil Öğretmeni',
-    subtitle: '90 günlük program — Fransızca, İspanyolca, Arapça (beginner). Pt–Ct ders, Pazar mola.',
+    subtitle: '90 günlük program — Fransızca, İspanyolca, Arapça (beginner). Her gün ders (Pazar dahil).',
     day: 'Gün',
     streak: 'Seri',
     restDay: 'Pazar — dinlenme günü',

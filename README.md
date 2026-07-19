@@ -73,7 +73,7 @@ Run these before using each module:
 - `packages/storage/sql/voice_assistant.sql`
 - `packages/storage/sql/culture_tracker.sql`
 - `packages/storage/sql/travel_scout.sql`
-- `packages/storage/sql/language_tutor.sql`
+- `packages/storage/sql/language_tutor.sql` → `language_tutor_v2_sunday_lessons.sql`
 - `packages/storage/sql/funding_scout.sql`
 - `packages/storage/sql/funding_scout_v2_eligibility.sql`
 

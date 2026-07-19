@@ -16,11 +16,11 @@ export function isSunday(date: Date): boolean {
   return date.getDay() === 0
 }
 
-/** Mon=fr, Tue=es, Wed=ar, Thu=fr, Fri=es, Sat=ar, Sun=rest */
+/** Mon=fr, Tue=es, Wed=ar, Thu=fr, Fri=es, Sat=ar, Sun=fr (unless sundayBreak). */
 export function languageForDate(
   date: Date,
   rotation: TutorLanguage[] = DEFAULT_ROTATION,
-  sundayBreak = true,
+  sundayBreak = false,
 ): { language: TutorLanguage | null; isRestDay: boolean } {
   if (sundayBreak && isSunday(date)) {
     return { language: null, isRestDay: true }
@@ -31,8 +31,12 @@ export function languageForDate(
   return { language: lang, isRestDay: false }
 }
 
-/** Count learning days (non-Sunday) since program start. */
-export function programDayIndex(startDate: string, today = new Date()): number {
+/** Count learning days since program start (skips Sundays only when sundayBreak). */
+export function programDayIndex(
+  startDate: string,
+  today = new Date(),
+  sundayBreak = false,
+): number {
   const start = new Date(startDate + 'T12:00:00')
   let count = 0
   const cur = new Date(start)
@@ -40,7 +44,7 @@ export function programDayIndex(startDate: string, today = new Date()): number {
   const end = new Date(today)
   end.setHours(12, 0, 0, 0)
   while (cur <= end) {
-    if (!isSunday(cur)) count++
+    if (!(sundayBreak && isSunday(cur))) count++
     cur.setDate(cur.getDate() + 1)
   }
   return Math.max(1, count)
@@ -48,7 +52,7 @@ export function programDayIndex(startDate: string, today = new Date()): number {
 
 export function streakDays(
   completedDates: string[],
-  sundayBreak = true,
+  sundayBreak = false,
 ): number {
   if (!completedDates.length) return 0
   const done = new Set(completedDates)

@@ -99,7 +99,7 @@ export function LanguageTutorView() {
   const [programStart, setProgramStart] = useState('')
   const [goalDays, setGoalDays] = useState(90)
   const [nativeLanguage, setNativeLanguage] = useState('tr')
-  const [sundayBreak, setSundayBreak] = useState(true)
+  const [sundayBreak, setSundayBreak] = useState(false)
   const [savingSettings, setSavingSettings] = useState(false)
   const [speakingAnswer, setSpeakingAnswer] = useState('')
   const [writingAnswer, setWritingAnswer] = useState('')

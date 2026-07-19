@@ -32,7 +32,7 @@ export async function fetchTutorSettings(
     rotation: ((data?.rotation as string[] | undefined)?.length ?
         data!.rotation
       : ['fr', 'es', 'ar']) as TutorLanguage[],
-    sundayBreak: data?.sunday_break ?? true,
+    sundayBreak: data?.sunday_break ?? false,
     nativeLanguage: (data?.native_language as string | undefined) ?? 'tr',
     level: (data?.level as string | undefined) ?? 'beginner',
   }
@@ -52,8 +52,14 @@ export async function generateTodayLesson(
     return { restDay: true as const, lessonDate }
   }
 
-  const programDay = programDayIndex(settings.programStartDate, today)
-  const langDay = languageDayIndex(settings.programStartDate, language, today, settings.rotation)
+  const programDay = programDayIndex(settings.programStartDate, today, settings.sundayBreak)
+  const langDay = languageDayIndex(
+    settings.programStartDate,
+    language,
+    today,
+    settings.rotation,
+    settings.sundayBreak,
+  )
 
   const { data: grammarRows } = await supabase
     .from('language_tutor_grammar_progress')

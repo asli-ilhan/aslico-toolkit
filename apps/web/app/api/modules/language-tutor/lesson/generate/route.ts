@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   try {
     const result = await generateTodayLesson(supabase, user.id, locale)
     if (result.restDay) {
-      return NextResponse.json({ restDay: true, message: 'Sunday rest day — optional immersion only.' })
+      return NextResponse.json({ restDay: true, message: 'Rest day — optional immersion only.' })
     }
     return NextResponse.json({
       lesson: result.lesson,

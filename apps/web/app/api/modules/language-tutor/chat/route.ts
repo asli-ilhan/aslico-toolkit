@@ -49,7 +49,13 @@ export async function POST(request: NextRequest) {
     content: m.content,
   }))
 
-  const langDay = languageDayIndex(settings.programStartDate, lang, new Date(), settings.rotation)
+  const langDay = languageDayIndex(
+    settings.programStartDate,
+    lang,
+    new Date(),
+    settings.rotation,
+    settings.sundayBreak,
+  )
   const { data: grammarRows } = await supabase
     .from('language_tutor_grammar_progress')
     .select('topic_id, mastery_score, passed')
