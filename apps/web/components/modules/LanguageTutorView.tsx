@@ -6,6 +6,7 @@ import { ShellLayout } from '@/components/shell/ShellLayout'
 import { GlassPanel, Button, cn } from '@aslico/ui'
 import { useLocale } from '@/components/shell/LocaleProvider'
 import { ModuleGlyph } from '@/components/canvas/ModuleGlyph'
+import { LessonMarkdown } from '@/components/modules/LessonMarkdown'
 import { getModuleById } from '@/lib/module-registry'
 import {
   createSpeechRecognition,
@@ -634,16 +635,17 @@ export function LanguageTutorView() {
                             </div>
                           )}
                           {sections.teaching.explanationMd && (
-                            <div className="prose prose-sm max-w-none whitespace-pre-wrap text-sm text-[var(--text)]">
-                              {sections.teaching.explanationMd}
-                            </div>
+                            <LessonMarkdown content={sections.teaching.explanationMd} />
                           )}
                           {sections.teaching.keyPatterns && sections.teaching.keyPatterns.length > 0 && (
-                            <div>
+                            <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--background-alt)]/30 p-4">
                               <h3 className="text-sm font-semibold text-[var(--accent)]">{lt.keyPatterns}</h3>
-                              <ul className="mt-2 space-y-1 text-sm">
+                              <ul className="mt-3 space-y-2 text-sm">
                                 {sections.teaching.keyPatterns.map((p) => (
-                                  <li key={p} className="rounded-lg bg-[var(--background-alt)]/50 px-3 py-1.5">
+                                  <li
+                                    key={p}
+                                    className="rounded-lg border border-[var(--surface-border)]/60 bg-[var(--background)]/40 px-3 py-2 text-[var(--text)]"
+                                  >
                                     {p}
                                   </li>
                                 ))}
@@ -651,9 +653,9 @@ export function LanguageTutorView() {
                             </div>
                           )}
                           {sections.teaching.commonMistakes && sections.teaching.commonMistakes.length > 0 && (
-                            <div>
-                              <h3 className="text-sm font-semibold text-[var(--accent)]">{lt.commonMistakes}</h3>
-                              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-[var(--text-muted)]">
+                            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+                              <h3 className="text-sm font-semibold text-amber-200">{lt.commonMistakes}</h3>
+                              <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-[var(--text-muted)]">
                                 {sections.teaching.commonMistakes.map((m) => (
                                   <li key={m}>{m}</li>
                                 ))}
@@ -664,16 +666,19 @@ export function LanguageTutorView() {
                       : null}
 
                       {sections?.words && sections.words.length > 0 && (
-                        <div>
+                        <div className="rounded-xl border border-[var(--surface-border)] p-4">
                           <h3 className="text-sm font-semibold text-[var(--accent)]">
                             {lt.words} ({sections.words.length})
                           </h3>
-                          <ul className="mt-2 space-y-1 text-sm">
+                          <ul className="mt-3 divide-y divide-[var(--surface-border)]/70">
                             {sections.words.map((w) => (
-                              <li key={w.word}>
-                                <strong>{w.word}</strong> — {w.translation}
+                              <li key={w.word} className="flex flex-col gap-0.5 py-2.5 text-sm sm:flex-row sm:items-baseline sm:gap-3">
+                                <strong className="min-w-[7rem] text-[var(--text)]">{w.word}</strong>
+                                <span className="text-[var(--text-muted)]">{w.translation}</span>
                                 {w.example && (
-                                  <span className="text-[var(--text-muted)]"> · {w.example}</span>
+                                  <span className="text-xs italic text-[var(--text-muted)] sm:ml-auto">
+                                    {w.example}
+                                  </span>
                                 )}
                               </li>
                             ))}
@@ -682,13 +687,20 @@ export function LanguageTutorView() {
                       )}
 
                       {sections?.grammarRules?.map((g) => (
-                        <div key={g.rule}>
+                        <div
+                          key={g.rule}
+                          className="rounded-xl border border-[var(--surface-border)] p-4"
+                        >
                           <h3 className="text-sm font-semibold text-[var(--accent)]">{g.rule}</h3>
-                          <p className="text-sm text-[var(--text-muted)]">{g.explanation}</p>
+                          <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">
+                            {g.explanation}
+                          </p>
                           {g.examples?.length > 0 && (
-                            <ul className="mt-1 list-disc pl-5 text-sm text-[var(--text-muted)]">
+                            <ul className="mt-3 space-y-1.5 border-t border-[var(--surface-border)]/70 pt-3 text-sm text-[var(--text)]">
                               {g.examples.map((e) => (
-                                <li key={e}>{e}</li>
+                                <li key={e} className="rounded-lg bg-[var(--background-alt)]/40 px-3 py-1.5">
+                                  {e}
+                                </li>
                               ))}
                             </ul>
                           )}
@@ -1137,9 +1149,7 @@ export function LanguageTutorView() {
                   </ul>
                 </div>
               )}
-              {report?.content_md && (
-                <pre className="whitespace-pre-wrap text-sm text-[var(--text-muted)]">{report.content_md}</pre>
-              )}
+              {report?.content_md && <LessonMarkdown content={report.content_md} />}
             </GlassPanel>
           )}
         </div>
