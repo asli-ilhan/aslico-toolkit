@@ -713,6 +713,7 @@ export type Messages = {
     generating: string
     speak: string
     speaking: string
+    speakingHint: string
     play: string
     pause: string
     sleepMode: string
@@ -734,7 +735,6 @@ export type Messages = {
       elevenLabsQuota: string
       localTtsUnavailable: string
       audioPlayFailed: string
-      speakingHint: string
       storageMissing: string
       tableRequired: string
     }
