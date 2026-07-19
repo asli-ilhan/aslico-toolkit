@@ -41,7 +41,6 @@ function formatTime(sec: number) {
 export function SelfTherapyView() {
   const { t, locale } = useLocale()
   const st = t.selfTherapy
-  const speakingHint = st.speakingHint
   const mod = getModuleById('self-therapy')!
 
   const [topic, setTopic] = useState('')
@@ -518,7 +517,7 @@ export function SelfTherapyView() {
             {speaking && (
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between text-xs text-[var(--muted)]">
-                  <span>{speakingHint}</span>
+                  <span>{st.speaking}</span>
                   <span className="tabular-nums font-medium text-[var(--text)]">
                     {speakProgress == null ? '…' : `${Math.min(100, Math.round(speakProgress))}%`}
                   </span>

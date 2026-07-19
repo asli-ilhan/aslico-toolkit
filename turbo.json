@@ -35,6 +35,7 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "cache": false,
       "env": [
         "NEXT_PUBLIC_APP_NAME",
         "NEXT_PUBLIC_APP_URL",
