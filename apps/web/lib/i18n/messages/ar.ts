@@ -412,6 +412,8 @@ export const ar: Messages = {
     grammarPassed: 'نجحت — الوحدة التالية',
     grammarPending: 'اختبار ≥70%',
     generateLesson: 'إنشاء يوم المعهد',
+    regenerateLesson: 'إعادة إنشاء (صيغة المعهد)',
+    legacyLessonHint: 'صيغة قديمة. أعد الإنشاء للحصول على علّم → درّب → اختبر → مهام.',
     generating: '…',
     noLesson: 'لا درس.',
     markDone: 'تم ✓',

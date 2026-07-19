@@ -114,6 +114,7 @@ export async function generateTodayLesson(
         status: 'pending',
         sections: { ...sections, repeatUnit, unitId: unit.id },
         youtube_url: youtubeUrl,
+        scores: null,
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'user_id,lesson_date' },
@@ -122,6 +123,9 @@ export async function generateTodayLesson(
     .single()
 
   if (error) throw error
+
+  // Replace flashcards for this lesson so regenerate doesn't pile duplicates
+  await supabase.from('language_tutor_flashcards').delete().eq('source_lesson_id', saved.id)
 
   if (sections.words.length > 0) {
     const targetCount = Math.min(

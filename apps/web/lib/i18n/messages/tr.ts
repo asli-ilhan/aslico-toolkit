@@ -674,6 +674,8 @@ export const tr: Messages = {
     grammarPassed: 'Geçildi — sonraki üniteye hazır',
     grammarPending: 'Sonraki ünite için Ölçümde quiz ≥%70',
     generateLesson: 'Bugünün institute gününü oluştur (~45 dk)',
+    regenerateLesson: 'Institute günü olarak yeniden oluştur',
+    legacyLessonHint: 'Bu eski ders formatı. Öğret → alıştır → ölç → görevler için yeniden oluştur.',
     generating: 'Institute günü hazırlanıyor…',
     noLesson: 'Bugün için ders yok.',
     markDone: 'Günü tamamladım ✓',

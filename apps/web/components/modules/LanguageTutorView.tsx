@@ -500,10 +500,26 @@ export function LanguageTutorView() {
                     <h2 className="text-lg font-semibold">
                       {schedule?.languageLabel} — {lesson.topic}
                     </h2>
-                    <span className="text-xs text-[var(--text-muted)]">
-                      {fillTemplate(lt.estimatedMinutes, { min: estimated })}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs text-[var(--text-muted)]">
+                        {fillTemplate(lt.estimatedMinutes, { min: estimated })}
+                      </span>
+                      <Button
+                        variant="outline"
+                        onClick={generateLesson}
+                        disabled={generating}
+                        className="text-xs"
+                      >
+                        {generating ? lt.generating : lt.regenerateLesson}
+                      </Button>
+                    </div>
                   </div>
+
+                  {!hasTeaching && (
+                    <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                      {lt.legacyLessonHint}
+                    </p>
+                  )}
 
                   <div className="rounded-xl border border-[var(--surface-border)] px-3 py-3">
                     <div className="flex items-center justify-between gap-2">
@@ -654,9 +670,7 @@ export function LanguageTutorView() {
                       ))}
 
                       {!hasTeaching && !sections?.words?.length && (
-                        <p className="text-sm text-[var(--text-muted)]">
-                          Legacy lesson — regenerate for the institute teach-first format.
-                        </p>
+                        <p className="text-sm text-[var(--text-muted)]">{lt.legacyLessonHint}</p>
                       )}
 
                       <Button

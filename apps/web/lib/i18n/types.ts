@@ -567,6 +567,8 @@ export type Messages = {
     grammarPassed: string
     grammarPending: string
     generateLesson: string
+    regenerateLesson: string
+    legacyLessonHint: string
     generating: string
     noLesson: string
     markDone: string

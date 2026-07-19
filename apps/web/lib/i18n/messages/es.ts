@@ -414,6 +414,8 @@ export const es: Messages = {
     grammarPassed: 'Aprobado — siguiente unidad',
     grammarPending: 'Control quiz ≥70%',
     generateLesson: 'Generar día institute',
+    regenerateLesson: 'Regenerar (formato institute)',
+    legacyLessonHint: 'Formato antiguo. Regenera para enseñar → practicar → comprobar → misiones.',
     generating: '…',
     noLesson: 'Sin lección.',
     markDone: 'Hecho ✓',
