@@ -861,6 +861,8 @@ export const en: Messages = {
     warnings: {
       tableMissing: 'Run packages/storage/sql/self_therapy.sql in Supabase SQL Editor.',
       storageMissing: 'Run packages/storage/sql/self_therapy_audio_storage.sql in Supabase.',
+      incompleteScript:
+        'All three sections should be filled (Induction + Deepening + Suggestions) for a full session.',
     },
     errors: {
       loadFailed: 'Could not load sessions.',

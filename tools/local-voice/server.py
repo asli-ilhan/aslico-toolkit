@@ -35,10 +35,12 @@ DEFAULT_REF = os.environ.get("LOCAL_VOICE_REF", "ref_1.wav")
 HOST = os.environ.get("LOCAL_TTS_HOST", "127.0.0.1")
 PORT = int(os.environ.get("LOCAL_TTS_PORT", "8765"))
 MODEL_NAME = "tts_models/multilingual/multi-dataset/xtts_v2"
-# XTTS blows up on long GPT sequences — keep chunks short
-CHUNK_CHARS = int(os.environ.get("LOCAL_TTS_CHUNK_CHARS", "120"))
+# XTTS blows up on long GPT sequences — keep chunks moderate; crossfade joins them
+CHUNK_CHARS = int(os.environ.get("LOCAL_TTS_CHUNK_CHARS", "160"))
+CROSSFADE_MS = int(os.environ.get("LOCAL_TTS_CROSSFADE_MS", "110"))
+EDGE_FADE_MS = int(os.environ.get("LOCAL_TTS_EDGE_FADE_MS", "55"))
 
-app = FastAPI(title="asliCo local voice TTS", version="0.2.0")
+app = FastAPI(title="asliCo local voice TTS", version="0.3.0")
 app.add_middleware(
   CORSMiddleware,
   allow_origins=[
@@ -92,6 +94,76 @@ def resolve_ref(ref: str | None) -> Path:
   return ref_path
 
 
+def prepare_spoken_text(text: str) -> str:
+  """Merge sections into continuous speech (no decorative ellipsis cuts)."""
+  text = text.replace("…", ".").replace("...", ".")
+  lines = [ln.strip() for ln in text.splitlines()]
+  blocks: list[str] = []
+  buf: list[str] = []
+  for ln in lines:
+    if not ln:
+      if buf:
+        blocks.append(" ".join(buf))
+        buf = []
+      continue
+    buf.append(ln)
+  if buf:
+    blocks.append(" ".join(buf))
+  cleaned: list[str] = []
+  for b in blocks:
+    b = b.strip()
+    if not b or b in {".", "…"}:
+      continue
+    if not b.endswith((".", "!", "?", ";")):
+      b += "."
+    cleaned.append(b)
+  return " ".join(cleaned)
+
+
+def trim_edges(arr: np.ndarray, sr: int, thresh: float = 0.012, pad_ms: int = 35) -> np.ndarray:
+  if arr.size == 0:
+    return arr
+  energy = np.abs(arr)
+  idx = np.where(energy > thresh)[0]
+  if idx.size == 0:
+    return arr
+  pad = int(sr * pad_ms / 1000)
+  start = max(0, int(idx[0]) - pad)
+  end = min(len(arr), int(idx[-1]) + pad)
+  return arr[start:end].copy()
+
+
+def soft_edges(arr: np.ndarray, sr: int, fade_ms: int = 55) -> np.ndarray:
+  n = int(sr * fade_ms / 1000)
+  if arr.size < n * 2 + 8:
+    return arr
+  out = arr.astype(np.float32, copy=True)
+  fade = np.linspace(0.0, 1.0, n, dtype=np.float32)
+  out[:n] *= fade
+  out[-n:] *= fade[::-1]
+  return out
+
+
+def crossfade_join(pieces: list[np.ndarray], sr: int, overlap_ms: int = 110) -> np.ndarray:
+  if not pieces:
+    return np.zeros(0, dtype=np.float32)
+  overlap = max(1, int(sr * overlap_ms / 1000))
+  out = pieces[0].astype(np.float32, copy=True)
+  for nxt in pieces[1:]:
+    nxt = nxt.astype(np.float32, copy=False)
+    if out.size < overlap or nxt.size < overlap:
+      gap = np.zeros(int(sr * 0.06), dtype=np.float32)
+      out = np.concatenate([out, gap, nxt])
+      continue
+    a = out[-overlap:]
+    b = nxt[:overlap]
+    fade_out = np.linspace(1.0, 0.0, overlap, dtype=np.float32)
+    fade_in = np.linspace(0.0, 1.0, overlap, dtype=np.float32)
+    blended = a * fade_out + b * fade_in
+    out = np.concatenate([out[:-overlap], blended, nxt[overlap:]])
+  return out
+
+
 def synthesize_chunks(
   text: str,
   language: str,
@@ -99,7 +171,12 @@ def synthesize_chunks(
   on_progress=None,
 ) -> bytes:
   tts = get_tts()
+  text = prepare_spoken_text(text)
   chunks = split_text(text, max_chars=CHUNK_CHARS)
+  chunks = [c for c in chunks if c and c not in {".", "…", "..."}]
+  if not chunks:
+    raise ValueError("No speakable text after cleanup")
+
   pieces: list[np.ndarray] = []
   sr = 24000
   total = max(len(chunks), 1)
@@ -109,15 +186,20 @@ def synthesize_chunks(
       on_progress(i / total)
     print(f"[{i + 1}/{total}] synthesizing {len(chunk)} chars…")
     arr = synth_one(tts, chunk, language, ref_path)
+    arr = trim_edges(arr, sr)
+    arr = soft_edges(arr, sr, fade_ms=EDGE_FADE_MS)
     pieces.append(arr)
-    pieces.append(np.zeros(int(sr * 0.2), dtype=np.float32))
 
   if on_progress:
     on_progress(1.0)
 
-  audio = np.concatenate(pieces) if pieces else np.zeros(0, dtype=np.float32)
+  audio = crossfade_join(pieces, sr, overlap_ms=CROSSFADE_MS)
+  peak = float(np.max(np.abs(audio))) if audio.size else 0.0
+  if peak > 1e-4:
+    audio = audio * (0.85 / peak)
+
   buf = io.BytesIO()
-  sf.write(buf, audio, sr, format="WAV")
+  sf.write(buf, audio.astype(np.float32), sr, format="WAV")
   return buf.getvalue()
 
 
@@ -130,9 +212,8 @@ def synth_one(tts, chunk: str, language: str, ref_path: Path) -> np.ndarray:
   except IndexError:
     if len(chunk) < 40:
       print(f"skip failed micro-chunk ({len(chunk)} chars)")
-      return np.zeros(int(24000 * 0.15), dtype=np.float32)
+      return np.zeros(int(24000 * 0.05), dtype=np.float32)
     mid = len(chunk) // 2
-    # prefer split on space near middle
     cut = chunk.rfind(" ", 0, mid)
     if cut < mid * 0.4:
       cut = mid
@@ -144,7 +225,7 @@ def synth_one(tts, chunk: str, language: str, ref_path: Path) -> np.ndarray:
       parts.append(synth_one(tts, left, language, ref_path))
     if right:
       parts.append(synth_one(tts, right, language, ref_path))
-    return np.concatenate(parts) if parts else np.zeros(0, dtype=np.float32)
+    return crossfade_join(parts, 24000, overlap_ms=80) if parts else np.zeros(0, dtype=np.float32)
 
 
 def split_text(text: str, max_chars: int) -> list[str]:
@@ -155,6 +236,10 @@ def split_text(text: str, max_chars: int) -> list[str]:
   remaining = text
   while len(remaining) > max_chars:
     cut = remaining.rfind(". ", 0, max_chars)
+    if cut < max_chars * 0.4:
+      cut = remaining.rfind("; ", 0, max_chars)
+    if cut < max_chars * 0.4:
+      cut = remaining.rfind(", ", 0, max_chars)
     if cut < max_chars * 0.35:
       cut = remaining.rfind(" ", 0, max_chars)
     if cut < 1:
@@ -201,6 +286,7 @@ def health():
     "refs": refs,
     "default_ref": DEFAULT_REF,
     "chunk_chars": CHUNK_CHARS,
+    "crossfade_ms": CROSSFADE_MS,
   }
 
 

@@ -860,6 +860,8 @@ export const tr: Messages = {
     warnings: {
       tableMissing: 'Supabase SQL Editor’da packages/storage/sql/self_therapy.sql çalıştır.',
       storageMissing: 'Supabase’de packages/storage/sql/self_therapy_audio_storage.sql çalıştır.',
+      incompleteScript:
+        'Üç bölüm de dolu olmalı (Rahatlama + Frekans/derinlik + Telkinler). Eksik bölüm seslendirilmez.',
     },
     errors: {
       loadFailed: 'Seanslar yüklenemedi.',

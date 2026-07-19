@@ -700,7 +700,7 @@ export type Messages = {
     empty: string
     sections: { induction: string; deepening: string; suggestions: string }
     status: { draft: string; ready: string; speaking: string; failed: string }
-    warnings: { tableMissing: string; storageMissing: string }
+    warnings: { tableMissing: string; storageMissing: string; incompleteScript: string }
     errors: {
       loadFailed: string
       generateFailed: string

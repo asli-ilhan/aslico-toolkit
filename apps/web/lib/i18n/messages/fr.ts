@@ -573,6 +573,7 @@ export const fr: Messages = {
     warnings: {
       tableMissing: 'Exécutez packages/storage/sql/self_therapy.sql dans Supabase.',
       storageMissing: 'Exécutez packages/storage/sql/self_therapy_audio_storage.sql.',
+      incompleteScript: 'Remplissez les 3 sections (Induction + Approfondissement + Suggestions).',
     },
     errors: {
       loadFailed: 'Chargement impossible.',

@@ -78,9 +78,10 @@ export async function POST(request: Request) {
   induction = induction || String(session.induction ?? '')
   deepening = deepening || String(session.deepening ?? '')
   suggestions = suggestions || String(session.suggestions ?? '')
-  const fullScript = [induction, '', '…', '', deepening, '', '…', '', suggestions]
-    .join('\n')
-    .trim()
+  const fullScript = [induction, deepening, suggestions]
+    .map((s) => s.replace(/…/g, '.').trim())
+    .filter(Boolean)
+    .join('\n\n')
 
   await supabase
     .from('self_therapy_sessions')

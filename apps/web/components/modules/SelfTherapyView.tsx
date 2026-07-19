@@ -25,6 +25,13 @@ interface TherapySession {
 
 type DurationHint = 'short' | 'medium' | 'long'
 
+function buildSpokenScript(inductionText: string, deepeningText: string, suggestionsText: string) {
+  return [inductionText, deepeningText, suggestionsText]
+    .map((s) => s.replace(/…/g, '.').trim())
+    .filter(Boolean)
+    .join('\n\n')
+}
+
 function formatTime(sec: number) {
   const m = Math.floor(sec / 60)
   const s = Math.floor(sec % 60)
@@ -200,9 +207,14 @@ export function SelfTherapyView() {
 
       let res: Response
       if (localBase) {
-        const fullScript = [induction, '', '…', '', deepening, '', '…', '', suggestions]
-          .join('\n')
-          .trim()
+        const fullScript = buildSpokenScript(induction, deepening, suggestions)
+        if (!fullScript.trim()) {
+          setError(st.errors.speakFailed)
+          return
+        }
+        if (!deepening.trim() || !suggestions.trim()) {
+          setWarning(st.warnings.incompleteScript)
+        }
         const start = await fetch(`${localBase}/jobs`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -494,11 +506,14 @@ export function SelfTherapyView() {
 
             <Button
               onClick={() => void speak()}
-              disabled={speaking || !induction.trim()}
+              disabled={speaking || !buildSpokenScript(induction, deepening, suggestions)}
               className="min-h-12 w-full text-base"
             >
               {speaking ? st.speaking : st.speak}
             </Button>
+            {(!deepening.trim() || !suggestions.trim()) && induction.trim() && !speaking && (
+              <p className="text-center text-xs text-amber-200/80">{st.warnings.incompleteScript}</p>
+            )}
             {speaking && (
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between text-xs text-[var(--muted)]">

@@ -571,6 +571,7 @@ export const ar: Messages = {
     warnings: {
       tableMissing: 'نفّذ packages/storage/sql/self_therapy.sql في Supabase.',
       storageMissing: 'نفّذ packages/storage/sql/self_therapy_audio_storage.sql.',
+      incompleteScript: 'أكمل الأقسام الثلاثة (استرخاء + تعميق + اقتراحات).',
     },
     errors: {
       loadFailed: 'تعذّر تحميل الجلسات.',
