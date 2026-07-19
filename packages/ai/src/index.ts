@@ -25,6 +25,9 @@ export {
   type TutorLanguage,
   type ChatMode,
   type DailyLessonSections,
+  type DailyPlan,
+  type TeachingBlock,
+  type LessonDrill,
 } from './language-tutor'
 export {
   JOB_APPLICATION_GUARDRAILS,

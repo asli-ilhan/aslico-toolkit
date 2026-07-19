@@ -124,9 +124,14 @@ export async function generateTodayLesson(
   if (error) throw error
 
   if (sections.words.length > 0) {
+    const targetCount = Math.min(
+      sections.words.length,
+      Math.max(12, sections.dailyPlan?.flashcardCount ?? 14),
+    )
+    const wordsForCards = sections.words.slice(0, targetCount)
     const cards = await generateFlashcardsFromWords(
       language,
-      sections.words.map((w) => ({ word: w.word, translation: w.translation })),
+      wordsForCards.map((w) => ({ word: w.word, translation: w.translation })),
       settings.nativeLanguage,
     )
     for (const card of cards) {
@@ -157,9 +162,9 @@ async function ensurePracticeTodo(
   date: string,
 ) {
   const labels: Record<TutorLanguage, string> = {
-    fr: 'French practice 20min',
-    es: 'Spanish practice 20min',
-    ar: 'Arabic practice 20min',
+    fr: 'French Institute day (~45min)',
+    es: 'Spanish Institute day (~45min)',
+    ar: 'Arabic Institute day (~45min)',
   }
   try {
     const { data: existing } = await supabase

@@ -1,6 +1,6 @@
 import type { TutorLanguage } from './rotation'
 
-/** Curated beginner YouTube videos per curriculum unit. */
+/** Curated beginner YouTube videos per curriculum unit (new units fall back to search). */
 export const YOUTUBE_PLAYLISTS: Record<string, string> = {
   'fr-01': 'https://www.youtube.com/watch?v=Cb0pzP-PJzQ',
   'fr-02': 'https://www.youtube.com/watch?v=lj2e4vL_QZM',
@@ -10,8 +10,14 @@ export const YOUTUBE_PLAYLISTS: Record<string, string> = {
   'fr-06': 'https://www.youtube.com/watch?v=8y2Hj7b8q0Y',
   'fr-07': 'https://www.youtube.com/watch?v=ZxXruY7llcc',
   'fr-08': 'https://www.youtube.com/watch?v=ZxXruY7llcc',
-  'fr-09': 'https://www.youtube.com/watch?v=Cb0pzP-PJzQ',
-  'fr-10': 'https://www.youtube.com/watch?v=0druh1M5Pdc',
+  'fr-09': 'https://www.youtube.com/watch?v=lj2e4vL_QZM',
+  'fr-10': 'https://www.youtube.com/watch?v=Cb0pzP-PJzQ',
+  'fr-11': 'https://www.youtube.com/watch?v=0druh1M5Pdc',
+  'fr-12': 'https://www.youtube.com/watch?v=0druh1M5Pdc',
+  'fr-13': 'https://www.youtube.com/watch?v=ZxXruY7llcc',
+  'fr-14': 'https://www.youtube.com/watch?v=ZxXruY7llcc',
+  'fr-15': 'https://www.youtube.com/watch?v=3I2ab0t4KLo',
+  'fr-16': 'https://www.youtube.com/watch?v=Cb0pzP-PJzQ',
   'es-01': 'https://www.youtube.com/watch?v=1J8rqlz-KnE',
   'es-02': 'https://www.youtube.com/watch?v=h1cVv1n0jKc',
   'es-03': 'https://www.youtube.com/watch?v=ni0Xl-Xo6K0',
@@ -22,6 +28,12 @@ export const YOUTUBE_PLAYLISTS: Record<string, string> = {
   'es-08': 'https://www.youtube.com/watch?v=h1cVv1n0jKc',
   'es-09': 'https://www.youtube.com/watch?v=1J8rqlz-KnE',
   'es-10': 'https://www.youtube.com/watch?v=ni0Xl-Xo6K0',
+  'es-11': 'https://www.youtube.com/watch?v=gs6RlqVKbm0',
+  'es-12': 'https://www.youtube.com/watch?v=ni0Xl-Xo6K0',
+  'es-13': 'https://www.youtube.com/watch?v=h1cVv1n0jKc',
+  'es-14': 'https://www.youtube.com/watch?v=h1cVv1n0jKc',
+  'es-15': 'https://www.youtube.com/watch?v=1J8rqlz-KnE',
+  'es-16': 'https://www.youtube.com/watch?v=gs6RlqVKbm0',
   'ar-01': 'https://www.youtube.com/watch?v=bo6Y2sNs7j0',
   'ar-02': 'https://www.youtube.com/watch?v=bo6Y2sNs7j0',
   'ar-03': 'https://www.youtube.com/watch?v=bo6Y2sNs7j0',
@@ -32,6 +44,12 @@ export const YOUTUBE_PLAYLISTS: Record<string, string> = {
   'ar-08': 'https://www.youtube.com/watch?v=bo6Y2sNs7j0',
   'ar-09': 'https://www.youtube.com/watch?v=bo6Y2sNs7j0',
   'ar-10': 'https://www.youtube.com/watch?v=bo6Y2sNs7j0',
+  'ar-11': 'https://www.youtube.com/watch?v=bo6Y2sNs7j0',
+  'ar-12': 'https://www.youtube.com/watch?v=bo6Y2sNs7j0',
+  'ar-13': 'https://www.youtube.com/watch?v=bo6Y2sNs7j0',
+  'ar-14': 'https://www.youtube.com/watch?v=bo6Y2sNs7j0',
+  'ar-15': 'https://www.youtube.com/watch?v=bo6Y2sNs7j0',
+  'ar-16': 'https://www.youtube.com/watch?v=bo6Y2sNs7j0',
 }
 
 export function youtubeSearchUrl(topic: string, language: TutorLanguage): string {

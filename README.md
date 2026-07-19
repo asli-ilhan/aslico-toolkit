@@ -59,7 +59,7 @@ packages/modules  → Plugin modules (_template)
 | **Daily Newsletter** | Beta — nightly cron 05:00 UTC |
 | **Culture Tracker** | Beta — nightly cron 06:00 UTC |
 | **Travel Scout** | Beta |
-| **Language Tutor** | Beta — 90-day FR/ES/AR program, nightly cron 04:00 UTC |
+| **Language Tutor** | Beta — intensive A1 institute days (FR/ES/AR), teach→practice→check→missions |
 | **Doc Editor** | Coming soon |
 
 ### SQL migrations (Supabase SQL Editor)

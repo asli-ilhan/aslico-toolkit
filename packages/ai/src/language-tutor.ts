@@ -21,17 +21,43 @@ export interface DailyLessonInput {
   topic: string
   grammarFocus: string
   youtubeUrl: string
-  recentScores?: { vocab?: number; grammar?: number; speaking?: number }
+  recentScores?: { vocab?: number; grammar?: number; speaking?: number; quiz?: number }
+}
+
+export interface LessonDrill {
+  type: 'gap_fill' | 'transform' | 'reorder'
+  prompt: string
+  answer: string
+  hint?: string
+}
+
+export interface DailyPlan {
+  flashcardCount: number
+  coachMode: ChatMode
+  coachPrompt: string
+  immersionTask: string
+  videoTask: string
+  estimatedMinutes: number
+}
+
+export interface TeachingBlock {
+  goals: string[]
+  explanationMd: string
+  keyPatterns: string[]
+  commonMistakes: string[]
 }
 
 export interface DailyLessonSections {
+  teaching: TeachingBlock
   words: Array<{ word: string; translation: string; ipa?: string; example: string }>
   grammarRules: Array<{ rule: string; explanation: string; examples: string[] }>
+  drills: LessonDrill[]
   dialogues: Array<{ context: string; lines: string[] }>
   reading: { title: string; text: string; questions: string[] }
   speakingExercise: { prompt: string; hints: string[] }
   writingExercise: { prompt: string; minSentences: number }
   quiz: Array<{ question: string; options?: string[]; answer: string }>
+  dailyPlan: DailyPlan
   youtubeUrl: string
   immersion: { films: string[]; books: string[]; why: string }
 }
@@ -42,16 +68,39 @@ export async function generateDailyLesson(input: DailyLessonInput): Promise<{
 }> {
   const explainIn = EXPLAIN_LANG[input.locale] ?? 'English'
   const target = LANG_NAMES[input.language]
+  const avg =
+    ((input.recentScores?.quiz ?? input.recentScores?.vocab ?? 70) +
+      (input.recentScores?.grammar ?? 70)) /
+    2
   const difficulty =
-    (input.recentScores?.vocab ?? 70) >= 80 ? 'slightly harder than yesterday'
-    : 'beginner-friendly'
+    avg >= 85 ? 'intensive — pack more patterns, slightly above yesterday'
+    : avg >= 70 ? 'solid A1 pace — teach two grammar points thoroughly'
+    : 'clear beginner — still pack a full institute day'
 
   let sections = defaultLesson(input)
 
   if (process.env.ANTHROPIC_API_KEY) {
     try {
       const raw = await createClaudeMessage({
-        system: `Expert ${target} teacher. Create a 20-minute beginner daily lesson. Explain grammar in ${explainIn}. Target language content in ${target}. Return JSON only matching DailyLessonSections shape. Difficulty: ${difficulty}. Include exactly: 10 words, 3 grammar rules, 5 dialogue snippets (short), 1 reading (~80 words), speaking + writing exercise, 5 quiz questions.`,
+        system: `You are an intensive ${target} institute teacher (Alliance Française / Instituto Cervantes / Arabic institute style).
+Create ONE daily A1 lesson (~40–45 minutes). Teach FIRST, then practice, then test. Never start with a quiz.
+Explain teaching + grammar in ${explainIn}. Target-language examples, dialogues, reading, drills in ${target}.
+Difficulty: ${difficulty}.
+
+Return JSON only matching DailyLessonSections:
+- teaching: { goals: string[3-5], explanationMd: markdown mini-lesson (what/why/how), keyPatterns: string[4-6], commonMistakes: string[3-5] }
+- words: exactly 15–20 items {word, translation, ipa?, example}
+- grammarRules: exactly 2 dense points {rule, explanation, examples: string[4-6]}
+- drills: 6–8 controlled items {type: gap_fill|transform|reorder, prompt, answer, hint?}
+- dialogues: 5 short snippets {context, lines[]}
+- reading: {title, text ~100-120 words, questions: string[3]}
+- speakingExercise: {prompt, hints[]}
+- writingExercise: {prompt, minSentences: 4}
+- quiz: exactly 8 questions {question, options?, answer} — only after teaching concepts
+- dailyPlan: {flashcardCount: 12-15, coachMode: friend|pronunciation|voice_coach|grammar, coachPrompt: one concrete task, immersionTask: one scene/paragraph task, videoTask: what to watch for, estimatedMinutes: 40-45}
+- youtubeUrl, immersion may be placeholders (server overwrites)
+
+Pack more into one day than a casual app. Be systematic and clear.`,
         messages: [
           {
             role: 'user',
@@ -63,44 +112,114 @@ export async function generateDailyLesson(input: DailyLessonInput): Promise<{
             }),
           },
         ],
-        maxTokens: 4000,
-        temperature: 0.45,
+        maxTokens: 8000,
+        temperature: 0.4,
       })
-      const parsed = JSON.parse(extractJson(raw)) as DailyLessonSections
-      if (parsed.words?.length) sections = { ...sections, ...parsed, youtubeUrl: input.youtubeUrl }
+      const parsed = JSON.parse(extractJson(raw)) as Partial<DailyLessonSections>
+      if (parsed.words?.length || parsed.teaching?.explanationMd) {
+        sections = normalizeSections({ ...sections, ...parsed }, input)
+      }
     } catch {
       // defaults
     }
   }
 
-  const contentMd = lessonToMarkdown(sections, input, explainIn)
+  const contentMd = lessonToMarkdown(sections, input)
   return { sections, contentMd }
+}
+
+function normalizeSections(
+  s: Partial<DailyLessonSections> & { youtubeUrl?: string },
+  input: DailyLessonInput,
+): DailyLessonSections {
+  const base = defaultLesson(input)
+  return {
+    teaching: {
+      goals: s.teaching?.goals?.length ? s.teaching.goals : base.teaching.goals,
+      explanationMd: s.teaching?.explanationMd || base.teaching.explanationMd,
+      keyPatterns: s.teaching?.keyPatterns ?? base.teaching.keyPatterns,
+      commonMistakes: s.teaching?.commonMistakes ?? base.teaching.commonMistakes,
+    },
+    words: s.words?.length ? s.words : base.words,
+    grammarRules: s.grammarRules?.length ? s.grammarRules : base.grammarRules,
+    drills: s.drills?.length ? s.drills : base.drills,
+    dialogues: s.dialogues?.length ? s.dialogues : base.dialogues,
+    reading: s.reading?.text ? s.reading : base.reading,
+    speakingExercise: s.speakingExercise ?? base.speakingExercise,
+    writingExercise: s.writingExercise ?? base.writingExercise,
+    quiz: s.quiz?.length ? s.quiz : base.quiz,
+    dailyPlan: {
+      flashcardCount: s.dailyPlan?.flashcardCount ?? base.dailyPlan.flashcardCount,
+      coachMode: s.dailyPlan?.coachMode ?? base.dailyPlan.coachMode,
+      coachPrompt: s.dailyPlan?.coachPrompt ?? base.dailyPlan.coachPrompt,
+      immersionTask: s.dailyPlan?.immersionTask ?? base.dailyPlan.immersionTask,
+      videoTask: s.dailyPlan?.videoTask ?? base.dailyPlan.videoTask,
+      estimatedMinutes: s.dailyPlan?.estimatedMinutes ?? base.dailyPlan.estimatedMinutes,
+    },
+    youtubeUrl: input.youtubeUrl,
+    immersion: s.immersion ?? base.immersion,
+  }
 }
 
 function defaultLesson(input: DailyLessonInput): DailyLessonSections {
   return {
+    teaching: {
+      goals: [
+        `Understand today's topic: ${input.topic}`,
+        `Use the grammar focus: ${input.grammarFocus}`,
+        'Produce 4+ simple sentences aloud and in writing',
+      ],
+      explanationMd: `## ${input.topic}\n\nToday we focus on **${input.grammarFocus}**. Read the patterns, study the words, then practice before the quiz.`,
+      keyPatterns: [input.grammarFocus],
+      commonMistakes: ['Mixing word order', 'Forgetting agreement', 'Translating word-for-word from your native language'],
+    },
     words: [],
-    grammarRules: [{ rule: input.grammarFocus, explanation: 'See lesson topic.', examples: [] }],
+    grammarRules: [
+      { rule: input.grammarFocus, explanation: 'See the teaching section.', examples: [] },
+      { rule: 'Core phrase patterns', explanation: 'Reuse patterns from dialogues.', examples: [] },
+    ],
+    drills: [],
     dialogues: [],
     reading: { title: input.topic, text: '', questions: [] },
-    speakingExercise: { prompt: `Introduce yourself in ${LANG_NAMES[input.language]}.`, hints: [] },
-    writingExercise: { prompt: 'Write 3 sentences about your day.', minSentences: 3 },
+    speakingExercise: {
+      prompt: `Speak for 1–2 minutes about "${input.topic}" in ${LANG_NAMES[input.language]}.`,
+      hints: ['Use today\'s words', 'Reuse one grammar pattern'],
+    },
+    writingExercise: {
+      prompt: `Write 4 sentences about "${input.topic}" using today's grammar.`,
+      minSentences: 4,
+    },
     quiz: [],
+    dailyPlan: {
+      flashcardCount: 14,
+      coachMode: 'grammar',
+      coachPrompt: `Drill me on ${input.grammarFocus} with 5 short questions.`,
+      immersionTask: 'Watch or read one immersion item and note 3 new words.',
+      videoTask: 'Watch the lesson video and repeat 3 key sentences aloud.',
+      estimatedMinutes: 45,
+    },
     youtubeUrl: input.youtubeUrl,
     immersion: { films: [], books: [], why: 'Build immersion habit.' },
   }
 }
 
-function lessonToMarkdown(
-  s: DailyLessonSections,
-  input: DailyLessonInput,
-  explainIn: string,
-): string {
+function lessonToMarkdown(s: DailyLessonSections, input: DailyLessonInput): string {
   const lines = [
-    `# ${LANG_NAMES[input.language]} · Day ${input.programDay}`,
-    `**${input.topic}**`,
+    `# ${LANG_NAMES[input.language]} · Day ${input.programDay} · Institute day`,
+    `**${input.topic}** (~${s.dailyPlan.estimatedMinutes} min)`,
     '',
-    '## 10 words',
+    '## Teach — goals',
+    ...s.teaching.goals.map((g) => `- ${g}`),
+    '',
+    s.teaching.explanationMd,
+    '',
+    '## Key patterns',
+    ...s.teaching.keyPatterns.map((p) => `- ${p}`),
+    '',
+    '## Common mistakes',
+    ...s.teaching.commonMistakes.map((m) => `- ${m}`),
+    '',
+    `## Words (${s.words.length})`,
     ...s.words.map((w) => `- **${w.word}** — ${w.translation}${w.ipa ? ` [${w.ipa}]` : ''}\n  ${w.example}`),
     '',
     '## Grammar',
@@ -110,6 +229,9 @@ function lessonToMarkdown(
       ...g.examples.map((e) => `- ${e}`),
       '',
     ]),
+    '## Drills',
+    ...s.drills.map((d, i) => `${i + 1}. [${d.type}] ${d.prompt}`),
+    '',
     '## Dialogues',
     ...s.dialogues.flatMap((d) => [`**${d.context}**`, ...d.lines.map((l) => `- ${l}`), '']),
     '## Reading',
@@ -124,6 +246,12 @@ function lessonToMarkdown(
     '',
     '## Quiz',
     ...s.quiz.map((q, i) => `${i + 1}. ${q.question}`),
+    '',
+    '## Daily plan',
+    `- Video: ${s.dailyPlan.videoTask}`,
+    `- Coach (${s.dailyPlan.coachMode}): ${s.dailyPlan.coachPrompt}`,
+    `- Flashcards: ${s.dailyPlan.flashcardCount}`,
+    `- Immersion: ${s.dailyPlan.immersionTask}`,
     '',
     `## YouTube\n${s.youtubeUrl}`,
   ]
@@ -205,7 +333,7 @@ export async function generateFlashcardsFromWords(
     const raw = await createClaudeMessage({
       system: `Create flashcards for ${target}. Return JSON array: [{word, translation, ipa, example_sentence, synonyms, antonyms, reviewDays:[1,3,7,14]}]. Example sentences in ${target}, meanings in ${explainIn}.`,
       messages: [{ role: 'user', content: JSON.stringify(words) }],
-      maxTokens: 2000,
+      maxTokens: 3500,
       temperature: 0.3,
     })
     return JSON.parse(extractJson(raw)) as Array<{

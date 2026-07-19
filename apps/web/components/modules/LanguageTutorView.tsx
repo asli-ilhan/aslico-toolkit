@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ShellLayout } from '@/components/shell/ShellLayout'
 import { GlassPanel, Button, cn } from '@aslico/ui'
@@ -12,28 +12,48 @@ import {
   isSpeechRecognitionSupported,
   isSpeechSynthesisSupported,
   speakText,
-  stopSpeaking,
 } from '@/lib/voice/speech'
 
 type Tab = 'today' | 'chat' | 'flashcards' | 'immersion' | 'report'
 type ChatMode = 'friend' | 'pronunciation' | 'voice_coach' | 'grammar'
+type Phase = 'teach' | 'practice' | 'check' | 'missions'
+
+interface LessonSections {
+  teaching?: {
+    goals?: string[]
+    explanationMd?: string
+    keyPatterns?: string[]
+    commonMistakes?: string[]
+  }
+  words?: Array<{ word: string; translation: string; ipa?: string; example: string }>
+  grammarRules?: Array<{ rule: string; explanation: string; examples: string[] }>
+  drills?: Array<{ type: string; prompt: string; answer: string; hint?: string }>
+  dialogues?: Array<{ context: string; lines: string[] }>
+  reading?: { title: string; text: string; questions: string[] }
+  speakingExercise?: { prompt: string; hints?: string[] }
+  writingExercise?: { prompt: string; minSentences?: number }
+  quiz?: Array<{ question: string; answer: string }>
+  dailyPlan?: {
+    flashcardCount?: number
+    coachMode?: ChatMode
+    coachPrompt?: string
+    immersionTask?: string
+    videoTask?: string
+    estimatedMinutes?: number
+  }
+  youtubeUrl?: string
+  immersion?: { films: string[]; books: string[]; why: string }
+  unitId?: string
+  submissions?: { quizScore?: number }
+}
 
 interface Lesson {
   id: string
   language: string
   topic: string
   status: string
-  sections?: {
-    words?: Array<{ word: string; translation: string; ipa?: string; example: string }>
-    grammarRules?: Array<{ rule: string; explanation: string; examples: string[] }>
-    dialogues?: Array<{ context: string; lines: string[] }>
-    reading?: { title: string; text: string; questions: string[] }
-    speakingExercise?: { prompt: string }
-    writingExercise?: { prompt: string }
-    quiz?: Array<{ question: string; answer: string }>
-    youtubeUrl?: string
-    immersion?: { films: string[]; books: string[]; why: string }
-  }
+  scores?: { quiz?: number } | null
+  sections?: LessonSections
   youtube_url?: string
 }
 
@@ -51,6 +71,13 @@ interface ChatMsg {
   content: string
 }
 
+function fillTemplate(template: string, vars: Record<string, string | number>) {
+  return Object.entries(vars).reduce(
+    (s, [k, v]) => s.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v)),
+    template,
+  )
+}
+
 export function LanguageTutorView() {
   const { t, locale } = useLocale()
   const lt = t.languageTutor
@@ -58,6 +85,10 @@ export function LanguageTutorView() {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   const [tab, setTab] = useState<Tab>('today')
+  const [phase, setPhase] = useState<Phase>('teach')
+  const [teachDone, setTeachDone] = useState(false)
+  const [practiceDone, setPracticeDone] = useState(false)
+  const [revealedDrills, setRevealedDrills] = useState<Set<number>>(new Set())
   const [schedule, setSchedule] = useState<{
     language: string | null
     languageLabel: string | null
@@ -68,6 +99,8 @@ export function LanguageTutorView() {
     currentUnit?: { id: string; topic: string; grammarFocus: string; repeatUnit?: boolean } | null
     grammarMastery?: { topic_id: string; mastery_score: number; passed: boolean } | null
     grammarGateOpen?: boolean
+    checkComplete?: boolean
+    quizPassThreshold?: number
   } | null>(null)
   const [immersion, setImmersion] = useState<{
     films: string[]
@@ -125,6 +158,11 @@ export function LanguageTutorView() {
       if (data.settings?.nativeLanguage) setNativeLanguage(data.settings.nativeLanguage)
       if (data.settings?.sundayBreak != null) setSundayBreak(data.settings.sundayBreak)
       if (data.settings?.rotation?.length) setRotation(data.settings.rotation.join(','))
+      if (data.todayLesson?.scores?.quiz != null || data.schedule?.checkComplete) {
+        setTeachDone(true)
+        setPracticeDone(true)
+        setPhase('missions')
+      }
     }
     const immRes = await fetch('/api/modules/language-tutor/immersion')
     const immData = await immRes.json()
@@ -143,6 +181,13 @@ export function LanguageTutorView() {
   async function generateLesson() {
     setGenerating(true)
     setError(null)
+    setTeachDone(false)
+    setPracticeDone(false)
+    setPhase('teach')
+    setQuizCorrect(new Set())
+    setRevealedQuiz(new Set())
+    setRevealedDrills(new Set())
+    setFeedback(null)
     const res = await fetch('/api/modules/language-tutor/lesson/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -166,8 +211,7 @@ export function LanguageTutorView() {
     setSubmitting(true)
     setError(null)
     const quizTotal = sections?.quiz?.length ?? 0
-    const quizScore =
-      quizTotal > 0 ? Math.round((quizCorrect.size / quizTotal) * 100) : 80
+    const quizScore = quizTotal > 0 ? Math.round((quizCorrect.size / quizTotal) * 100) : 80
     const res = await fetch('/api/modules/language-tutor/lesson/submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -186,6 +230,7 @@ export function LanguageTutorView() {
       return
     }
     setFeedback(data.feedback)
+    setPhase('missions')
     await load()
   }
 
@@ -268,18 +313,67 @@ export function LanguageTutorView() {
     if (!rec) return
     setListening(true)
     rec.onresult = (ev) => {
-      const t = ev.results[0]?.[0]?.transcript
-      if (t) void sendChat(t)
+      const transcript = ev.results[0]?.[0]?.transcript
+      if (transcript) void sendChat(transcript)
     }
     rec.onend = () => setListening(false)
     rec.onerror = () => setListening(false)
     rec.start()
   }
 
+  function openCoachMission() {
+    const plan = sections?.dailyPlan
+    if (plan?.coachMode) setChatMode(plan.coachMode)
+    if (plan?.coachPrompt) setChatInput(plan.coachPrompt)
+    setTab('chat')
+  }
+
   const sections = lesson?.sections
   const currentCard = dueCards[cardIndex]
   const isArabic = lesson?.language === 'ar' || chatLang === 'ar'
   const textDir = isArabic ? 'rtl' : 'ltr'
+  const hasTeaching = Boolean(sections?.teaching?.explanationMd)
+  const checkComplete =
+    schedule?.checkComplete || typeof lesson?.scores?.quiz === 'number'
+  const canComplete = Boolean(checkComplete && schedule?.grammarGateOpen)
+  const estimated = sections?.dailyPlan?.estimatedMinutes ?? 45
+  const passThreshold = schedule?.quizPassThreshold ?? 70
+
+  const checklist = useMemo(() => {
+    const items = [
+      { id: 'teach', label: lt.phaseTeach, done: teachDone || checkComplete },
+      { id: 'practice', label: lt.phasePractice, done: practiceDone || checkComplete },
+      { id: 'check', label: lt.phaseCheck, done: checkComplete },
+      {
+        id: 'video',
+        label: lt.missionVideo,
+        done: false,
+      },
+      { id: 'coach', label: lt.missionCoach, done: false },
+      {
+        id: 'cards',
+        label: `${lt.missionFlashcards} (${sections?.dailyPlan?.flashcardCount ?? 14})`,
+        done: dueCards.length === 0 && checkComplete,
+      },
+    ]
+    return items
+  }, [
+    lt,
+    teachDone,
+    practiceDone,
+    checkComplete,
+    sections?.dailyPlan?.flashcardCount,
+    dueCards.length,
+  ])
+
+  const checklistDone = checklist.filter((c) => c.done).length
+
+  const phaseButtons: { id: Phase; label: string; locked: boolean }[] = [
+    { id: 'teach', label: lt.phaseTeach, locked: false },
+    { id: 'practice', label: lt.phasePractice, locked: !teachDone && !checkComplete && hasTeaching },
+    { id: 'check', label: lt.phaseCheck, locked: !practiceDone && !checkComplete && hasTeaching },
+    { id: 'missions', label: lt.phaseMissions, locked: !checkComplete && hasTeaching },
+  ]
 
   return (
     <ShellLayout>
@@ -402,15 +496,46 @@ export function LanguageTutorView() {
                 <p className="text-sm text-[var(--text-muted)]">{lt.restDayHint}</p>
               : lesson ?
                 <>
-                  <h2 className="text-lg font-semibold">
-                    {schedule?.languageLabel} — {lesson.topic}
-                  </h2>
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <h2 className="text-lg font-semibold">
+                      {schedule?.languageLabel} — {lesson.topic}
+                    </h2>
+                    <span className="text-xs text-[var(--text-muted)]">
+                      {fillTemplate(lt.estimatedMinutes, { min: estimated })}
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl border border-[var(--surface-border)] px-3 py-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-semibold text-[var(--accent)]">{lt.dailyPlan}</p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {fillTemplate(lt.dailyPlanProgress, {
+                          done: checklistDone,
+                          total: checklist.length,
+                        })}
+                      </p>
+                    </div>
+                    <ul className="mt-2 grid gap-1 sm:grid-cols-2">
+                      {checklist.map((item) => (
+                        <li
+                          key={item.id}
+                          className={cn(
+                            'text-xs',
+                            item.done ? 'text-emerald-400' : 'text-[var(--text-muted)]',
+                          )}
+                        >
+                          {item.done ? '✓' : '○'} {item.label}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
                   {schedule?.currentUnit && (
                     <div className="rounded-xl border border-[var(--surface-border)] px-3 py-2 text-xs">
                       <p className="font-semibold text-[var(--accent)]">{lt.grammarGate}</p>
                       <p className="text-[var(--text-muted)]">{schedule.currentUnit.grammarFocus}</p>
                       <p className="mt-1">
-                        {schedule.grammarMastery?.passed ?
+                        {schedule.grammarMastery?.passed || schedule.grammarGateOpen ?
                           <span className="text-emerald-400">{lt.grammarPassed}</span>
                         : <span>
                             {lt.grammarPending}
@@ -420,6 +545,9 @@ export function LanguageTutorView() {
                           </span>
                         }
                       </p>
+                      <p className="mt-1 text-[var(--text-muted)]">
+                        {fillTemplate(lt.quizPassHint, { score: passThreshold })}
+                      </p>
                     </div>
                   )}
                   {schedule?.currentUnit?.repeatUnit && (
@@ -427,163 +555,357 @@ export function LanguageTutorView() {
                       {lt.repeatUnit}
                     </p>
                   )}
-                  {sections?.words && sections.words.length > 0 && (
-                    <div dir={textDir}>
-                      <h3 className="text-sm font-semibold text-[var(--accent)]">{lt.words}</h3>
-                      <ul className="mt-2 space-y-1 text-sm">
-                        {sections.words.map((w) => (
-                          <li key={w.word}>
-                            <strong>{w.word}</strong> — {w.translation}
-                            {w.example && <span className="text-[var(--text-muted)]"> · {w.example}</span>}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {sections?.grammarRules?.map((g) => (
-                    <div key={g.rule} dir={textDir}>
-                      <h3 className="text-sm font-semibold text-[var(--accent)]">{g.rule}</h3>
-                      <p className="text-sm text-[var(--text-muted)]">{g.explanation}</p>
-                    </div>
-                  ))}
-                  {sections?.dialogues && sections.dialogues.length > 0 && (
-                    <div dir={textDir}>
-                      <h3 className="text-sm font-semibold text-[var(--accent)]">{lt.dialogues}</h3>
-                      {sections.dialogues.map((d) => (
-                        <div key={d.context} className="mt-2 text-sm">
-                          <p className="font-medium">{d.context}</p>
-                          <ul className="mt-1 space-y-0.5 text-[var(--text-muted)]">
-                            {d.lines.map((line) => (
-                              <li key={line}>{line}</li>
+
+                  <div className="flex flex-wrap gap-2">
+                    {phaseButtons.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        disabled={p.locked}
+                        onClick={() => setPhase(p.id)}
+                        className={cn(
+                          'rounded-full px-3 py-1.5 text-xs font-medium',
+                          phase === p.id ?
+                            'bg-[var(--accent)] text-white'
+                          : p.locked ?
+                            'cursor-not-allowed opacity-40 border border-[var(--surface-border)] text-[var(--text-muted)]'
+                          : 'border border-[var(--surface-border)] text-[var(--text-muted)]',
+                        )}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {phase === 'teach' && (
+                    <div className="space-y-4" dir={textDir}>
+                      {sections?.teaching ?
+                        <>
+                          {sections.teaching.goals && sections.teaching.goals.length > 0 && (
+                            <div>
+                              <h3 className="text-sm font-semibold text-[var(--accent)]">{lt.teachingGoals}</h3>
+                              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-[var(--text-muted)]">
+                                {sections.teaching.goals.map((g) => (
+                                  <li key={g}>{g}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {sections.teaching.explanationMd && (
+                            <div className="prose prose-sm max-w-none whitespace-pre-wrap text-sm text-[var(--text)]">
+                              {sections.teaching.explanationMd}
+                            </div>
+                          )}
+                          {sections.teaching.keyPatterns && sections.teaching.keyPatterns.length > 0 && (
+                            <div>
+                              <h3 className="text-sm font-semibold text-[var(--accent)]">{lt.keyPatterns}</h3>
+                              <ul className="mt-2 space-y-1 text-sm">
+                                {sections.teaching.keyPatterns.map((p) => (
+                                  <li key={p} className="rounded-lg bg-[var(--background-alt)]/50 px-3 py-1.5">
+                                    {p}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {sections.teaching.commonMistakes && sections.teaching.commonMistakes.length > 0 && (
+                            <div>
+                              <h3 className="text-sm font-semibold text-[var(--accent)]">{lt.commonMistakes}</h3>
+                              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-[var(--text-muted)]">
+                                {sections.teaching.commonMistakes.map((m) => (
+                                  <li key={m}>{m}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </>
+                      : null}
+
+                      {sections?.words && sections.words.length > 0 && (
+                        <div>
+                          <h3 className="text-sm font-semibold text-[var(--accent)]">
+                            {lt.words} ({sections.words.length})
+                          </h3>
+                          <ul className="mt-2 space-y-1 text-sm">
+                            {sections.words.map((w) => (
+                              <li key={w.word}>
+                                <strong>{w.word}</strong> — {w.translation}
+                                {w.example && (
+                                  <span className="text-[var(--text-muted)]"> · {w.example}</span>
+                                )}
+                              </li>
                             ))}
                           </ul>
                         </div>
+                      )}
+
+                      {sections?.grammarRules?.map((g) => (
+                        <div key={g.rule}>
+                          <h3 className="text-sm font-semibold text-[var(--accent)]">{g.rule}</h3>
+                          <p className="text-sm text-[var(--text-muted)]">{g.explanation}</p>
+                          {g.examples?.length > 0 && (
+                            <ul className="mt-1 list-disc pl-5 text-sm text-[var(--text-muted)]">
+                              {g.examples.map((e) => (
+                                <li key={e}>{e}</li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
                       ))}
+
+                      {!hasTeaching && !sections?.words?.length && (
+                        <p className="text-sm text-[var(--text-muted)]">
+                          Legacy lesson — regenerate for the institute teach-first format.
+                        </p>
+                      )}
+
+                      <Button
+                        onClick={() => {
+                          setTeachDone(true)
+                          setPhase('practice')
+                        }}
+                      >
+                        {lt.finishTeach}
+                      </Button>
                     </div>
                   )}
-                  {sections?.reading?.text && (
-                    <div dir={textDir}>
-                      <h3 className="text-sm font-semibold text-[var(--accent)]">{lt.reading}</h3>
-                      <p className="text-sm">{sections.reading.text}</p>
-                      {sections.reading.questions?.length > 0 && (
-                        <div className="mt-2">
-                          <p className="text-xs font-semibold text-[var(--accent)]">{lt.readingQuestions}</p>
-                          <ol className="mt-1 list-decimal pl-5 text-sm text-[var(--text-muted)]">
-                            {sections.reading.questions.map((q) => (
-                              <li key={q}>{q}</li>
+
+                  {phase === 'practice' && (
+                    <div className="space-y-4" dir={textDir}>
+                      {sections?.drills && sections.drills.length > 0 && (
+                        <div>
+                          <h3 className="text-sm font-semibold text-[var(--accent)]">{lt.drills}</h3>
+                          <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm">
+                            {sections.drills.map((d, i) => (
+                              <li key={`drill-${i}`}>
+                                <span className="text-[10px] uppercase text-[var(--text-muted)]">
+                                  {d.type}
+                                </span>
+                                <p>{d.prompt}</p>
+                                {d.hint && !revealedDrills.has(i) && (
+                                  <p className="text-xs text-[var(--text-muted)]">{d.hint}</p>
+                                )}
+                                {revealedDrills.has(i) ?
+                                  <p className="text-xs text-emerald-400">→ {d.answer}</p>
+                                : <button
+                                    type="button"
+                                    onClick={() => setRevealedDrills((s) => new Set(s).add(i))}
+                                    className="text-xs text-[var(--accent)] hover:underline"
+                                  >
+                                    {lt.revealDrillAnswer}
+                                  </button>
+                                }
+                              </li>
                             ))}
                           </ol>
                         </div>
                       )}
+
+                      {sections?.dialogues && sections.dialogues.length > 0 && (
+                        <div>
+                          <h3 className="text-sm font-semibold text-[var(--accent)]">{lt.dialogues}</h3>
+                          {sections.dialogues.map((d) => (
+                            <div key={d.context} className="mt-2 text-sm">
+                              <p className="font-medium">{d.context}</p>
+                              <ul className="mt-1 space-y-0.5 text-[var(--text-muted)]">
+                                {d.lines.map((line) => (
+                                  <li key={line}>{line}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {sections?.reading?.text && (
+                        <div>
+                          <h3 className="text-sm font-semibold text-[var(--accent)]">{lt.reading}</h3>
+                          <p className="text-sm font-medium">{sections.reading.title}</p>
+                          <p className="mt-1 text-sm">{sections.reading.text}</p>
+                          {sections.reading.questions?.length > 0 && (
+                            <div className="mt-2">
+                              <p className="text-xs font-semibold text-[var(--accent)]">
+                                {lt.readingQuestions}
+                              </p>
+                              <ol className="mt-1 list-decimal pl-5 text-sm text-[var(--text-muted)]">
+                                {sections.reading.questions.map((q) => (
+                                  <li key={q}>{q}</li>
+                                ))}
+                              </ol>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <Button
+                        onClick={() => {
+                          setPracticeDone(true)
+                          setPhase('check')
+                        }}
+                      >
+                        {lt.finishPractice}
+                      </Button>
                     </div>
                   )}
-                  {sections?.speakingExercise && (
-                    <div className="space-y-2">
-                      <p className="text-sm" dir={textDir}>
-                        <strong>{lt.speaking}:</strong> {sections.speakingExercise.prompt}
-                      </p>
-                      <textarea
-                        value={speakingAnswer}
-                        onChange={(e) => setSpeakingAnswer(e.target.value)}
-                        placeholder={lt.speakingPlaceholder}
-                        rows={2}
-                        dir={textDir}
-                        className="w-full rounded-xl border border-[var(--surface-border)] bg-[var(--background-alt)]/50 px-3 py-2 text-sm"
-                      />
-                    </div>
-                  )}
-                  {sections?.writingExercise && (
-                    <div className="space-y-2">
-                      <p className="text-sm" dir={textDir}>
-                        <strong>{lt.writing}:</strong> {sections.writingExercise.prompt}
-                      </p>
-                      <textarea
-                        value={writingAnswer}
-                        onChange={(e) => setWritingAnswer(e.target.value)}
-                        placeholder={lt.writingPlaceholder}
-                        rows={3}
-                        dir={textDir}
-                        className="w-full rounded-xl border border-[var(--surface-border)] bg-[var(--background-alt)]/50 px-3 py-2 text-sm"
-                      />
-                    </div>
-                  )}
-                  {sections?.quiz && sections.quiz.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-[var(--accent)]">{lt.quiz}</h3>
-                      <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm">
-                        {sections.quiz.map((q, i) => (
-                          <li key={`q-${i}`}>
-                            <label className="flex items-start gap-2">
-                              <input
-                                type="checkbox"
-                                checked={quizCorrect.has(i)}
-                                onChange={(e) => {
-                                  setQuizCorrect((s) => {
-                                    const n = new Set(s)
-                                    if (e.target.checked) n.add(i)
-                                    else n.delete(i)
-                                    return n
-                                  })
-                                }}
-                              />
-                              <span>
-                                {q.question}
-                                {revealedQuiz.has(i) && (
-                                  <span className="ml-1 text-xs text-[var(--text-muted)]">→ {q.answer}</span>
+
+                  {phase === 'check' && (
+                    <div className="space-y-4">
+                      {sections?.speakingExercise && (
+                        <div className="space-y-2">
+                          <p className="text-sm" dir={textDir}>
+                            <strong>{lt.speaking}:</strong> {sections.speakingExercise.prompt}
+                          </p>
+                          <textarea
+                            value={speakingAnswer}
+                            onChange={(e) => setSpeakingAnswer(e.target.value)}
+                            placeholder={lt.speakingPlaceholder}
+                            rows={2}
+                            dir={textDir}
+                            className="w-full rounded-xl border border-[var(--surface-border)] bg-[var(--background-alt)]/50 px-3 py-2 text-sm"
+                          />
+                        </div>
+                      )}
+                      {sections?.writingExercise && (
+                        <div className="space-y-2">
+                          <p className="text-sm" dir={textDir}>
+                            <strong>{lt.writing}:</strong> {sections.writingExercise.prompt}
+                          </p>
+                          <textarea
+                            value={writingAnswer}
+                            onChange={(e) => setWritingAnswer(e.target.value)}
+                            placeholder={lt.writingPlaceholder}
+                            rows={3}
+                            dir={textDir}
+                            className="w-full rounded-xl border border-[var(--surface-border)] bg-[var(--background-alt)]/50 px-3 py-2 text-sm"
+                          />
+                        </div>
+                      )}
+                      {sections?.quiz && sections.quiz.length > 0 && (
+                        <div>
+                          <h3 className="text-sm font-semibold text-[var(--accent)]">
+                            {lt.quiz} ({sections.quiz.length})
+                          </h3>
+                          <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm">
+                            {sections.quiz.map((q, i) => (
+                              <li key={`q-${i}`}>
+                                <label className="flex items-start gap-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={quizCorrect.has(i)}
+                                    onChange={(e) => {
+                                      setQuizCorrect((s) => {
+                                        const n = new Set(s)
+                                        if (e.target.checked) n.add(i)
+                                        else n.delete(i)
+                                        return n
+                                      })
+                                    }}
+                                  />
+                                  <span>
+                                    {q.question}
+                                    {revealedQuiz.has(i) && (
+                                      <span className="ml-1 text-xs text-[var(--text-muted)]">
+                                        → {q.answer}
+                                      </span>
+                                    )}
+                                  </span>
+                                </label>
+                                {!revealedQuiz.has(i) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setRevealedQuiz((s) => new Set(s).add(i))}
+                                    className="ml-6 text-xs text-[var(--accent)] hover:underline"
+                                  >
+                                    {lt.showAnswer}
+                                  </button>
                                 )}
-                              </span>
-                            </label>
-                            {!revealedQuiz.has(i) && (
-                              <button
-                                type="button"
-                                onClick={() => setRevealedQuiz((s) => new Set(s).add(i))}
-                                className="ml-6 text-xs text-[var(--accent)] hover:underline"
-                              >
-                                {lt.showAnswer}
-                              </button>
-                            )}
-                          </li>
-                        ))}
-                      </ol>
-                    </div>
-                  )}
-                  {(lesson.youtube_url || sections?.youtubeUrl) && (
-                    <a
-                      href={lesson.youtube_url ?? sections?.youtubeUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-[var(--accent)] hover:underline"
-                    >
-                      {lt.youtube}
-                    </a>
-                  )}
-                  {sections?.immersion && (
-                    <div className="text-xs text-[var(--text-muted)]">
-                      <strong>{lt.immersion}:</strong> {sections.immersion.films.join(', ')} ·{' '}
-                      {sections.immersion.books.join(', ')}
-                    </div>
-                  )}
-                  {feedback && (
-                    <p className="rounded-lg border border-[var(--surface-border)] px-3 py-2 text-sm text-[var(--text-muted)]">
-                      {feedback}
-                    </p>
-                  )}
-                  {lesson.status !== 'done' && (
-                    <div className="flex flex-wrap gap-2">
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+                      )}
+                      {feedback && (
+                        <p className="rounded-lg border border-[var(--surface-border)] px-3 py-2 text-sm text-[var(--text-muted)]">
+                          {feedback}
+                        </p>
+                      )}
                       <Button variant="outline" onClick={submitPractice} disabled={submitting}>
                         {submitting ? lt.grading : lt.submitPractice}
                       </Button>
-                      <Button
-                        onClick={completeLesson}
-                        disabled={!schedule?.grammarGateOpen}
-                        title={!schedule?.grammarGateOpen ? lt.grammarBlocked : undefined}
-                      >
-                        {lt.markDone}
-                      </Button>
                     </div>
                   )}
-                  {lesson.status !== 'done' && !schedule?.grammarGateOpen && (
-                    <p className="text-xs text-amber-300">{lt.grammarBlocked}</p>
+
+                  {phase === 'missions' && (
+                    <div className="space-y-3">
+                      <div className="rounded-xl border border-[var(--surface-border)] p-3">
+                        <p className="text-xs font-semibold text-[var(--accent)]">{lt.missionVideo}</p>
+                        <p className="mt-1 text-sm text-[var(--text-muted)]">
+                          {sections?.dailyPlan?.videoTask ?? lt.youtube}
+                        </p>
+                        {(lesson.youtube_url || sections?.youtubeUrl) && (
+                          <a
+                            href={lesson.youtube_url ?? sections?.youtubeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-2 inline-block text-sm text-[var(--accent)] hover:underline"
+                          >
+                            {lt.openMission}
+                          </a>
+                        )}
+                      </div>
+                      <div className="rounded-xl border border-[var(--surface-border)] p-3">
+                        <p className="text-xs font-semibold text-[var(--accent)]">{lt.missionCoach}</p>
+                        <p className="mt-1 text-sm text-[var(--text-muted)]">
+                          {sections?.dailyPlan?.coachPrompt ?? lt.modes.grammar}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={openCoachMission}
+                          className="mt-2 text-sm text-[var(--accent)] hover:underline"
+                        >
+                          {lt.openMission}
+                        </button>
+                      </div>
+                      <div className="rounded-xl border border-[var(--surface-border)] p-3">
+                        <p className="text-xs font-semibold text-[var(--accent)]">
+                          {lt.missionFlashcards} ({sections?.dailyPlan?.flashcardCount ?? dueCards.length})
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setTab('flashcards')}
+                          className="mt-2 text-sm text-[var(--accent)] hover:underline"
+                        >
+                          {lt.openMission}
+                        </button>
+                      </div>
+                      <div className="rounded-xl border border-[var(--surface-border)] p-3">
+                        <p className="text-xs font-semibold text-[var(--accent)]">{lt.missionImmersion}</p>
+                        <p className="mt-1 text-sm text-[var(--text-muted)]">
+                          {sections?.dailyPlan?.immersionTask ?? sections?.immersion?.why}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setTab('immersion')}
+                          className="mt-2 text-sm text-[var(--accent)] hover:underline"
+                        >
+                          {lt.openMission}
+                        </button>
+                      </div>
+
+                      {lesson.status !== 'done' && (
+                        <div className="space-y-2 pt-2">
+                          <Button onClick={completeLesson} disabled={!canComplete}>
+                            {lt.markDone}
+                          </Button>
+                          {!checkComplete && (
+                            <p className="text-xs text-amber-300">{lt.checkRequired}</p>
+                          )}
+                          {checkComplete && !schedule?.grammarGateOpen && (
+                            <p className="text-xs text-amber-300">{lt.grammarBlocked}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </>
               : <div className="space-y-3">
@@ -673,7 +995,9 @@ export function LanguageTutorView() {
                     <div className="mt-4 text-sm text-[var(--text-muted)]">
                       <p>{currentCard.translation}</p>
                       {currentCard.ipa && <p className="text-xs">[{currentCard.ipa}]</p>}
-                      {currentCard.example_sentence && <p className="mt-2">{currentCard.example_sentence}</p>}
+                      {currentCard.example_sentence && (
+                        <p className="mt-2">{currentCard.example_sentence}</p>
+                      )}
                     </div>
                   )}
                   <div className="mt-6 flex justify-center gap-2">
@@ -704,7 +1028,14 @@ export function LanguageTutorView() {
                 <p className="text-sm text-[var(--text-muted)]">{lt.restDayHint}</p>
               : immersion ?
                 <>
-                  <p className="text-xs text-[var(--accent)]">{immersion.cefr} · {immersion.why}</p>
+                  <p className="text-xs text-[var(--accent)]">
+                    {immersion.cefr} · {immersion.why}
+                  </p>
+                  {sections?.dailyPlan?.immersionTask && (
+                    <p className="rounded-lg border border-[var(--surface-border)] px-3 py-2 text-sm">
+                      {sections.dailyPlan.immersionTask}
+                    </p>
+                  )}
                   {immersion.youtubeUrl && (
                     <a
                       href={immersion.youtubeUrl}

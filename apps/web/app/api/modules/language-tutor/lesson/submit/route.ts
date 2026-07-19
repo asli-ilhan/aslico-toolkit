@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { gradeSpeakingWriting } from '@aslico/ai'
 import { createClient } from '@/lib/supabase/server'
 import { isMissingLanguageTutorTable } from '@/lib/supabase/errors'
+import { isUnitPassedByScore, QUIZ_PASS_THRESHOLD } from '@/lib/language-tutor/progress'
 import type { TutorLanguage } from '@/lib/language-tutor/rotation'
 
 export const maxDuration = 60
@@ -34,6 +35,8 @@ export async function POST(request: NextRequest) {
   const sections = lesson.sections as {
     speakingExercise?: { prompt: string }
     writingExercise?: { prompt: string }
+    unitId?: string
+    submissions?: Record<string, unknown>
   }
 
   const graded = await gradeSpeakingWriting({
@@ -59,8 +62,9 @@ export async function POST(request: NextRequest) {
       scores,
       sections: {
         ...sections,
-        submissions: { speaking, writing, feedback: graded.feedback },
+        submissions: { speaking, writing, feedback: graded.feedback, quizScore },
       },
+      status: 'in_progress',
       updated_at: new Date().toISOString(),
     })
     .eq('user_id', user.id)
@@ -75,5 +79,38 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json({ lesson: updated, scores, feedback: graded.feedback })
+  const unitId = sections.unitId
+  if (unitId && isUnitPassedByScore(quizScore)) {
+    await supabase.from('language_tutor_grammar_progress').upsert(
+      {
+        user_id: user.id,
+        language: lesson.language,
+        topic_id: unitId,
+        mastery_score: quizScore,
+        passed: true,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,language,topic_id' },
+    )
+  } else if (unitId) {
+    await supabase.from('language_tutor_grammar_progress').upsert(
+      {
+        user_id: user.id,
+        language: lesson.language,
+        topic_id: unitId,
+        mastery_score: quizScore,
+        passed: false,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,language,topic_id' },
+    )
+  }
+
+  return NextResponse.json({
+    lesson: updated,
+    scores,
+    feedback: graded.feedback,
+    unitPassed: isUnitPassedByScore(quizScore),
+    passThreshold: QUIZ_PASS_THRESHOLD,
+  })
 }

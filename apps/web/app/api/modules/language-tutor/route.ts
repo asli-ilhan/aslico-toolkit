@@ -5,7 +5,7 @@ import { fetchTutorSettings } from '@/lib/language-tutor/lesson'
 import { languageForDate, programDayIndex, streakDays } from '@/lib/language-tutor/rotation'
 import { languageLabel } from '@/lib/language-tutor/rotation'
 import { languageDayIndex } from '@/lib/language-tutor/curriculum'
-import { gatedUnitForLanguageDay } from '@/lib/language-tutor/progress'
+import { gatedUnitForLanguageDay, isUnitPassedByScore } from '@/lib/language-tutor/progress'
 
 export async function GET() {
   const supabase = await createClient()
@@ -90,6 +90,10 @@ export async function GET() {
   const currentGrammar = currentUnit ?
     grammarProgress.find((g) => g.topic_id === currentUnit.id) ?? null
   : null
+  const todayScores = lessonRes.data?.scores as { quiz?: number } | null | undefined
+  const checkComplete = typeof todayScores?.quiz === 'number'
+  const grammarGateOpen =
+    (currentGrammar?.passed ?? false) || isUnitPassedByScore(todayScores?.quiz)
 
   return NextResponse.json({
     settings,
@@ -108,7 +112,9 @@ export async function GET() {
         }
       : null,
       grammarMastery: currentGrammar,
-      grammarGateOpen: currentGrammar?.passed ?? false,
+      grammarGateOpen,
+      checkComplete,
+      quizPassThreshold: 70,
     },
     todayLesson: lessonRes.data,
     dueFlashcards: dueCardsRes.data ?? [],

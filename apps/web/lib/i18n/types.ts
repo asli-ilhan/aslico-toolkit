@@ -585,6 +585,27 @@ export type Messages = {
     nativeLanguage: string
     sundayBreak: string
     goalDays: string
+    dailyPlan: string
+    dailyPlanProgress: string
+    phaseTeach: string
+    phasePractice: string
+    phaseCheck: string
+    phaseMissions: string
+    teachingGoals: string
+    keyPatterns: string
+    commonMistakes: string
+    drills: string
+    revealDrillAnswer: string
+    missionVideo: string
+    missionCoach: string
+    missionFlashcards: string
+    missionImmersion: string
+    openMission: string
+    finishTeach: string
+    finishPractice: string
+    checkRequired: string
+    quizPassHint: string
+    estimatedMinutes: string
     warnings: { tableMissing: string }
     errors: { lessonFailed: string; grammarBlocked: string; submitFailed: string }
   }

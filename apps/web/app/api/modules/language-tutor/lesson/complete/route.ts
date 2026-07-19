@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isMissingLanguageTutorTable } from '@/lib/supabase/errors'
-import { isGrammarGateOpen } from '@/lib/language-tutor/progress'
+import { isGrammarGateOpen, isUnitPassedByScore } from '@/lib/language-tutor/progress'
 import type { TutorLanguage } from '@/lib/language-tutor/rotation'
 
 export async function PATCH(request: NextRequest) {
@@ -13,7 +13,6 @@ export async function PATCH(request: NextRequest) {
 
   const body = await request.json()
   const lessonDate = body.lesson_date ?? new Date().toISOString().slice(0, 10)
-  const requireGrammar = body.require_grammar !== false
 
   const { data: existing } = await supabase
     .from('language_tutor_lessons')
@@ -26,42 +25,75 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Lesson not found' }, { status: 404 })
   }
 
-  const sections = existing.sections as { unitId?: string } | null
+  const sections = existing.sections as { unitId?: string; submissions?: { quizScore?: number } } | null
   const unitId = sections?.unitId
+  const scores =
+    (existing.scores as Record<string, number> | null) ??
+    (body.scores as Record<string, number> | undefined) ??
+    null
+  const quizScore = scores?.quiz ?? sections?.submissions?.quizScore
 
-  if (requireGrammar && unitId) {
+  if (quizScore == null) {
+    return NextResponse.json(
+      {
+        error: 'check_phase_incomplete',
+        message: 'Finish the Check phase: submit quiz + speaking/writing before marking done.',
+      },
+      { status: 403 },
+    )
+  }
+
+  if (unitId) {
     const { data: grammarRows } = await supabase
       .from('language_tutor_grammar_progress')
       .select('topic_id, mastery_score, passed')
       .eq('user_id', user.id)
       .eq('language', existing.language as TutorLanguage)
 
-    if (!isGrammarGateOpen(unitId, (grammarRows ?? []) as Array<{ topic_id: string; mastery_score: number; passed: boolean }>)) {
+    const gateOpen =
+      isGrammarGateOpen(
+        unitId,
+        (grammarRows ?? []) as Array<{ topic_id: string; mastery_score: number; passed: boolean }>,
+      ) || isUnitPassedByScore(quizScore)
+
+    if (!gateOpen) {
       return NextResponse.json(
         {
-          error: 'grammar_gate_blocked',
-          message: 'Complete the Grammar drill coach to 80% before marking lesson done.',
+          error: 'quiz_gate_blocked',
+          message: 'Score at least 70% on the quiz to complete this unit (retry Check phase).',
         },
         { status: 403 },
       )
     }
+
+    if (isUnitPassedByScore(quizScore)) {
+      await supabase.from('language_tutor_grammar_progress').upsert(
+        {
+          user_id: user.id,
+          language: existing.language,
+          topic_id: unitId,
+          mastery_score: quizScore,
+          passed: true,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,language,topic_id' },
+      )
+    }
   }
 
-  const scores =
-    body.scores ??
-    (existing.scores as Record<string, number> | null) ?? {
-      vocab: 80,
-      grammar: 80,
-      speaking: 75,
-      writing: 75,
-      quiz: 80,
-    }
+  const finalScores = scores ?? {
+    vocab: 80,
+    grammar: quizScore,
+    speaking: 75,
+    writing: 75,
+    quiz: quizScore,
+  }
 
   const { data, error } = await supabase
     .from('language_tutor_lessons')
     .update({
       status: 'done',
-      scores,
+      scores: finalScores,
       updated_at: new Date().toISOString(),
     })
     .eq('user_id', user.id)

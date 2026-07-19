@@ -7,11 +7,15 @@ export interface GrammarProgressRow {
   passed: boolean
 }
 
+export const QUIZ_PASS_THRESHOLD = 70
+
 export function unitsForLanguage(language: TutorLanguage): CurriculumUnit[] {
   return CURRICULUM.filter((u) => u.language === language).sort((a, b) => a.order - b.order)
 }
 
-/** Block next unit until all prior units have grammar mastery >= 80%. */
+/**
+ * Block next unit until prior units are passed (coach mastery OR quiz ≥ threshold synced to progress).
+ */
 export function gatedUnitForLanguageDay(
   language: TutorLanguage,
   langDayIndex: number,
@@ -37,4 +41,9 @@ export function isGrammarGateOpen(
 ): boolean {
   const row = grammarProgress.find((g) => g.topic_id === unitId)
   return row?.passed ?? false
+}
+
+/** Quiz (or coach) score opens the unit gate when ≥ threshold. */
+export function isUnitPassedByScore(score: number | null | undefined): boolean {
+  return typeof score === 'number' && score >= QUIZ_PASS_THRESHOLD
 }
