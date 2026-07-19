@@ -569,6 +569,7 @@ export type Messages = {
     generateLesson: string
     regenerateLesson: string
     legacyLessonHint: string
+    deleteLesson: string
     generating: string
     noLesson: string
     markDone: string

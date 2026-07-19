@@ -14,8 +14,27 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => ({}))
   const locale = String(body.locale ?? 'en')
+  const force = body.force === true
+  const lessonDate = String(body.lesson_date ?? new Date().toISOString().slice(0, 10))
 
   try {
+    if (force) {
+      const { data: existing } = await supabase
+        .from('language_tutor_lessons')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('lesson_date', lessonDate)
+        .maybeSingle()
+      if (existing?.id) {
+        await supabase.from('language_tutor_flashcards').delete().eq('source_lesson_id', existing.id)
+        await supabase
+          .from('language_tutor_lessons')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('lesson_date', lessonDate)
+      }
+    }
+
     const result = await generateTodayLesson(supabase, user.id, locale)
     if (result.restDay) {
       return NextResponse.json({ restDay: true, message: 'Rest day — optional immersion only.' })
@@ -25,6 +44,7 @@ export async function POST(request: NextRequest) {
       language: result.language,
       programDay: result.programDay,
       goalDays: result.goalDays,
+      regenerated: force,
     })
   } catch (err) {
     if (err && typeof err === 'object' && 'message' in err) {

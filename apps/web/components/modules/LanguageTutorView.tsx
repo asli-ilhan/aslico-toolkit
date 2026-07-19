@@ -178,7 +178,7 @@ export function LanguageTutorView() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatMessages, chatSending])
 
-  async function generateLesson() {
+  async function generateLesson(force = false) {
     setGenerating(true)
     setError(null)
     setTeachDone(false)
@@ -188,10 +188,16 @@ export function LanguageTutorView() {
     setRevealedQuiz(new Set())
     setRevealedDrills(new Set())
     setFeedback(null)
+    setSpeakingAnswer('')
+    setWritingAnswer('')
     const res = await fetch('/api/modules/language-tutor/lesson/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ locale }),
+      body: JSON.stringify({
+        locale,
+        force,
+        lesson_date: new Date().toISOString().slice(0, 10),
+      }),
     })
     const data = await res.json()
     setGenerating(false)
@@ -204,6 +210,27 @@ export function LanguageTutorView() {
       return
     }
     setLesson(data.lesson)
+    await load()
+  }
+
+  async function deleteTodayLesson() {
+    setGenerating(true)
+    setError(null)
+    const res = await fetch(
+      `/api/modules/language-tutor/lesson?lesson_date=${new Date().toISOString().slice(0, 10)}`,
+      { method: 'DELETE' },
+    )
+    const data = await res.json()
+    setGenerating(false)
+    if (!res.ok) {
+      setError(data.error ?? data.message ?? lt.errors.lessonFailed)
+      return
+    }
+    setLesson(null)
+    setTeachDone(false)
+    setPracticeDone(false)
+    setPhase('teach')
+    setFeedback(null)
     await load()
   }
 
@@ -500,19 +527,18 @@ export function LanguageTutorView() {
                     <h2 className="text-lg font-semibold">
                       {schedule?.languageLabel} — {lesson.topic}
                     </h2>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs text-[var(--text-muted)]">
-                        {fillTemplate(lt.estimatedMinutes, { min: estimated })}
-                      </span>
-                      <Button
-                        variant="outline"
-                        onClick={generateLesson}
-                        disabled={generating}
-                        className="text-xs"
-                      >
-                        {generating ? lt.generating : lt.regenerateLesson}
-                      </Button>
-                    </div>
+                    <span className="text-xs text-[var(--text-muted)]">
+                      {fillTemplate(lt.estimatedMinutes, { min: estimated })}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button onClick={() => generateLesson(true)} disabled={generating}>
+                      {generating ? lt.generating : lt.regenerateLesson}
+                    </Button>
+                    <Button variant="outline" onClick={deleteTodayLesson} disabled={generating}>
+                      {lt.deleteLesson}
+                    </Button>
                   </div>
 
                   {!hasTeaching && (
@@ -924,7 +950,7 @@ export function LanguageTutorView() {
                 </>
               : <div className="space-y-3">
                   <p className="text-sm text-[var(--text-muted)]">{lt.noLesson}</p>
-                  <Button onClick={generateLesson} disabled={generating}>
+                  <Button onClick={() => generateLesson(false)} disabled={generating}>
                     {generating ? lt.generating : lt.generateLesson}
                   </Button>
                 </div>

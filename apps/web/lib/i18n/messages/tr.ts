@@ -676,6 +676,7 @@ export const tr: Messages = {
     generateLesson: 'Bugünün institute gününü oluştur (~45 dk)',
     regenerateLesson: 'Institute günü olarak yeniden oluştur',
     legacyLessonHint: 'Bu eski ders formatı. Öğret → alıştır → ölç → görevler için yeniden oluştur.',
+    deleteLesson: 'Bugünün dersini sil',
     generating: 'Institute günü hazırlanıyor…',
     noLesson: 'Bugün için ders yok.',
     markDone: 'Günü tamamladım ✓',

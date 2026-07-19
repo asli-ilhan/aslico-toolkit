@@ -678,6 +678,7 @@ export const en: Messages = {
     generateLesson: 'Generate today\'s institute day (~45 min)',
     regenerateLesson: 'Regenerate as institute day',
     legacyLessonHint: 'This is an older lesson format. Regenerate to get teach → practice → check → missions.',
+    deleteLesson: 'Delete today\'s lesson',
     generating: 'Building institute day…',
     noLesson: 'No lesson yet today.',
     markDone: 'Mark day complete ✓',

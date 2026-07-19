@@ -414,6 +414,7 @@ export const ar: Messages = {
     generateLesson: 'إنشاء يوم المعهد',
     regenerateLesson: 'إعادة إنشاء (صيغة المعهد)',
     legacyLessonHint: 'صيغة قديمة. أعد الإنشاء للحصول على علّم → درّب → اختبر → مهام.',
+    deleteLesson: 'حذف درس اليوم',
     generating: '…',
     noLesson: 'لا درس.',
     markDone: 'تم ✓',

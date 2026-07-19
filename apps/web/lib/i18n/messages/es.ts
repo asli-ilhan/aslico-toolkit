@@ -416,6 +416,7 @@ export const es: Messages = {
     generateLesson: 'Generar día institute',
     regenerateLesson: 'Regenerar (formato institute)',
     legacyLessonHint: 'Formato antiguo. Regenera para enseñar → practicar → comprobar → misiones.',
+    deleteLesson: 'Borrar la lección de hoy',
     generating: '…',
     noLesson: 'Sin lección.',
     markDone: 'Hecho ✓',
