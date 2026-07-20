@@ -576,6 +576,7 @@ export const es: Messages = {
     speakingHint: 'El clon local puede tardar minutos. Se reproduce al terminar.',
     play: 'Reproducir',
     pause: 'Pausa',
+    ambientBed: 'Fondo 432 Hz (bajo, en bucle)',
     sleepMode: 'Modo sueño',
     sleepHint: 'Oscurece la pantalla. Toca para salir.',
     fadeTimer: 'Desvanecer',
@@ -599,6 +600,7 @@ export const es: Messages = {
       storageMissing: 'Ejecuta packages/storage/sql/self_therapy_audio_storage.sql.',
       incompleteScript: 'Completa las 3 secciones (Inducción + Profundidad + Sugerencias).',
     },
+
     errors: {
       loadFailed: 'No se pudieron cargar las sesiones.',
       generateFailed: 'No se pudo generar el guion.',

@@ -25,6 +25,10 @@ interface TherapySession {
 
 type DurationHint = 'short' | 'medium' | 'long'
 
+/** Quiet 432 Hz bed — loops under spoken script (does not dominate). */
+const AMBIENT_SRC = '/self-therapy/ambient-432-loop.mp3'
+const AMBIENT_VOLUME = 0.16
+
 function buildSpokenScript(inductionText: string, deepeningText: string, suggestionsText: string) {
   return [inductionText, deepeningText, suggestionsText]
     .map((s) => s.replace(/…/g, '.').trim())
@@ -65,16 +69,28 @@ export function SelfTherapyView() {
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [fadeMinutes, setFadeMinutes] = useState(0)
+  const [ambientOn, setAmbientOn] = useState(true)
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const bedRef = useRef<HTMLAudioElement | null>(null)
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const autoplayAfterSpeakRef = useRef(false)
+  const fadeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const localObjectUrlRef = useRef<string | null>(null)
+
+  function revokeLocalAudioUrl() {
+    if (localObjectUrlRef.current) {
+      URL.revokeObjectURL(localObjectUrlRef.current)
+      localObjectUrlRef.current = null
+    }
+  }
 
   const applySession = useCallback((s: TherapySession | null) => {
     setActive(s)
     setInduction(s?.induction ?? '')
     setDeepening(s?.deepening ?? '')
     setSuggestions(s?.suggestions ?? '')
+    revokeLocalAudioUrl()
     setAudioUrl(null)
     setPlaying(false)
     setCurrentTime(0)
@@ -130,6 +146,8 @@ export function SelfTherapyView() {
     const onEnded = () => {
       setPlaying(false)
       setSleepMode(false)
+      const bed = bedRef.current
+      if (bed) bed.pause()
     }
     el.addEventListener('timeupdate', onTime)
     el.addEventListener('loadedmetadata', onMeta)
@@ -144,8 +162,27 @@ export function SelfTherapyView() {
   useEffect(() => {
     return () => {
       if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
+      if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current)
+      revokeLocalAudioUrl()
     }
   }, [])
+
+  function syncAmbient(shouldPlay: boolean) {
+    const bed = bedRef.current
+    if (!bed) return
+    bed.loop = true
+    bed.volume = AMBIENT_VOLUME
+    if (shouldPlay && ambientOn) {
+      void bed.play().catch(() => {})
+    } else {
+      bed.pause()
+    }
+  }
+
+  useEffect(() => {
+    syncAmbient(playing)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- syncAmbient reads ambientOn/bedRef
+  }, [playing, ambientOn])
 
   async function generate() {
     if (!topic.trim()) return
@@ -234,6 +271,7 @@ export function SelfTherapyView() {
         }
         const { id: jobId } = (await start.json()) as { id: string }
         let progress = 0
+        let jobDuration: number | null = null
         for (;;) {
           await new Promise((r) => setTimeout(r, 800))
           const stRes = await fetch(`${localBase}/jobs/${jobId}`)
@@ -242,25 +280,44 @@ export function SelfTherapyView() {
             status: string
             progress: number
             error?: string | null
+            duration_seconds?: number | null
           }
           progress = Math.max(progress, job.progress ?? 0)
           setSpeakProgress(progress)
-          if (job.status === 'done') break
+          if (job.status === 'done') {
+            jobDuration = job.duration_seconds ?? null
+            break
+          }
           if (job.status === 'error') {
             throw new Error(job.error || st.errors.speakFailed)
           }
         }
         setSpeakProgress(100)
+
+        // Play the full local file immediately (avoid truncating 20MB+ uploads via Next).
         const audioRes = await fetch(`${localBase}/jobs/${jobId}/audio`)
         if (!audioRes.ok) throw new Error(st.errors.speakFailed)
         const blob = await audioRes.blob()
-        const form = new FormData()
-        form.set('sessionId', active.id)
-        form.set('induction', induction)
-        form.set('deepening', deepening)
-        form.set('suggestions', suggestions)
-        form.set('audio', blob, 'speak.wav')
-        res = await fetch('/api/modules/self-therapy/speak', { method: 'POST', body: form })
+        revokeLocalAudioUrl()
+        const localUrl = URL.createObjectURL(blob)
+        localObjectUrlRef.current = localUrl
+        if (jobDuration && jobDuration > 1) setDuration(jobDuration)
+        autoplayAfterSpeakRef.current = true
+        setAudioUrl(localUrl)
+
+        // Persist: Next pulls audio from local TTS by jobId (no giant FormData body).
+        res = await fetch('/api/modules/self-therapy/speak', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: active.id,
+            induction,
+            deepening,
+            suggestions,
+            jobId,
+            durationSeconds: jobDuration,
+          }),
+        })
       } else {
         res = await fetch('/api/modules/self-therapy/speak', {
           method: 'POST',
@@ -298,14 +355,18 @@ export function SelfTherapyView() {
         setDeepening(data.item.deepening)
         setSuggestions(data.item.suggestions)
         setSessions((prev) => prev.map((s) => (s.id === data.item.id ? data.item : s)))
+        if (data.item.duration_seconds) setDuration(data.item.duration_seconds)
       }
-      const url = data.audioUrl as string | null
-      if (!url) {
-        setError(st.errors.speakFailed)
-        return
+      // Keep local blob playing if we already set it; otherwise use signed URL.
+      if (!localObjectUrlRef.current) {
+        const url = data.audioUrl as string | null
+        if (!url) {
+          setError(st.errors.speakFailed)
+          return
+        }
+        autoplayAfterSpeakRef.current = true
+        setAudioUrl(url)
       }
-      autoplayAfterSpeakRef.current = true
-      setAudioUrl(url)
     } catch (err) {
       setError(err instanceof Error ? err.message : st.errors.speakFailed)
     } finally {
@@ -314,7 +375,7 @@ export function SelfTherapyView() {
     }
   }
 
-  // After speak sets audioUrl, <audio> mounts — then play once
+  // After speak sets audioUrl, <audio> mounts — then play once (+ ambient bed)
   useEffect(() => {
     if (!audioUrl || speaking || !autoplayAfterSpeakRef.current) return
     autoplayAfterSpeakRef.current = false
@@ -322,9 +383,13 @@ export function SelfTherapyView() {
     if (!el) return
     el.load()
     void el.play().then(
-      () => setPlaying(true),
+      () => {
+        setPlaying(true)
+        syncAmbient(true)
+      },
       () => setPlaying(false),
     )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [audioUrl, speaking])
 
   async function removeSession(id: string) {
@@ -342,9 +407,11 @@ export function SelfTherapyView() {
     if (!el || !audioUrl) return
     if (playing) {
       el.pause()
+      syncAmbient(false)
       setPlaying(false)
     } else {
       void el.play()
+      syncAmbient(true)
       setPlaying(true)
       if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
@@ -361,22 +428,32 @@ export function SelfTherapyView() {
     if (el && audioUrl && !playing) {
       void el.play()
       setPlaying(true)
+      syncAmbient(true)
     }
     if (fadeMinutes > 0) {
       if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
+      if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current)
       fadeTimerRef.current = setTimeout(() => {
         const a = audioRef.current
+        const bed = bedRef.current
         if (!a) return
-        const start = a.volume
+        const startMain = a.volume
+        const startBed = bed?.volume ?? AMBIENT_VOLUME
         const steps = 20
         let i = 0
-        const iv = setInterval(() => {
+        fadeIntervalRef.current = setInterval(() => {
           i += 1
-          a.volume = Math.max(0, start * (1 - i / steps))
+          const t = 1 - i / steps
+          a.volume = Math.max(0, startMain * t)
+          if (bed) bed.volume = Math.max(0, startBed * t)
           if (i >= steps) {
-            clearInterval(iv)
+            if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current)
             a.pause()
             a.volume = 1
+            if (bed) {
+              bed.pause()
+              bed.volume = AMBIENT_VOLUME
+            }
             setPlaying(false)
             setSleepMode(false)
           }
@@ -540,7 +617,13 @@ export function SelfTherapyView() {
                   src={audioUrl}
                   preload="auto"
                   onError={() => setError(st.errors.audioPlayFailed)}
+                  onEnded={() => {
+                    setPlaying(false)
+                    setSleepMode(false)
+                    syncAmbient(false)
+                  }}
                 />
+                <audio ref={bedRef} src={AMBIENT_SRC} preload="auto" loop playsInline />
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
@@ -570,6 +653,21 @@ export function SelfTherapyView() {
                     </div>
                   </div>
                 </div>
+
+                <label className="flex min-h-10 cursor-pointer items-center gap-2 text-sm text-[var(--muted)]">
+                  <input
+                    type="checkbox"
+                    checked={ambientOn}
+                    onChange={(e) => {
+                      const on = e.target.checked
+                      setAmbientOn(on)
+                      if (!on) syncAmbient(false)
+                      else if (playing) syncAmbient(true)
+                    }}
+                    className="h-4 w-4 accent-[var(--accent)]"
+                  />
+                  <span>{st.ambientBed}</span>
+                </label>
 
                 <div className="flex flex-wrap items-center gap-2">
                   <label className="text-sm text-[var(--muted)]">{st.fadeTimer}</label>

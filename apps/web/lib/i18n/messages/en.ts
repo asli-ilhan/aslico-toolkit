@@ -864,6 +864,7 @@ export const en: Messages = {
     speakingHint: 'Local clone running — auto-plays at 100%. Keep sound on.',
     play: 'Play',
     pause: 'Pause',
+    ambientBed: '432 Hz bed (quiet, loops)',
     sleepMode: 'Sleep mode',
     sleepHint: 'Dims the screen. Tap anywhere to exit.',
     fadeTimer: 'Fade-out',

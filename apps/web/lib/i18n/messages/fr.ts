@@ -576,6 +576,7 @@ export const fr: Messages = {
     speakingHint: 'Le clone local peut prendre quelques minutes. Lecture auto à la fin.',
     play: 'Lecture',
     pause: 'Pause',
+    ambientBed: 'Fond 432 Hz (discret, boucle)',
     sleepMode: 'Mode sommeil',
     sleepHint: 'Assombrit l’écran. Touchez pour quitter.',
     fadeTimer: 'Fondu',
@@ -599,6 +600,7 @@ export const fr: Messages = {
       storageMissing: 'Exécutez packages/storage/sql/self_therapy_audio_storage.sql.',
       incompleteScript: 'Remplissez les 3 sections (Induction + Approfondissement + Suggestions).',
     },
+
     errors: {
       loadFailed: 'Chargement impossible.',
       generateFailed: 'Génération échouée.',

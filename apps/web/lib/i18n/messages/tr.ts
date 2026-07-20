@@ -863,6 +863,7 @@ export const tr: Messages = {
       'Yerel klon çalışıyor — yüzde dolunca otomatik çalar. Ses açık olsun.',
     play: 'Oynat',
     pause: 'Duraklat',
+    ambientBed: '432 Hz arka plan (düşük ses, loop)',
     sleepMode: 'Uyku modu',
     sleepHint: 'Ekranı karartır. Çıkmak için dokun.',
     fadeTimer: 'Fade-out',

@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import io
 import os
+import subprocess
+import tempfile
 import threading
 import uuid
 from pathlib import Path
@@ -35,12 +37,15 @@ DEFAULT_REF = os.environ.get("LOCAL_VOICE_REF", "ref_1.wav")
 HOST = os.environ.get("LOCAL_TTS_HOST", "127.0.0.1")
 PORT = int(os.environ.get("LOCAL_TTS_PORT", "8765"))
 MODEL_NAME = "tts_models/multilingual/multi-dataset/xtts_v2"
-# XTTS blows up on long GPT sequences — keep chunks moderate; crossfade joins them
+# XTTS blows up on long GPT sequences — keep chunks moderate; breath gaps between them
 CHUNK_CHARS = int(os.environ.get("LOCAL_TTS_CHUNK_CHARS", "160"))
-CROSSFADE_MS = int(os.environ.get("LOCAL_TTS_CROSSFADE_MS", "110"))
-EDGE_FADE_MS = int(os.environ.get("LOCAL_TTS_EDGE_FADE_MS", "55"))
+CROSSFADE_MS = int(os.environ.get("LOCAL_TTS_CROSSFADE_MS", "80"))
+EDGE_FADE_MS = int(os.environ.get("LOCAL_TTS_EDGE_FADE_MS", "70"))
+# Hypnosis pacing: <1.0 = slower; breath pause between sentences
+SPEECH_SPEED = float(os.environ.get("LOCAL_TTS_SPEED", "0.82"))
+BREATH_MS = int(os.environ.get("LOCAL_TTS_BREATH_MS", "480"))
 
-app = FastAPI(title="asliCo local voice TTS", version="0.3.0")
+app = FastAPI(title="asliCo local voice TTS", version="0.4.0")
 app.add_middleware(
   CORSMiddleware,
   allow_origins=[
@@ -164,12 +169,75 @@ def crossfade_join(pieces: list[np.ndarray], sr: int, overlap_ms: int = 110) -> 
   return out
 
 
+def join_with_breath(
+  pieces: list[np.ndarray],
+  sr: int,
+  breath_ms: int = 480,
+  overlap_ms: int = 60,
+) -> np.ndarray:
+  """Soft edge into a short silence (breath), then next sentence — hypnosis pacing."""
+  if not pieces:
+    return np.zeros(0, dtype=np.float32)
+  breath = np.zeros(max(1, int(sr * breath_ms / 1000)), dtype=np.float32)
+  out = pieces[0].astype(np.float32, copy=True)
+  for nxt in pieces[1:]:
+    nxt = nxt.astype(np.float32, copy=False)
+    # Tiny crossfade into silence so the cut isn't clicky, then hold the breath
+    if overlap_ms > 0 and out.size > int(sr * overlap_ms / 1000):
+      n = int(sr * overlap_ms / 1000)
+      fade = np.linspace(1.0, 0.0, n, dtype=np.float32)
+      out[-n:] *= fade
+    out = np.concatenate([out, breath, nxt])
+  return out
+
+
+def wav_bytes_from_audio(audio: np.ndarray, sr: int) -> bytes:
+  buf = io.BytesIO()
+  sf.write(buf, audio.astype(np.float32), sr, format="WAV")
+  return buf.getvalue()
+
+
+def encode_mp3(wav_data: bytes, bitrate: str = "64k") -> bytes | None:
+  """Compress for upload/playback; returns None if ffmpeg unavailable."""
+  try:
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as wf:
+      wf.write(wav_data)
+      wav_path = wf.name
+    mp3_path = wav_path.replace(".wav", ".mp3")
+    try:
+      subprocess.run(
+        [
+          "ffmpeg",
+          "-y",
+          "-loglevel",
+          "error",
+          "-i",
+          wav_path,
+          "-codec:a",
+          "libmp3lame",
+          "-b:a",
+          bitrate,
+          mp3_path,
+        ],
+        check=True,
+        timeout=120,
+      )
+      return Path(mp3_path).read_bytes()
+    finally:
+      Path(wav_path).unlink(missing_ok=True)
+      Path(mp3_path).unlink(missing_ok=True)
+  except (FileNotFoundError, subprocess.SubprocessError, OSError) as exc:
+    print(f"mp3 encode skipped: {exc}")
+    return None
+
+
 def synthesize_chunks(
   text: str,
   language: str,
   ref_path: Path,
   on_progress=None,
-) -> bytes:
+) -> tuple[bytes, str, float]:
+  """Returns (audio_bytes, content_type, duration_seconds). Prefers MP3 when ffmpeg exists."""
   tts = get_tts()
   text = prepare_spoken_text(text)
   chunks = split_text(text, max_chars=CHUNK_CHARS)
@@ -184,7 +252,7 @@ def synthesize_chunks(
   for i, chunk in enumerate(chunks):
     if on_progress:
       on_progress(i / total)
-    print(f"[{i + 1}/{total}] synthesizing {len(chunk)} chars…")
+    print(f"[{i + 1}/{total}] synthesizing {len(chunk)} chars @ speed={SPEECH_SPEED}…")
     arr = synth_one(tts, chunk, language, ref_path)
     arr = trim_edges(arr, sr)
     arr = soft_edges(arr, sr, fade_ms=EDGE_FADE_MS)
@@ -193,19 +261,35 @@ def synthesize_chunks(
   if on_progress:
     on_progress(1.0)
 
-  audio = crossfade_join(pieces, sr, overlap_ms=CROSSFADE_MS)
+  audio = join_with_breath(pieces, sr, breath_ms=BREATH_MS, overlap_ms=min(60, CROSSFADE_MS))
   peak = float(np.max(np.abs(audio))) if audio.size else 0.0
   if peak > 1e-4:
     audio = audio * (0.85 / peak)
 
-  buf = io.BytesIO()
-  sf.write(buf, audio.astype(np.float32), sr, format="WAV")
-  return buf.getvalue()
+  duration = float(len(audio) / sr) if audio.size else 0.0
+  print(f"joined {len(pieces)} phrases + {BREATH_MS}ms breath → {duration:.1f}s")
+  wav_data = wav_bytes_from_audio(audio, sr)
+  mp3 = encode_mp3(wav_data)
+  if mp3:
+    print(f"encoded mp3 {len(wav_data)} → {len(mp3)} bytes ({duration:.1f}s)")
+    return mp3, "audio/mpeg", duration
+  return wav_data, "audio/wav", duration
 
 
 def synth_one(tts, chunk: str, language: str, ref_path: Path) -> np.ndarray:
   """Synthesize one chunk; on XTTS index errors, split smaller and retry."""
   try:
+    with _tts_lock:
+      wav = tts.tts(
+        text=chunk,
+        speaker_wav=str(ref_path),
+        language=language,
+        speed=SPEECH_SPEED,
+        split_sentences=False,
+      )
+    return np.asarray(wav, dtype=np.float32)
+  except TypeError:
+    # Older Coqui builds may not accept speed=
     with _tts_lock:
       wav = tts.tts(text=chunk, speaker_wav=str(ref_path), language=language)
     return np.asarray(wav, dtype=np.float32)
@@ -225,19 +309,26 @@ def synth_one(tts, chunk: str, language: str, ref_path: Path) -> np.ndarray:
       parts.append(synth_one(tts, left, language, ref_path))
     if right:
       parts.append(synth_one(tts, right, language, ref_path))
-    return crossfade_join(parts, 24000, overlap_ms=80) if parts else np.zeros(0, dtype=np.float32)
+    return join_with_breath(parts, 24000, breath_ms=220, overlap_ms=40) if parts else np.zeros(0, dtype=np.float32)
 
 
-def split_text(text: str, max_chars: int) -> list[str]:
+def split_into_sentences(text: str) -> list[str]:
+  import re
+
   text = " ".join(text.split())
+  if not text:
+    return []
+  parts = re.split(r"(?<=[.!?])\s+", text)
+  return [p.strip() for p in parts if p.strip()]
+
+
+def split_long_phrase(text: str, max_chars: int) -> list[str]:
   if len(text) <= max_chars:
     return [text]
   parts: list[str] = []
   remaining = text
   while len(remaining) > max_chars:
-    cut = remaining.rfind(". ", 0, max_chars)
-    if cut < max_chars * 0.4:
-      cut = remaining.rfind("; ", 0, max_chars)
+    cut = remaining.rfind("; ", 0, max_chars)
     if cut < max_chars * 0.4:
       cut = remaining.rfind(", ", 0, max_chars)
     if cut < max_chars * 0.35:
@@ -251,6 +342,17 @@ def split_text(text: str, max_chars: int) -> list[str]:
   return [p for p in parts if p]
 
 
+def split_text(text: str, max_chars: int) -> list[str]:
+  """One breath-sized unit per sentence; overlong sentences are split further."""
+  sentences = split_into_sentences(text)
+  if not sentences:
+    return split_long_phrase(" ".join(text.split()), max_chars)
+  parts: list[str] = []
+  for sent in sentences:
+    parts.extend(split_long_phrase(sent, max_chars))
+  return parts
+
+
 def run_job(job_id: str, text: str, language: str, ref_path: Path) -> None:
   def on_progress(p: float) -> None:
     with _jobs_lock:
@@ -259,15 +361,21 @@ def run_job(job_id: str, text: str, language: str, ref_path: Path) -> None:
         job["progress"] = round(min(max(p, 0.0), 0.99) * 100)
 
   try:
-    wav = synthesize_chunks(text, language, ref_path, on_progress=on_progress)
-    path = OUT / f"{job_id}.wav"
-    path.write_bytes(wav)
+    data, content_type, duration = synthesize_chunks(
+      text, language, ref_path, on_progress=on_progress
+    )
+    ext = "mp3" if "mpeg" in content_type else "wav"
+    path = OUT / f"{job_id}.{ext}"
+    path.write_bytes(data)
     with _jobs_lock:
       job = _jobs.get(job_id)
       if job:
         job["status"] = "done"
         job["progress"] = 100
         job["path"] = str(path)
+        job["content_type"] = content_type
+        job["duration_seconds"] = round(duration, 1)
+        job["bytes"] = len(data)
   except Exception as exc:  # noqa: BLE001
     print(f"job {job_id} failed: {exc}")
     with _jobs_lock:
@@ -287,6 +395,8 @@ def health():
     "default_ref": DEFAULT_REF,
     "chunk_chars": CHUNK_CHARS,
     "crossfade_ms": CROSSFADE_MS,
+    "speech_speed": SPEECH_SPEED,
+    "breath_ms": BREATH_MS,
   }
 
 
@@ -303,6 +413,9 @@ def create_job(body: SpeakRequest):
       "progress": 0,
       "error": None,
       "path": None,
+      "content_type": None,
+      "duration_seconds": None,
+      "bytes": None,
     }
   thread = threading.Thread(
     target=run_job,
@@ -324,6 +437,9 @@ def job_status(job_id: str):
     "status": job["status"],
     "progress": job["progress"],
     "error": job["error"],
+    "duration_seconds": job.get("duration_seconds"),
+    "bytes": job.get("bytes"),
+    "content_type": job.get("content_type"),
   }
 
 
@@ -336,7 +452,8 @@ def job_audio(job_id: str):
   if job["status"] != "done" or not job.get("path"):
     raise HTTPException(409, "Audio not ready")
   data = Path(job["path"]).read_bytes()
-  return Response(content=data, media_type="audio/wav")
+  media = job.get("content_type") or "audio/wav"
+  return Response(content=data, media_type=media)
 
 
 @app.post("/speak")
@@ -346,10 +463,10 @@ def speak(body: SpeakRequest):
     raise HTTPException(400, "Empty text")
   ref_path = resolve_ref(body.ref)
   try:
-    wav = synthesize_chunks(text, body.language, ref_path)
+    data, content_type, _duration = synthesize_chunks(text, body.language, ref_path)
   except Exception as exc:  # noqa: BLE001
     raise HTTPException(500, str(exc)[:400]) from exc
-  return Response(content=wav, media_type="audio/wav")
+  return Response(content=data, media_type=content_type)
 
 
 if __name__ == "__main__":

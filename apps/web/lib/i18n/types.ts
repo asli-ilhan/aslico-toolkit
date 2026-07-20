@@ -716,6 +716,7 @@ export type Messages = {
     speakingHint: string
     play: string
     pause: string
+    ambientBed: string
     sleepMode: string
     sleepHint: string
     fadeTimer: string

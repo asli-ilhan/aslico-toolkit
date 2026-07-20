@@ -574,6 +574,7 @@ export const ar: Messages = {
     speakingHint: 'الاستنساخ المحلي قد يستغرق دقائق. سيشغّل تلقائياً عند الانتهاء.',
     play: 'تشغيل',
     pause: 'إيقاف',
+    ambientBed: 'خلفية 432 Hz (هادئة، تتكرر)',
     sleepMode: 'وضع النوم',
     sleepHint: 'يُعتم الشاشة. المس للخروج.',
     fadeTimer: 'تلاشي',
@@ -597,6 +598,7 @@ export const ar: Messages = {
       storageMissing: 'نفّذ packages/storage/sql/self_therapy_audio_storage.sql.',
       incompleteScript: 'أكمل الأقسام الثلاثة (استرخاء + تعميق + اقتراحات).',
     },
+
     errors: {
       loadFailed: 'تعذّر تحميل الجلسات.',
       generateFailed: 'تعذّر إنشاء النص.',
