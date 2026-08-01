@@ -166,6 +166,21 @@ export const moduleRegistry: ModuleManifest[] = [
     status: 'beta',
     href: '/self-therapy',
   },
+  {
+    id: 'meeting-copilot',
+    name: 'Meeting Copilot',
+    description: 'Pitch assist — knowledge pool, Space-to-capture questions, instant cue cards.',
+    icon: 'meeting-copilot',
+    category: 'productivity',
+    accent: {
+      primary: '#34d399',
+      secondary: '#6ee7b7',
+      glow: '#10b981',
+      canvasMode: 'constellation',
+    },
+    status: 'beta',
+    href: '/meeting-copilot',
+  },
 ]
 
 export function getModuleById(id: string): ModuleManifest | undefined {

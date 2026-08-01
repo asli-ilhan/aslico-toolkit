@@ -84,6 +84,96 @@ export async function transcribeAudio(
   return parseDeepgramResponse(await response.json())
 }
 
+/** Pitch jargon nova-3 otherwise mangles (English keyterms only). */
+const MEETING_KEYTERMS = ['ARR', 'MRR', 'CAC', 'LTV', 'runway', 'burn', 'GTM', 'churn', 'payback']
+
+async function listenOnce(
+  apiKey: string,
+  buffer: ArrayBuffer,
+  contentType: string,
+  language: 'tr' | 'en',
+): Promise<{ text: string; confidence: number; language: 'tr' | 'en' }> {
+  const params = new URLSearchParams({
+    model: 'nova-3',
+    language,
+    smart_format: 'true',
+    punctuate: 'true',
+  })
+  if (language === 'en') {
+    for (const term of MEETING_KEYTERMS) params.append('keyterm', term)
+  }
+
+  const response = await fetch(`https://api.deepgram.com/v1/listen?${params}`, {
+    method: 'POST',
+    headers: { Authorization: `Token ${apiKey}`, 'Content-Type': contentType },
+    body: buffer,
+  })
+  if (!response.ok) {
+    const body = await response.text()
+    throw new Error(`Deepgram API error (${response.status}): ${body}`)
+  }
+  const data = (await response.json()) as {
+    results?: { channels?: { alternatives?: { transcript?: string; confidence?: number }[] }[] }
+  }
+  const alt = data.results?.channels?.[0]?.alternatives?.[0]
+  return {
+    text: (alt?.transcript ?? '').trim(),
+    confidence: Number(alt?.confidence ?? 0),
+    language,
+  }
+}
+
+/**
+ * Meeting-grade STT. nova-3 `multi` does not cover Turkish and nova-2 returns an empty
+ * transcript for it, so auto mode races Turkish and English and keeps the confident one.
+ */
+export async function transcribeMeetingAudio(
+  file: Blob | ArrayBuffer,
+  filename: string,
+  languageMode: 'auto' | 'tr' | 'en' = 'auto',
+): Promise<{ text: string; language?: string }> {
+  const apiKey = process.env.DEEPGRAM_API_KEY
+  if (!apiKey) throw new Error('DEEPGRAM_API_KEY is not set')
+
+  const buffer = file instanceof ArrayBuffer ? file : await file.arrayBuffer()
+  const contentType = mimeFromFilename(filename)
+
+  if (languageMode === 'tr' || languageMode === 'en') {
+    const single = await listenOnce(apiKey, buffer, contentType, languageMode)
+    if (!single.text) throw new Error('Deepgram returned empty transcript')
+    return { text: single.text, language: single.language }
+  }
+
+  const results = await Promise.allSettled([
+    listenOnce(apiKey, buffer, contentType, 'tr'),
+    listenOnce(apiKey, buffer, contentType, 'en'),
+  ])
+  const candidates = results
+    .filter(
+      (r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof listenOnce>>> =>
+        r.status === 'fulfilled',
+    )
+    .map((r) => r.value)
+    .filter((c) => c.text.length > 0)
+
+  if (!candidates.length) {
+    const failure = results.find((r) => r.status === 'rejected')
+    if (failure && failure.status === 'rejected') {
+      throw failure.reason instanceof Error ? failure.reason : new Error('Deepgram failed')
+    }
+    throw new Error('Deepgram returned empty transcript')
+  }
+
+  // Slight Turkish bias: Turkish speech peppered with English jargon.
+  const best = candidates.sort(
+    (a, b) =>
+      b.confidence +
+      (b.language === 'tr' ? 0.04 : 0) -
+      (a.confidence + (a.language === 'tr' ? 0.04 : 0)),
+  )[0]
+  return { text: best.text, language: best.language }
+}
+
 /** Deepgram fetches the audio itself — used when file bypasses Vercel 4.5 MB body limit. */
 export async function transcribeAudioFromUrl(
   audioUrl: string,

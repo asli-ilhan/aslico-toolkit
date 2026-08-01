@@ -127,3 +127,21 @@ export function isMissingSelfTherapyTable(error: {
 }): boolean {
   return isMissingTable(error, 'self_therapy_sessions')
 }
+
+export function isMissingMeetingCopilotTable(error: {
+  code?: string
+  message?: string
+}): boolean {
+  return (
+    isMissingTable(error, 'meeting_knowledge_docs') ||
+    isMissingTable(error, 'meeting_sessions') ||
+    isMissingTable(error, 'meeting_turns')
+  )
+}
+
+export function isMissingMeetingChunks(error: { code?: string; message?: string }): boolean {
+  return (
+    isMissingTable(error, 'meeting_knowledge_chunks') ||
+    (error.message?.includes('search_meeting_knowledge') ?? false)
+  )
+}

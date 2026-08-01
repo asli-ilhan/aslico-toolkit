@@ -67,6 +67,27 @@
     },
     "app/api/modules/self-therapy/speak/route.ts": {
       "maxDuration": 300
+    },
+    "app/api/modules/meeting-copilot/capture/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/modules/meeting-copilot/capture/stream/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/modules/meeting-copilot/transcribe-slice/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/modules/meeting-copilot/prewarm/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/modules/meeting-copilot/docs/upload/route.ts": {
+      "maxDuration": 120
+    },
+    "app/api/modules/meeting-copilot/docs/reindex/route.ts": {
+      "maxDuration": 120
+    },
+    "app/api/modules/meeting-copilot/docs/seed-asheriv/route.ts": {
+      "maxDuration": 120
     }
   }
 }

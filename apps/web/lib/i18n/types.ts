@@ -740,4 +740,89 @@ export type Messages = {
       tableRequired: string
     }
   }
+  meetingCopilot: {
+    tabs: { pool: string; brief: string; live: string }
+    poolTitle: string
+    poolHint: string
+    poolList: string
+    emptyPool: string
+    docTitle: string
+    docTitlePlaceholder: string
+    docType: string
+    docTypes: {
+      pitch: string
+      metrics: string
+      faq: string
+      strategy: string
+      product: string
+      competitor: string
+      note: string
+      'answer-template': string
+    }
+    tags: string
+    tagsPlaceholder: string
+    content: string
+    contentPlaceholder: string
+    addDoc: string
+    saving: string
+    untitled: string
+    uploadTitle: string
+    uploadHint: string
+    uploadButton: string
+    uploading: string
+    uploadDone: string
+    pasteToggle: string
+    reindex: string
+    reindexing: string
+    reindexDone: string
+    seedAsheriv: string
+    seedingAsheriv: string
+    seedAsherivDone: string
+    briefTitle: string
+    briefHint: string
+    counterparty: string
+    counterpartyPlaceholder: string
+    focus: string
+    focusPlaceholder: string
+    languageMode: string
+    languages: { auto: string; tr: string; en: string }
+    tagFilter: string
+    tagFilterPlaceholder: string
+    startLive: string
+    starting: string
+    openLiveWindow: string
+    recentSessions: string
+    untitledSession: string
+    liveTitle: string
+    spaceHint: string
+    holdToCapture: string
+    recording: string
+    listening: string
+    listeningLive: string
+    thinking: string
+    showAll: string
+    micReady: string
+    micWarming: string
+    cornerMode: string
+    endSession: string
+    goBrief: string
+    needSession: string
+    questions: string
+    cues: string
+    emptyTurns: string
+    copy: string
+    backToPrep: string
+    warnings: { tableMissing: string; chunksMissing: string; templateTypeMissing: string }
+    errors: {
+      loadFailed: string
+      saveFailed: string
+      sessionFailed: string
+      captureFailed: string
+      micDenied: string
+      tooShort: string
+      noDeepgram: string
+      uploadFailed: string
+      reindexFailed: string
+    }
+  }
 }

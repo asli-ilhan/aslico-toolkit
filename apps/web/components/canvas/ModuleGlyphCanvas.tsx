@@ -113,6 +113,19 @@ function GlyphMesh({ moduleId, primary, glow }: GlyphMeshProps) {
           </mesh>
         </group>
       )
+    case 'meeting-copilot':
+      return (
+        <group ref={groupRef}>
+          <mesh position={[0, 0.08, 0]}>
+            <boxGeometry args={[0.55, 0.38, 0.08]} />
+            <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.4} metalness={0.45} roughness={0.35} />
+          </mesh>
+          <mesh position={[0.28, -0.18, 0]} rotation={[0, 0, -0.4]}>
+            <coneGeometry args={[0.08, 0.22, 12]} />
+            <meshStandardMaterial color={glow} emissive={emissive} emissiveIntensity={0.5} metalness={0.4} roughness={0.3} />
+          </mesh>
+        </group>
+      )
     default:
       return (
         <mesh ref={meshRef}>

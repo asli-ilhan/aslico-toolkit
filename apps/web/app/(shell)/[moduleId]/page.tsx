@@ -30,5 +30,6 @@ export function generateStaticParams() {
     { moduleId: 'language-tutor' },
     { moduleId: 'funding-scout' },
     { moduleId: 'self-therapy' },
+    { moduleId: 'meeting-copilot' },
   ]
 }

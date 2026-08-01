@@ -7,8 +7,18 @@ export interface LLMClient {
   chat(messages: LLMMessage[]): Promise<string>
 }
 
-export { createClaudeMessage, type ClaudeMessage } from './claude'
-export { transcribeAudio, transcribeAudioFromUrl, type TranscribeOptions } from './transcribe'
+export {
+  createClaudeMessage,
+  streamClaudeMessage,
+  type ClaudeMessage,
+  type ClaudeRequestOptions,
+} from './claude'
+export {
+  transcribeAudio,
+  transcribeAudioFromUrl,
+  transcribeMeetingAudio,
+  type TranscribeOptions,
+} from './transcribe'
 export { summarizeTranscript } from './summarize'
 export { chatWithAssistant, type ToolkitContext } from './assistant'
 export { generateNewsletterIssue, type NewsletterInput, type NewsletterSections } from './newsletter'
@@ -71,6 +81,18 @@ export {
   type TherapyScriptResult,
 } from './self-therapy'
 export { THERAPY_SCRIPT_EXAMPLES, type TherapyScriptExample } from './self-therapy-examples'
+export {
+  generateMeetingCue,
+  streamMeetingCue,
+  parseCueStreamText,
+  classifyKnowledgeDoc,
+  type MeetingCueAnswer,
+  type MeetingCueInput,
+  type MeetingLanguageMode,
+  type MeetingDocType,
+  type ClassifiedKnowledgeDoc,
+  type MeetingStreamEvent,
+} from './meeting-copilot'
 export { synthesizeSpeech, type SpeakOptions } from './elevenlabs-tts'
 export {
   synthesizeSpeechLocal,

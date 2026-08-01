@@ -9,6 +9,7 @@ import { TravelScoutView } from '@/components/modules/TravelScoutView'
 import { LanguageTutorView } from '@/components/modules/LanguageTutorView'
 import { FundingScoutView } from '@/components/modules/FundingScoutView'
 import { SelfTherapyView } from '@/components/modules/SelfTherapyView'
+import { MeetingCopilotView } from '@/components/modules/MeetingCopilotView'
 
 export const moduleViews: Record<string, ComponentType> = {
   transcription: TranscriptionView,
@@ -21,6 +22,7 @@ export const moduleViews: Record<string, ComponentType> = {
   'language-tutor': LanguageTutorView,
   'funding-scout': FundingScoutView,
   'self-therapy': SelfTherapyView,
+  'meeting-copilot': MeetingCopilotView,
 }
 
 export function getModuleView(moduleId: string): ComponentType | undefined {
