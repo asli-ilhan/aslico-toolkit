@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isMissingLanguageTutorTable } from '@/lib/supabase/errors'
+import { resolveLessonDate } from '@/lib/language-tutor/dates'
 
 /** Delete today's (or given date) lesson so it can be regenerated. */
 export async function DELETE(request: NextRequest) {
@@ -11,8 +12,7 @@ export async function DELETE(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { searchParams } = new URL(request.url)
-  const lessonDate =
-    searchParams.get('lesson_date') ?? new Date().toISOString().slice(0, 10)
+  const lessonDate = resolveLessonDate(searchParams.get('lesson_date'))
 
   const { data: existing, error: fetchErr } = await supabase
     .from('language_tutor_lessons')

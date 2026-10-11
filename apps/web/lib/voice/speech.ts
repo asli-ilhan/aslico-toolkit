@@ -4,10 +4,20 @@ interface BrowserSpeechRecognition extends EventTarget {
   continuous: boolean
   interimResults: boolean
   lang: string
-  onresult: ((ev: { results: { [index: number]: { [index: number]: { transcript: string } } } }) => void) | null
-  onerror: (() => void) | null
+  onresult:
+    | ((ev: {
+        resultIndex: number
+        results: ArrayLike<{
+          isFinal: boolean
+          0: { transcript: string }
+        }>
+      }) => void)
+    | null
+  onerror: ((ev?: { error?: string }) => void) | null
   onend: (() => void) | null
   start(): void
+  stop(): void
+  abort(): void
 }
 
 type SpeechRecognitionCtor = new () => BrowserSpeechRecognition
@@ -25,7 +35,10 @@ export function isSpeechSynthesisSupported(): boolean {
   return typeof window !== 'undefined' && 'speechSynthesis' in window
 }
 
-export function createSpeechRecognition(locale: string): BrowserSpeechRecognition | null {
+export function createSpeechRecognition(
+  locale: string,
+  opts?: { continuous?: boolean; interimResults?: boolean },
+): BrowserSpeechRecognition | null {
   if (typeof window === 'undefined') return null
   const Ctor =
     (window as unknown as { SpeechRecognition?: SpeechRecognitionCtor }).SpeechRecognition ||
@@ -33,8 +46,9 @@ export function createSpeechRecognition(locale: string): BrowserSpeechRecognitio
       .webkitSpeechRecognition
   if (!Ctor) return null
   const rec = new Ctor()
-  rec.continuous = false
-  rec.interimResults = false
+  // Manual start/stop: keep listening until user stops.
+  rec.continuous = opts?.continuous ?? true
+  rec.interimResults = opts?.interimResults ?? true
   rec.lang =
     locale === 'tr' ? 'tr-TR'
     : locale === 'fr' ? 'fr-FR'

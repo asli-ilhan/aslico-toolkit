@@ -3,9 +3,58 @@ import { gradeSpeakingWriting } from '@aslico/ai'
 import { createClient } from '@/lib/supabase/server'
 import { isMissingLanguageTutorTable } from '@/lib/supabase/errors'
 import { isUnitPassedByScore, QUIZ_PASS_THRESHOLD } from '@/lib/language-tutor/progress'
+import { resolveLessonDate } from '@/lib/language-tutor/dates'
 import type { TutorLanguage } from '@/lib/language-tutor/rotation'
 
 export const maxDuration = 60
+
+type LessonRow = {
+  id: string
+  user_id: string
+  lesson_date: string
+  language: string
+  sections: Record<string, unknown> | null
+  scores: Record<string, unknown> | null
+  status: string
+}
+
+async function findLesson(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  body: { lesson_id?: string; lesson_date?: string },
+): Promise<LessonRow | null> {
+  const lessonId = String(body.lesson_id ?? '').trim()
+  if (lessonId) {
+    const { data } = await supabase
+      .from('language_tutor_lessons')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('id', lessonId)
+      .maybeSingle()
+    if (data) return data as LessonRow
+  }
+
+  const lessonDate = resolveLessonDate(body.lesson_date)
+  const { data: byDate } = await supabase
+    .from('language_tutor_lessons')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('lesson_date', lessonDate)
+    .maybeSingle()
+  if (byDate) return byDate as LessonRow
+
+  // Recovery: open lesson from the last few days (UTC/local mismatch or overnight session).
+  const { data: open } = await supabase
+    .from('language_tutor_lessons')
+    .select('*')
+    .eq('user_id', userId)
+    .in('status', ['pending', 'in_progress'])
+    .order('lesson_date', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  return (open as LessonRow | null) ?? null
+}
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
@@ -15,28 +64,26 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json()
-  const lessonDate = body.lesson_date ?? new Date().toISOString().slice(0, 10)
   const quizScore = Number(body.quiz_score ?? 0)
   const speaking = String(body.speaking ?? '').trim()
   const writing = String(body.writing ?? '').trim()
   const locale = String(body.locale ?? 'tr')
+  const quizAnswers =
+    body.quiz_answers && typeof body.quiz_answers === 'object' ?
+      (body.quiz_answers as Record<string, string>)
+    : {}
 
-  const { data: lesson, error: fetchErr } = await supabase
-    .from('language_tutor_lessons')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('lesson_date', lessonDate)
-    .maybeSingle()
-
-  if (fetchErr || !lesson) {
+  const lesson = await findLesson(supabase, user.id, body)
+  if (!lesson) {
     return NextResponse.json({ error: 'Lesson not found' }, { status: 404 })
   }
 
-  const sections = lesson.sections as {
+  const sections = (lesson.sections ?? {}) as {
     speakingExercise?: { prompt: string }
     writingExercise?: { prompt: string }
     unitId?: string
     submissions?: Record<string, unknown>
+    checkAcknowledged?: boolean
   }
 
   const graded = await gradeSpeakingWriting({
@@ -62,13 +109,21 @@ export async function POST(request: NextRequest) {
       scores,
       sections: {
         ...sections,
-        submissions: { speaking, writing, feedback: graded.feedback, quizScore },
+        // New attempt — must re-acknowledge after reviewing feedback.
+        checkAcknowledged: false,
+        submissions: {
+          speaking,
+          writing,
+          feedback: graded.feedback,
+          quizScore,
+          quizAnswers,
+        },
       },
       status: 'in_progress',
       updated_at: new Date().toISOString(),
     })
+    .eq('id', lesson.id)
     .eq('user_id', user.id)
-    .eq('lesson_date', lessonDate)
     .select('*')
     .single()
 

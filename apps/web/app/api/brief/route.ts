@@ -7,7 +7,8 @@ import {
   fetchTodayTodos,
 } from '@/lib/toolkit-context'
 import { fetchTutorSettings } from '@/lib/language-tutor/lesson'
-import { languageForDate, languageLabel, programDayIndex } from '@/lib/language-tutor/rotation'
+import { languageForCalendarDate, languageLabel, programDayIndex } from '@/lib/language-tutor/rotation'
+import { calendarDateInTimeZone } from '@/lib/language-tutor/dates'
 
 /** Unified dashboard brief: job agent + calendar + newsletter + learning */
 export async function GET() {
@@ -80,7 +81,11 @@ export async function GET() {
 
   try {
     const settings = await fetchTutorSettings(supabase, user.id)
-    const schedule = languageForDate(new Date(), settings.rotation, settings.sundayBreak)
+    const schedule = languageForCalendarDate(
+      calendarDateInTimeZone(),
+      settings.rotation,
+      settings.sundayBreak,
+    )
     const explainLocale = settings.nativeLanguage === 'tr' ? 'tr' : 'en'
     languageTutor = {
       isRestDay: schedule.isRestDay,

@@ -14,6 +14,8 @@ const EXPLAIN_LANG: Record<string, string> = {
   en: 'English',
 }
 
+export type LessonTrack = 'a1' | 'a2_crash'
+
 export interface DailyLessonInput {
   language: TutorLanguage
   locale: string
@@ -21,6 +23,8 @@ export interface DailyLessonInput {
   topic: string
   grammarFocus: string
   youtubeUrl: string
+  /** FR A2 crash course; ES/AR stay a1. */
+  track?: LessonTrack
   recentScores?: { vocab?: number; grammar?: number; speaking?: number; quiz?: number }
 }
 
@@ -56,7 +60,7 @@ export interface DailyLessonSections {
   reading: { title: string; text: string; questions: string[] }
   speakingExercise: { prompt: string; hints: string[] }
   writingExercise: { prompt: string; minSentences: number }
-  quiz: Array<{ question: string; options?: string[]; answer: string }>
+  quiz: Array<{ question: string; options: string[]; answer: string }>
   dailyPlan: DailyPlan
   youtubeUrl: string
   immersion: { films: string[]; books: string[]; why: string }
@@ -68,14 +72,47 @@ export async function generateDailyLesson(input: DailyLessonInput): Promise<{
 }> {
   const explainIn = EXPLAIN_LANG[input.locale] ?? 'English'
   const target = LANG_NAMES[input.language]
+  const track: LessonTrack = input.track ?? 'a1'
+  const isA2Crash = track === 'a2_crash'
   const avg =
     ((input.recentScores?.quiz ?? input.recentScores?.vocab ?? 70) +
       (input.recentScores?.grammar ?? 70)) /
     2
-  const difficulty =
-    avg >= 85 ? 'intensive — pack more patterns, slightly above yesterday'
-    : avg >= 70 ? 'solid A1 pace — teach two grammar points thoroughly'
-    : 'clear beginner — still pack a full institute day'
+  const difficulty = isA2Crash
+    ? avg >= 85
+      ? 'dense A2+ — pack nuances, connectors, and production; stay within A2+/early B1'
+      : avg >= 70
+        ? 'solid A2 crash pace — teach 2–3 grammar points thoroughly, no A1 greetings'
+        : 'clear A2 — assume présent + basic PC; still pack a full institute day'
+    : avg >= 85
+      ? 'intensive — pack more patterns, slightly above yesterday'
+      : avg >= 70
+        ? 'solid A1 pace — teach two grammar points thoroughly'
+        : 'clear beginner — still pack a full institute day'
+
+  const densityBlock = isA2Crash
+    ? `- words: exactly 22–28 items {word, translation, ipa?, example} — A2 vocabulary, not beginner greetings
+- grammarRules: 2–3 dense points {rule, explanation, examples: string[4-6]}
+- drills: 8–10 controlled items {type: gap_fill|transform|reorder, prompt, answer, hint?}
+- dialogues: 5 short naturalistic snippets {context, lines[]}
+- reading: {title, text 120–160 words at A2, questions: string[3]}
+- speakingExercise: {prompt, hints[]}
+- writingExercise: {prompt, minSentences: 5}
+- quiz: exactly 8 multiple-choice questions at A2 difficulty {question, options: string[4], answer} — answer MUST be one of options
+- dailyPlan: {flashcardCount: 14-18, coachMode: friend|pronunciation|voice_coach|grammar, coachPrompt: one concrete task, immersionTask: one scene/paragraph task, videoTask: what to watch for, estimatedMinutes: 40-45}`
+    : `- words: exactly 15–20 items {word, translation, ipa?, example}
+- grammarRules: exactly 2 dense points {rule, explanation, examples: string[4-6]}
+- drills: 6–8 controlled items {type: gap_fill|transform|reorder, prompt, answer, hint?}
+- dialogues: 5 short snippets {context, lines[]}
+- reading: {title, text ~100-120 words, questions: string[3]}
+- speakingExercise: {prompt, hints[]}
+- writingExercise: {prompt, minSentences: 4}
+- quiz: exactly 8 multiple-choice questions {question, options: string[4], answer} — answer MUST be one of options; only after teaching concepts
+- dailyPlan: {flashcardCount: 12-15, coachMode: friend|pronunciation|voice_coach|grammar, coachPrompt: one concrete task, immersionTask: one scene/paragraph task, videoTask: what to watch for, estimatedMinutes: 40-45}`
+
+  const levelLine = isA2Crash
+    ? `Create ONE daily A2 crash-course lesson (~40–45 minutes). Dense, not longer. Assume the learner already has présent and basic passé composé; do NOT teach A1 greetings/numbers from scratch.`
+    : `Create ONE daily A1 lesson (~40–45 minutes).`
 
   let sections = defaultLesson(input)
 
@@ -83,24 +120,16 @@ export async function generateDailyLesson(input: DailyLessonInput): Promise<{
     try {
       const raw = await createClaudeMessage({
         system: `You are an intensive ${target} institute teacher (Alliance Française / Instituto Cervantes / Arabic institute style).
-Create ONE daily A1 lesson (~40–45 minutes). Teach FIRST, then practice, then test. Never start with a quiz.
+${levelLine} Teach FIRST, then practice, then test. Never start with a quiz.
 Explain teaching + grammar in ${explainIn}. Target-language examples, dialogues, reading, drills in ${target}.
-Difficulty: ${difficulty}.
+Difficulty: ${difficulty}. Track: ${track}.
 
 Return JSON only matching DailyLessonSections:
 - teaching: { goals: string[3-5], explanationMd: markdown mini-lesson (what/why/how), keyPatterns: string[4-6], commonMistakes: string[3-5] }
-- words: exactly 15–20 items {word, translation, ipa?, example}
-- grammarRules: exactly 2 dense points {rule, explanation, examples: string[4-6]}
-- drills: 6–8 controlled items {type: gap_fill|transform|reorder, prompt, answer, hint?}
-- dialogues: 5 short snippets {context, lines[]}
-- reading: {title, text ~100-120 words, questions: string[3]}
-- speakingExercise: {prompt, hints[]}
-- writingExercise: {prompt, minSentences: 4}
-- quiz: exactly 8 questions {question, options?, answer} — only after teaching concepts
-- dailyPlan: {flashcardCount: 12-15, coachMode: friend|pronunciation|voice_coach|grammar, coachPrompt: one concrete task, immersionTask: one scene/paragraph task, videoTask: what to watch for, estimatedMinutes: 40-45}
+${densityBlock}
 - youtubeUrl, immersion may be placeholders (server overwrites)
 
-Pack more into one day than a casual app. Be systematic and clear.`,
+Pack more into one day than a casual app. Be systematic and clear. Same duration (~45 min); higher density for A2 crash.`,
         messages: [
           {
             role: 'user',
@@ -109,10 +138,11 @@ Pack more into one day than a casual app. Be systematic and clear.`,
               topic: input.topic,
               grammarFocus: input.grammarFocus,
               youtubeUrl: input.youtubeUrl,
+              track,
             }),
           },
         ],
-        maxTokens: 8000,
+        maxTokens: isA2Crash ? 7000 : 8000,
         temperature: 0.4,
       })
       const parsed = JSON.parse(extractJson(raw)) as Partial<DailyLessonSections>
@@ -120,12 +150,33 @@ Pack more into one day than a casual app. Be systematic and clear.`,
         sections = normalizeSections({ ...sections, ...parsed }, input)
       }
     } catch {
-      // defaults
+      // defaults — caller may already have a stub row saved
     }
   }
 
   const contentMd = lessonToMarkdown(sections, input)
   return { sections, contentMd }
+}
+
+function normalizeQuizItem(q: {
+  question: string
+  options?: string[]
+  answer: string
+}): { question: string; options: string[]; answer: string } {
+  const answer = String(q.answer ?? '').trim()
+  const rawOptions = Array.isArray(q.options) ? q.options.map((o) => String(o).trim()).filter(Boolean) : []
+  const options = [...rawOptions]
+  if (answer && !options.some((o) => o.toLocaleLowerCase('tr-TR') === answer.toLocaleLowerCase('tr-TR'))) {
+    options.unshift(answer)
+  }
+  while (options.length < 4) {
+    options.push(`—`)
+  }
+  return {
+    question: String(q.question ?? '').trim() || '…',
+    options: options.slice(0, 4),
+    answer: answer || options[0],
+  }
 }
 
 function normalizeSections(
@@ -147,7 +198,7 @@ function normalizeSections(
     reading: s.reading?.text ? s.reading : base.reading,
     speakingExercise: s.speakingExercise ?? base.speakingExercise,
     writingExercise: s.writingExercise ?? base.writingExercise,
-    quiz: s.quiz?.length ? s.quiz : base.quiz,
+    quiz: (s.quiz?.length ? s.quiz : base.quiz).map((q) => normalizeQuizItem(q)),
     dailyPlan: {
       flashcardCount: s.dailyPlan?.flashcardCount ?? base.dailyPlan.flashcardCount,
       coachMode: s.dailyPlan?.coachMode ?? base.dailyPlan.coachMode,
@@ -162,12 +213,15 @@ function normalizeSections(
 }
 
 function defaultLesson(input: DailyLessonInput): DailyLessonSections {
+  const isA2Crash = (input.track ?? 'a1') === 'a2_crash'
   return {
     teaching: {
       goals: [
         `Understand today's topic: ${input.topic}`,
         `Use the grammar focus: ${input.grammarFocus}`,
-        'Produce 4+ simple sentences aloud and in writing',
+        isA2Crash
+          ? 'Produce 5+ connected A2 sentences aloud and in writing'
+          : 'Produce 4+ simple sentences aloud and in writing',
       ],
       explanationMd: `## ${input.topic}\n\nToday we focus on **${input.grammarFocus}**. Read the patterns, study the words, then practice before the quiz.`,
       keyPatterns: [input.grammarFocus],
@@ -177,6 +231,9 @@ function defaultLesson(input: DailyLessonInput): DailyLessonSections {
     grammarRules: [
       { rule: input.grammarFocus, explanation: 'See the teaching section.', examples: [] },
       { rule: 'Core phrase patterns', explanation: 'Reuse patterns from dialogues.', examples: [] },
+      ...(isA2Crash
+        ? [{ rule: 'Connectors & nuance', explanation: 'Link ideas with parce que / donc / pourtant when relevant.', examples: [] }]
+        : []),
     ],
     drills: [],
     dialogues: [],
@@ -186,15 +243,19 @@ function defaultLesson(input: DailyLessonInput): DailyLessonSections {
       hints: ['Use today\'s words', 'Reuse one grammar pattern'],
     },
     writingExercise: {
-      prompt: `Write 4 sentences about "${input.topic}" using today's grammar.`,
-      minSentences: 4,
+      prompt: isA2Crash
+        ? `Write 5 connected sentences about "${input.topic}" using today's grammar.`
+        : `Write 4 sentences about "${input.topic}" using today's grammar.`,
+      minSentences: isA2Crash ? 5 : 4,
     },
     quiz: [],
     dailyPlan: {
-      flashcardCount: 14,
+      flashcardCount: isA2Crash ? 16 : 14,
       coachMode: 'grammar',
       coachPrompt: `Drill me on ${input.grammarFocus} with 5 short questions.`,
-      immersionTask: 'Watch or read one immersion item and note 3 new words.',
+      immersionTask: isA2Crash
+        ? 'Watch or read one A2 immersion item; note 5 new words and one connector.'
+        : 'Watch or read one immersion item and note 3 new words.',
       videoTask: 'Watch the lesson video and repeat 3 key sentences aloud.',
       estimatedMinutes: 45,
     },
@@ -204,8 +265,9 @@ function defaultLesson(input: DailyLessonInput): DailyLessonSections {
 }
 
 function lessonToMarkdown(s: DailyLessonSections, input: DailyLessonInput): string {
+  const trackLabel = (input.track ?? 'a1') === 'a2_crash' ? 'A2 crash' : 'Institute day'
   const lines = [
-    `# ${LANG_NAMES[input.language]} · Day ${input.programDay} · Institute day`,
+    `# ${LANG_NAMES[input.language]} · Day ${input.programDay} · ${trackLabel}`,
     `**${input.topic}** (~${s.dailyPlan.estimatedMinutes} min)`,
     '',
     '## Teach — goals',
@@ -300,21 +362,21 @@ Keep conversation flowing with a follow-up question.`,
   })
 }
 
+export type FlashcardDraft = {
+  word: string
+  translation: string
+  ipa: string
+  example_sentence: string
+  synonyms: string
+  antonyms: string
+  reviewDays: number[]
+}
+
 export async function generateFlashcardsFromWords(
   language: TutorLanguage,
   words: Array<{ word: string; translation: string }>,
   locale: string,
-): Promise<
-  Array<{
-    word: string
-    translation: string
-    ipa: string
-    example_sentence: string
-    synonyms: string
-    antonyms: string
-    reviewDays: number[]
-  }>
-> {
+): Promise<FlashcardDraft[]> {
   const target = LANG_NAMES[language]
   const explainIn = EXPLAIN_LANG[locale] ?? 'English'
 
@@ -336,15 +398,7 @@ export async function generateFlashcardsFromWords(
       maxTokens: 3500,
       temperature: 0.3,
     })
-    return JSON.parse(extractJson(raw)) as Array<{
-      word: string
-      translation: string
-      ipa: string
-      example_sentence: string
-      synonyms: string
-      antonyms: string
-      reviewDays: number[]
-    }>
+    return JSON.parse(extractJson(raw)) as FlashcardDraft[]
   } catch {
     return words.map((w) => ({
       ...w,
@@ -354,6 +408,89 @@ export async function generateFlashcardsFromWords(
       antonyms: '',
       reviewDays: [1, 3, 7, 14],
     }))
+  }
+}
+
+/** New progressive pack — avoids existing words; raises CEFR / categories over time. */
+export async function generateProgressiveFlashcards(opts: {
+  language: TutorLanguage
+  locale: string
+  count?: number
+  existingWords: string[]
+  knownCount: number
+  topic?: string
+  grammarFocus?: string
+  track?: LessonTrack
+}): Promise<FlashcardDraft[]> {
+  const target = LANG_NAMES[opts.language]
+  const explainIn = EXPLAIN_LANG[opts.locale] ?? 'English'
+  const count = Math.min(20, Math.max(8, opts.count ?? 15))
+  const known = opts.knownCount
+  const band =
+    opts.track === 'a2_crash' || known >= 80 ? 'A2+/early B1'
+    : known >= 40 ? 'A2'
+    : known >= 15 ? 'A1+/A2'
+    : 'A1'
+  const focusHint =
+    known < 15 ? 'everyday nouns + greetings + numbers'
+    : known < 40 ? 'high-frequency verbs + objects + adjectives'
+    : known < 80 ? 'connectors + pronouns + workplace/travel verbs'
+    : 'nuance verbs, abstract nouns, opinion phrases'
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return Array.from({ length: count }, (_, i) => ({
+      word: `item-${known + i + 1}`,
+      translation: `(${band}) placeholder ${i + 1}`,
+      ipa: '',
+      example_sentence: '',
+      synonyms: '',
+      antonyms: '',
+      reviewDays: [1, 3, 7, 14],
+    }))
+  }
+
+  const avoid = opts.existingWords.slice(0, 120)
+  try {
+    const raw = await createClaudeMessage({
+      system: `You create a NEW ${target} flashcard pack for progressive vocabulary growth.
+CEFR band: ${band}. Mix: ${focusHint}.
+Return JSON array of exactly ${count} items:
+[{word, translation, ipa, example_sentence, synonyms, antonyms, reviewDays:[1,3,7,14]}]
+- word + example_sentence in ${target}
+- translation/synonyms/antonyms glosses in ${explainIn}
+- Do NOT repeat any word from the avoid list (case-insensitive)
+- Prefer useful productive vocabulary, not obscure literary words`,
+      messages: [
+        {
+          role: 'user',
+          content: JSON.stringify({
+            topic: opts.topic,
+            grammarFocus: opts.grammarFocus,
+            avoid,
+            knownCount: known,
+          }),
+        },
+      ],
+      maxTokens: 4000,
+      temperature: 0.45,
+    })
+    const parsed = JSON.parse(extractJson(raw)) as FlashcardDraft[]
+    if (!Array.isArray(parsed) || !parsed.length) return []
+    const avoidSet = new Set(avoid.map((w) => w.toLocaleLowerCase('tr-TR')))
+    return parsed
+      .filter((c) => c?.word && !avoidSet.has(String(c.word).toLocaleLowerCase('tr-TR')))
+      .slice(0, count)
+      .map((c) => ({
+        word: String(c.word),
+        translation: String(c.translation ?? ''),
+        ipa: String(c.ipa ?? ''),
+        example_sentence: String(c.example_sentence ?? ''),
+        synonyms: String(c.synonyms ?? ''),
+        antonyms: String(c.antonyms ?? ''),
+        reviewDays: Array.isArray(c.reviewDays) ? c.reviewDays : [1, 3, 7, 14],
+      }))
+  } catch {
+    return []
   }
 }
 

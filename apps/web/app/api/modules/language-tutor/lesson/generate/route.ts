@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isMissingLanguageTutorTable } from '@/lib/supabase/errors'
 import { generateTodayLesson } from '@/lib/language-tutor/lesson'
+import { resolveLessonDate } from '@/lib/language-tutor/dates'
 
 export const maxDuration = 120
 
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}))
   const locale = String(body.locale ?? 'en')
   const force = body.force === true
-  const lessonDate = String(body.lesson_date ?? new Date().toISOString().slice(0, 10))
+  const lessonDate = resolveLessonDate(body.lesson_date)
 
   try {
     if (force) {
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const result = await generateTodayLesson(supabase, user.id, locale)
+    const result = await generateTodayLesson(supabase, user.id, locale, lessonDate)
     if (result.restDay) {
       return NextResponse.json({ restDay: true, message: 'Rest day — optional immersion only.' })
     }
@@ -45,6 +46,7 @@ export async function POST(request: NextRequest) {
       programDay: result.programDay,
       goalDays: result.goalDays,
       regenerated: force,
+      enrichFailed: 'enrichFailed' in result ? result.enrichFailed : false,
     })
   } catch (err) {
     if (err && typeof err === 'object' && 'message' in err) {

@@ -536,6 +536,11 @@ export type Messages = {
     subtitle: string
     day: string
     streak: string
+    programProgress: string
+    progressTitle: string
+    progressHint: string
+    unitProgress: string
+    lastQuiz: string
     restDay: string
     restDayHint: string
     tabs: Record<string, string>
@@ -563,6 +568,12 @@ export type Messages = {
     srsGood: string
     srsEasy: string
     mic: string
+    micStart: string
+    micStop: string
+    generateFlashcards: string
+    flashcardProgressHint: string
+    markImmersionDone: string
+    immersionDoneTitle: string
     grammarGate: string
     grammarPassed: string
     grammarPending: string
@@ -588,11 +599,13 @@ export type Messages = {
     nativeLanguage: string
     sundayBreak: string
     goalDays: string
+    frTrackNote: string
     dailyPlan: string
     dailyPlanProgress: string
     phaseTeach: string
     phasePractice: string
     phaseCheck: string
+    phaseFeedback: string
     phaseMissions: string
     teachingGoals: string
     keyPatterns: string
@@ -608,6 +621,14 @@ export type Messages = {
     finishPractice: string
     checkRequired: string
     quizPassHint: string
+    feedbackTitle: string
+    quizScoreLabel: string
+    yourAnswer: string
+    correctAnswer: string
+    unanswered: string
+    retakeCheck: string
+    acknowledgeUnderstood: string
+    passAfterReviewHint: string
     estimatedMinutes: string
     warnings: { tableMissing: string }
     errors: { lessonFailed: string; grammarBlocked: string; submitFailed: string }

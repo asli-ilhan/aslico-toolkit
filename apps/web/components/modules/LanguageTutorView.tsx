@@ -17,7 +17,7 @@ import {
 
 type Tab = 'today' | 'chat' | 'flashcards' | 'immersion' | 'report'
 type ChatMode = 'friend' | 'pronunciation' | 'voice_coach' | 'grammar'
-type Phase = 'teach' | 'practice' | 'check' | 'missions'
+type Phase = 'teach' | 'practice' | 'check' | 'feedback' | 'missions'
 
 interface LessonSections {
   teaching?: {
@@ -33,7 +33,7 @@ interface LessonSections {
   reading?: { title: string; text: string; questions: string[] }
   speakingExercise?: { prompt: string; hints?: string[] }
   writingExercise?: { prompt: string; minSentences?: number }
-  quiz?: Array<{ question: string; answer: string }>
+  quiz?: Array<{ question: string; options?: string[]; answer: string }>
   dailyPlan?: {
     flashcardCount?: number
     coachMode?: ChatMode
@@ -45,7 +45,14 @@ interface LessonSections {
   youtubeUrl?: string
   immersion?: { films: string[]; books: string[]; why: string }
   unitId?: string
-  submissions?: { quizScore?: number }
+  checkAcknowledged?: boolean
+  submissions?: {
+    quizScore?: number
+    speaking?: string
+    writing?: string
+    feedback?: string
+    quizAnswers?: Record<string, string>
+  }
 }
 
 interface Lesson {
@@ -53,9 +60,38 @@ interface Lesson {
   language: string
   topic: string
   status: string
+  lesson_date?: string
   scores?: { quiz?: number } | null
   sections?: LessonSections
   youtube_url?: string
+}
+
+function localCalendarDate(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function normalizeQuizAnswer(value: string): string {
+  return value.trim().toLocaleLowerCase('tr-TR').replace(/\s+/g, ' ')
+}
+
+function scoreQuiz(
+  quiz: Array<{ question: string; options?: string[]; answer: string }>,
+  answers: Record<number, string>,
+): number {
+  if (!quiz.length) return 80
+  let correct = 0
+  for (let i = 0; i < quiz.length; i++) {
+    const expected = normalizeQuizAnswer(quiz[i].answer ?? '')
+    const given = normalizeQuizAnswer(answers[i] ?? '')
+    if (expected && given && (given === expected || expected.includes(given) || given.includes(expected))) {
+      correct += 1
+    }
+  }
+  return Math.round((correct / quiz.length) * 100)
 }
 
 interface Flashcard {
@@ -95,22 +131,42 @@ export function LanguageTutorView() {
     languageLabel: string | null
     isRestDay: boolean
     programDay: number
+    languageDay?: number
     goalDays: number
     streak: number
     currentUnit?: { id: string; topic: string; grammarFocus: string; repeatUnit?: boolean } | null
     grammarMastery?: { topic_id: string; mastery_score: number; passed: boolean } | null
     grammarGateOpen?: boolean
     checkComplete?: boolean
+    checkAcknowledged?: boolean
     quizPassThreshold?: number
+  } | null>(null)
+  const [progress, setProgress] = useState<{
+    completedCount: number
+    goalDays: number
+    completedByLanguage: Record<string, number>
+    unitsPassed: number
+    unitsTotal: number
+    languageDay: number
+    lastQuizScore: number | null
+    recentDone: Array<{ date: string; language: string; topic: string; quiz: number | null }>
   } | null>(null)
   const [immersion, setImmersion] = useState<{
     films: string[]
     books: string[]
+    doneFilms?: string[]
+    doneBooks?: string[]
     cultureBooks: Array<{ title: string; author: string | null; status: string }>
     youtubeUrl: string | null
     why: string
     cefr: string
   } | null>(null)
+  const [generatingCards, setGeneratingCards] = useState(false)
+  const recognitionRef = useRef<{
+    stop: () => void
+    abort: () => void
+  } | null>(null)
+  const micBaseRef = useRef('')
   const [lesson, setLesson] = useState<Lesson | null>(null)
   const [dueCards, setDueCards] = useState<Flashcard[]>([])
   const [topErrors, setTopErrors] = useState<Array<{ mistake: string; correction: string; count: number }>>([])
@@ -137,18 +193,19 @@ export function LanguageTutorView() {
   const [savingSettings, setSavingSettings] = useState(false)
   const [speakingAnswer, setSpeakingAnswer] = useState('')
   const [writingAnswer, setWritingAnswer] = useState('')
-  const [quizCorrect, setQuizCorrect] = useState<Set<number>>(new Set())
+  const [quizAnswers, setQuizAnswers] = useState<Record<number, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState<string | null>(null)
   const [rotation, setRotation] = useState('fr,es,ar')
 
   const load = useCallback(async () => {
     setLoading(true)
-    const res = await fetch('/api/modules/language-tutor')
+    const res = await fetch(`/api/modules/language-tutor?local_date=${localCalendarDate()}`)
     const data = await res.json()
     if (data.warning === 'language_tutor_table_missing') setWarning(lt.warnings.tableMissing)
     if (res.ok) {
       setSchedule(data.schedule)
+      setProgress(data.progress ?? null)
       setLesson(data.todayLesson)
       setDueCards(data.dueFlashcards ?? [])
       setTopErrors(data.topErrors ?? [])
@@ -162,7 +219,28 @@ export function LanguageTutorView() {
       if (data.todayLesson?.scores?.quiz != null || data.schedule?.checkComplete) {
         setTeachDone(true)
         setPracticeDone(true)
-        setPhase('missions')
+        const subs = data.todayLesson?.sections?.submissions as
+          | {
+              quizAnswers?: Record<string, string>
+              speaking?: string
+              writing?: string
+              feedback?: string
+            }
+          | undefined
+        if (subs?.quizAnswers && typeof subs.quizAnswers === 'object') {
+          const restored: Record<number, string> = {}
+          for (const [k, v] of Object.entries(subs.quizAnswers)) {
+            restored[Number(k)] = String(v)
+          }
+          setQuizAnswers(restored)
+        }
+        if (typeof subs?.speaking === 'string') setSpeakingAnswer(subs.speaking)
+        if (typeof subs?.writing === 'string') setWritingAnswer(subs.writing)
+        if (typeof subs?.feedback === 'string') setFeedback(subs.feedback)
+        const ack =
+          data.schedule?.checkAcknowledged ||
+          data.todayLesson?.sections?.checkAcknowledged === true
+        setPhase(ack ? 'missions' : 'feedback')
       }
     }
     const immRes = await fetch('/api/modules/language-tutor/immersion')
@@ -185,42 +263,49 @@ export function LanguageTutorView() {
     setTeachDone(false)
     setPracticeDone(false)
     setPhase('teach')
-    setQuizCorrect(new Set())
+    setQuizAnswers({})
     setRevealedQuiz(new Set())
     setRevealedDrills(new Set())
     setFeedback(null)
     setSpeakingAnswer('')
     setWritingAnswer('')
-    const res = await fetch('/api/modules/language-tutor/lesson/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        locale,
-        force,
-        lesson_date: new Date().toISOString().slice(0, 10),
-      }),
-    })
-    const data = await res.json()
-    setGenerating(false)
-    if (!res.ok) {
-      setError(data.error ?? data.message ?? lt.errors.lessonFailed)
-      return
+    try {
+      const res = await fetch('/api/modules/language-tutor/lesson/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          locale,
+          force,
+          lesson_date: localCalendarDate(),
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.error ?? data.message ?? lt.errors.lessonFailed)
+        await load()
+        return
+      }
+      if (data.restDay) {
+        setError(lt.restDay)
+        return
+      }
+      if (data.lesson) setLesson(data.lesson)
+      await load()
+    } catch {
+      setError(lt.errors.lessonFailed)
+      await load()
+    } finally {
+      setGenerating(false)
     }
-    if (data.restDay) {
-      setError(lt.restDay)
-      return
-    }
-    setLesson(data.lesson)
-    await load()
   }
 
   async function deleteTodayLesson() {
     setGenerating(true)
     setError(null)
-    const res = await fetch(
-      `/api/modules/language-tutor/lesson?lesson_date=${new Date().toISOString().slice(0, 10)}`,
-      { method: 'DELETE' },
-    )
+    const date = lesson?.lesson_date ?? localCalendarDate()
+    const res = await fetch(`/api/modules/language-tutor/lesson?lesson_date=${date}`, {
+      method: 'DELETE',
+    })
     const data = await res.json()
     setGenerating(false)
     if (!res.ok) {
@@ -236,18 +321,27 @@ export function LanguageTutorView() {
   }
 
   async function submitPractice() {
+    if (!lesson?.id) {
+      setError(lt.errors.submitFailed)
+      return
+    }
     setSubmitting(true)
     setError(null)
-    const quizTotal = sections?.quiz?.length ?? 0
-    const quizScore = quizTotal > 0 ? Math.round((quizCorrect.size / quizTotal) * 100) : 80
+    const quizScore = scoreQuiz(sections?.quiz ?? [], quizAnswers)
+    const quizAnswersPayload: Record<string, string> = {}
+    for (const [k, v] of Object.entries(quizAnswers)) {
+      quizAnswersPayload[String(k)] = v
+    }
     const res = await fetch('/api/modules/language-tutor/lesson/submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        lesson_date: new Date().toISOString().slice(0, 10),
+        lesson_id: lesson.id,
+        lesson_date: lesson.lesson_date ?? localCalendarDate(),
         speaking: speakingAnswer,
         writing: writingAnswer,
         quiz_score: quizScore,
+        quiz_answers: quizAnswersPayload,
         locale: nativeLanguage,
       }),
     })
@@ -258,22 +352,96 @@ export function LanguageTutorView() {
       return
     }
     setFeedback(data.feedback)
+    setPracticeDone(true)
+    setLesson((prev) =>
+      prev ?
+        {
+          ...prev,
+          ...(data.lesson ?? {}),
+          scores: data.scores ?? { ...(prev.scores ?? {}), quiz: quizScore },
+          status: data.lesson?.status ?? 'in_progress',
+          sections: {
+            ...(prev.sections ?? {}),
+            ...(data.lesson?.sections ?? {}),
+            checkAcknowledged: false,
+          },
+        }
+      : prev,
+    )
+    setPhase('feedback')
+    await load()
+  }
+
+  function retakeCheck() {
+    setError(null)
+    setFeedback(null)
+    setQuizAnswers({})
+    setRevealedQuiz(new Set())
+    setPhase('check')
+  }
+
+  async function acknowledgeCheck() {
+    if (!lesson?.id) return
+    setSubmitting(true)
+    setError(null)
+    const res = await fetch('/api/modules/language-tutor/lesson/acknowledge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        lesson_id: lesson.id,
+        lesson_date: lesson.lesson_date ?? localCalendarDate(),
+      }),
+    })
+    const data = await res.json()
+    setSubmitting(false)
+    if (!res.ok) {
+      setError(data.message ?? data.error ?? lt.errors.submitFailed)
+      return
+    }
+    setLesson((prev) =>
+      prev ?
+        {
+          ...prev,
+          ...(data.lesson ?? {}),
+          sections: {
+            ...(prev.sections ?? {}),
+            ...(data.lesson?.sections ?? {}),
+            checkAcknowledged: true,
+          },
+        }
+      : prev,
+    )
     setPhase('missions')
     await load()
   }
 
   async function completeLesson() {
-    const res = await fetch('/api/modules/language-tutor/lesson/complete', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lesson_date: new Date().toISOString().slice(0, 10) }),
-    })
-    const data = await res.json()
-    if (!res.ok) {
-      setError(data.message ?? data.error ?? lt.errors.grammarBlocked)
+    if (!lesson?.id) {
+      setError(lt.errors.lessonFailed)
       return
     }
-    await load()
+    setSubmitting(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/modules/language-tutor/lesson/complete', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lesson_id: lesson.id,
+          lesson_date: lesson.lesson_date ?? localCalendarDate(),
+          unit_id: lesson.sections?.unitId ?? schedule?.currentUnit?.id,
+          acknowledged: true,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.message ?? data.error ?? lt.errors.grammarBlocked)
+        return
+      }
+      await load()
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   async function sendChat(text: string) {
@@ -336,17 +504,117 @@ export function LanguageTutorView() {
     await load()
   }
 
-  function startMic() {
-    const rec = createSpeechRecognition(chatLang)
+  function stopMic() {
+    try {
+      recognitionRef.current?.stop()
+    } catch {
+      try {
+        recognitionRef.current?.abort()
+      } catch {
+        // ignore
+      }
+    }
+    recognitionRef.current = null
+    setListening(false)
+  }
+
+  function toggleMic() {
+    if (listening) {
+      stopMic()
+      return
+    }
+    const rec = createSpeechRecognition(chatLang, { continuous: true, interimResults: true })
     if (!rec) return
+    micBaseRef.current = chatInput.trim()
+    let finals = ''
+    recognitionRef.current = rec
     setListening(true)
     rec.onresult = (ev) => {
-      const transcript = ev.results[0]?.[0]?.transcript
-      if (transcript) void sendChat(transcript)
+      let interim = ''
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        const piece = ev.results[i]?.[0]?.transcript ?? ''
+        if (ev.results[i]?.isFinal) finals += (finals ? ' ' : '') + piece.trim()
+        else interim += piece
+      }
+      const base = micBaseRef.current
+      const merged = [base, finals, interim].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim()
+      setChatInput(merged)
     }
-    rec.onend = () => setListening(false)
-    rec.onerror = () => setListening(false)
-    rec.start()
+    rec.onerror = () => {
+      recognitionRef.current = null
+      setListening(false)
+    }
+    // Only clear listening if WE stopped — continuous mode may fire onend between phrases.
+    rec.onend = () => {
+      if (recognitionRef.current === rec) {
+        // Browser ended early — restart while user still wants listening
+        try {
+          rec.start()
+        } catch {
+          recognitionRef.current = null
+          setListening(false)
+        }
+      }
+    }
+    try {
+      rec.start()
+    } catch {
+      setListening(false)
+      recognitionRef.current = null
+    }
+  }
+
+  async function markImmersionDone(kind: 'film' | 'book', title: string) {
+    const language = (schedule?.language ?? lesson?.language ?? 'fr') as string
+    const res = await fetch('/api/modules/language-tutor/immersion/done', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ language, kind, title }),
+    })
+    const data = await res.json().catch(() => ({}))
+    // Always refresh active list from API (or optimistic local filter)
+    if (data.done || res.ok) {
+      const immRes = await fetch('/api/modules/language-tutor/immersion')
+      const imm = await immRes.json()
+      if (immRes.ok && !imm.restDay) setImmersion(imm)
+    } else {
+      setImmersion((prev) => {
+        if (!prev) return prev
+        if (kind === 'film') {
+          return {
+            ...prev,
+            films: prev.films.filter((f) => f !== title),
+            doneFilms: [...(prev.doneFilms ?? []), title],
+          }
+        }
+        return {
+          ...prev,
+          books: prev.books.filter((b) => b !== title),
+          doneBooks: [...(prev.doneBooks ?? []), title],
+        }
+      })
+    }
+  }
+
+  async function generateNewFlashcards() {
+    const language = schedule?.language ?? lesson?.language ?? chatLang
+    setGeneratingCards(true)
+    setError(null)
+    const res = await fetch('/api/modules/language-tutor/flashcards/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ language, count: 15 }),
+    })
+    const data = await res.json().catch(() => ({}))
+    setGeneratingCards(false)
+    if (!res.ok) {
+      setError(data.error ?? lt.errors.lessonFailed)
+      return
+    }
+    setCardIndex(0)
+    setShowAnswer(false)
+    await load()
+    setTab('flashcards')
   }
 
   function openCoachMission() {
@@ -363,15 +631,20 @@ export function LanguageTutorView() {
   const hasTeaching = Boolean(sections?.teaching?.explanationMd)
   const checkComplete =
     schedule?.checkComplete || typeof lesson?.scores?.quiz === 'number'
-  const canComplete = Boolean(checkComplete && schedule?.grammarGateOpen)
+  const checkAcknowledged =
+    schedule?.checkAcknowledged === true || sections?.checkAcknowledged === true
+  /** Day can always be marked done once a lesson row exists (no quiz soft-lock). */
+  const canComplete = Boolean(lesson?.id)
   const estimated = sections?.dailyPlan?.estimatedMinutes ?? 45
   const passThreshold = schedule?.quizPassThreshold ?? 70
+  const quizScoreNow = lesson?.scores?.quiz
 
   const checklist = useMemo(() => {
     const items = [
       { id: 'teach', label: lt.phaseTeach, done: teachDone || checkComplete },
       { id: 'practice', label: lt.phasePractice, done: practiceDone || checkComplete },
       { id: 'check', label: lt.phaseCheck, done: checkComplete },
+      { id: 'feedback', label: lt.phaseFeedback, done: checkAcknowledged },
       {
         id: 'video',
         label: lt.missionVideo,
@@ -390,6 +663,7 @@ export function LanguageTutorView() {
     teachDone,
     practiceDone,
     checkComplete,
+    checkAcknowledged,
     sections?.dailyPlan?.flashcardCount,
     dueCards.length,
   ])
@@ -400,7 +674,12 @@ export function LanguageTutorView() {
     { id: 'teach', label: lt.phaseTeach, locked: false },
     { id: 'practice', label: lt.phasePractice, locked: !teachDone && !checkComplete && hasTeaching },
     { id: 'check', label: lt.phaseCheck, locked: !practiceDone && !checkComplete && hasTeaching },
-    { id: 'missions', label: lt.phaseMissions, locked: !checkComplete && hasTeaching },
+    { id: 'feedback', label: lt.phaseFeedback, locked: !checkComplete && hasTeaching },
+    {
+      id: 'missions',
+      label: lt.phaseMissions,
+      locked: !checkAcknowledged && hasTeaching,
+    },
   ]
 
   return (
@@ -417,7 +696,7 @@ export function LanguageTutorView() {
             <p className="mt-1 text-xs text-[var(--accent)]">
               {schedule.isRestDay ?
                 lt.restDay
-              : `${schedule.languageLabel} · ${lt.day} ${schedule.programDay}/${schedule.goalDays} · ${lt.streak}: ${schedule.streak}`}
+              : `${schedule.languageLabel} · ${lt.day} ${schedule.languageDay ?? progress?.languageDay ?? 1}/${progress?.unitsTotal || 16} · ${lt.programProgress}: ${progress?.completedCount ?? 0}/${schedule.goalDays} · ${lt.streak}: ${schedule.streak}`}
             </p>
           )}
         </div>
@@ -494,6 +773,62 @@ export function LanguageTutorView() {
           <Button variant="outline" onClick={saveSettings} disabled={savingSettings}>
             {savingSettings ? lt.generating : lt.saveSettings}
           </Button>
+          <p className="basis-full text-xs text-[var(--text-muted)]">{lt.frTrackNote}</p>
+        </GlassPanel>
+      )}
+
+      {progress && !schedule?.isRestDay && (
+        <GlassPanel className="mb-4 space-y-3 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-[var(--text)]">{lt.progressTitle}</h2>
+            <p className="text-xs text-[var(--text-muted)]">{lt.progressHint}</p>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-border)]">
+            <div
+              className="h-full rounded-full bg-[var(--accent)] transition-all"
+              style={{
+                width: `${Math.min(100, Math.round((progress.completedCount / Math.max(1, progress.goalDays)) * 100))}%`,
+              }}
+            />
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-lg border border-[var(--surface-border)] px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">{lt.programProgress}</p>
+              <p className="text-sm font-medium text-[var(--text)]">
+                {progress.completedCount}/{progress.goalDays}
+              </p>
+            </div>
+            <div className="rounded-lg border border-[var(--surface-border)] px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">{lt.unitProgress}</p>
+              <p className="text-sm font-medium text-[var(--text)]">
+                {progress.unitsPassed}/{progress.unitsTotal}
+                {schedule?.currentUnit ? ` · ${schedule.currentUnit.topic}` : ''}
+              </p>
+            </div>
+            <div className="rounded-lg border border-[var(--surface-border)] px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">{lt.lastQuiz}</p>
+              <p className="text-sm font-medium text-[var(--text)]">
+                {progress.lastQuizScore != null ? `${progress.lastQuizScore}%` : '—'}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs text-[var(--text-muted)]">
+            <span>FR {progress.completedByLanguage.fr ?? 0}</span>
+            <span>ES {progress.completedByLanguage.es ?? 0}</span>
+            <span>AR {progress.completedByLanguage.ar ?? 0}</span>
+          </div>
+          {progress.recentDone.length > 0 && (
+            <ul className="space-y-1 border-t border-[var(--surface-border)] pt-2 text-xs text-[var(--text-muted)]">
+              {progress.recentDone.slice(0, 5).map((row) => (
+                <li key={`${row.date}-${row.language}`} className="flex flex-wrap justify-between gap-2">
+                  <span>
+                    {row.date} · {row.language.toUpperCase()} · {row.topic}
+                  </span>
+                  <span>{row.quiz != null ? `${row.quiz}%` : '✓'}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </GlassPanel>
       )}
 
@@ -833,62 +1168,193 @@ export function LanguageTutorView() {
                         </div>
                       )}
                       {sections?.quiz && sections.quiz.length > 0 && (
-                        <div>
+                        <div className="space-y-3">
                           <h3 className="text-sm font-semibold text-[var(--accent)]">
                             {lt.quiz} ({sections.quiz.length})
                           </h3>
-                          <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm">
-                            {sections.quiz.map((q, i) => (
-                              <li key={`q-${i}`}>
-                                <label className="flex items-start gap-2">
-                                  <input
-                                    type="checkbox"
-                                    checked={quizCorrect.has(i)}
-                                    onChange={(e) => {
-                                      setQuizCorrect((s) => {
-                                        const n = new Set(s)
-                                        if (e.target.checked) n.add(i)
-                                        else n.delete(i)
-                                        return n
-                                      })
-                                    }}
-                                  />
-                                  <span>
+                          <div className="space-y-3">
+                            {sections.quiz.map((q, i) => {
+                              const options =
+                                Array.isArray(q.options) && q.options.length > 0 ?
+                                  q.options
+                                : null
+                              return (
+                                <div
+                                  key={`q-${i}`}
+                                  className="rounded-xl border border-[var(--surface-border)] bg-[var(--background-alt)]/40 p-3"
+                                >
+                                  <p className="text-sm font-medium text-[var(--text)]" dir={textDir}>
+                                    <span className="mr-2 text-[var(--text-muted)]">{i + 1}.</span>
                                     {q.question}
-                                    {revealedQuiz.has(i) && (
-                                      <span className="ml-1 text-xs text-[var(--text-muted)]">
-                                        → {q.answer}
-                                      </span>
-                                    )}
-                                  </span>
-                                </label>
-                                {!revealedQuiz.has(i) && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setRevealedQuiz((s) => new Set(s).add(i))}
-                                    className="ml-6 text-xs text-[var(--accent)] hover:underline"
-                                  >
-                                    {lt.showAnswer}
-                                  </button>
-                                )}
-                              </li>
-                            ))}
-                          </ol>
+                                  </p>
+                                  {options ?
+                                    <div className="mt-3 space-y-2" role="radiogroup" aria-label={`Q${i + 1}`}>
+                                      {options.map((opt, oi) => {
+                                        const selected = quizAnswers[i] === opt
+                                        return (
+                                          <label
+                                            key={`q-${i}-opt-${oi}`}
+                                            className={cn(
+                                              'flex cursor-pointer items-start gap-2 rounded-lg border px-3 py-2 text-sm transition',
+                                              selected
+                                                ? 'border-[var(--accent)] bg-[var(--accent)]/10'
+                                                : 'border-[var(--surface-border)] hover:border-[var(--accent)]/50',
+                                            )}
+                                          >
+                                            <input
+                                              type="radio"
+                                              name={`quiz-${i}`}
+                                              className="mt-1"
+                                              checked={selected}
+                                              onChange={() =>
+                                                setQuizAnswers((prev) => ({ ...prev, [i]: opt }))
+                                              }
+                                            />
+                                            <span dir={textDir}>{opt}</span>
+                                          </label>
+                                        )
+                                      })}
+                                    </div>
+                                  : (
+                                    <div className="mt-3 space-y-2">
+                                      <input
+                                        type="text"
+                                        value={quizAnswers[i] ?? ''}
+                                        onChange={(e) =>
+                                          setQuizAnswers((prev) => ({ ...prev, [i]: e.target.value }))
+                                        }
+                                        dir={textDir}
+                                        className="w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm"
+                                        placeholder="…"
+                                      />
+                                      {!revealedQuiz.has(i) ?
+                                        <button
+                                          type="button"
+                                          onClick={() => setRevealedQuiz((s) => new Set(s).add(i))}
+                                          className="text-xs text-[var(--accent)] hover:underline"
+                                        >
+                                          {lt.showAnswer}
+                                        </button>
+                                      : (
+                                        <p className="text-xs text-[var(--text-muted)]">→ {q.answer}</p>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
                         </div>
                       )}
-                      {feedback && (
+                      <div className="flex flex-wrap gap-2">
+                        <Button variant="outline" onClick={submitPractice} disabled={submitting}>
+                          {submitting ? lt.grading : lt.submitPractice}
+                        </Button>
+                        {checkComplete && (
+                          <Button variant="outline" onClick={() => setPhase('feedback')}>
+                            {lt.phaseFeedback}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {phase === 'feedback' && (
+                    <div className="space-y-4">
+                      <div>
+                        <h3 className="text-sm font-semibold text-[var(--accent)]">
+                          {lt.feedbackTitle}
+                        </h3>
+                        <p className="mt-1 text-sm text-[var(--text-muted)]">
+                          {fillTemplate(lt.quizScoreLabel, {
+                            score: quizScoreNow ?? sections?.submissions?.quizScore ?? 0,
+                          })}
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--text-muted)]">
+                          {lt.passAfterReviewHint}
+                        </p>
+                      </div>
+
+                      {sections?.quiz && sections.quiz.length > 0 && (
+                        <div className="space-y-3">
+                          {sections.quiz.map((q, i) => {
+                            const given = quizAnswers[i] ?? sections.submissions?.quizAnswers?.[String(i)] ?? ''
+                            const expected = q.answer ?? ''
+                            const ok =
+                              given &&
+                              normalizeQuizAnswer(given) === normalizeQuizAnswer(expected)
+                            return (
+                              <div
+                                key={`fb-${i}`}
+                                className={cn(
+                                  'rounded-xl border p-3',
+                                  ok
+                                    ? 'border-emerald-500/40 bg-emerald-500/5'
+                                    : 'border-amber-500/40 bg-amber-500/5',
+                                )}
+                              >
+                                <p className="text-sm font-medium text-[var(--text)]" dir={textDir}>
+                                  <span className="mr-2 text-[var(--text-muted)]">{i + 1}.</span>
+                                  {q.question}
+                                </p>
+                                <p className="mt-2 text-xs text-[var(--text-muted)]">
+                                  {lt.yourAnswer}:{' '}
+                                  <span dir={textDir}>{given || lt.unanswered}</span>
+                                </p>
+                                <p className="mt-1 text-xs text-[var(--text)]">
+                                  {lt.correctAnswer}: <span dir={textDir}>{expected}</span>
+                                </p>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+
+                      {(feedback || sections?.submissions?.feedback) && (
                         <p className="rounded-lg border border-[var(--surface-border)] px-3 py-2 text-sm text-[var(--text-muted)]">
-                          {feedback}
+                          {feedback || sections?.submissions?.feedback}
                         </p>
                       )}
-                      <Button variant="outline" onClick={submitPractice} disabled={submitting}>
-                        {submitting ? lt.grading : lt.submitPractice}
-                      </Button>
+
+                      <div className="flex flex-wrap gap-2">
+                        <Button variant="outline" onClick={retakeCheck}>
+                          {lt.retakeCheck}
+                        </Button>
+                        {!checkAcknowledged ?
+                          <Button onClick={acknowledgeCheck} disabled={submitting}>
+                            {submitting ? lt.grading : lt.acknowledgeUnderstood}
+                          </Button>
+                        : (
+                          <Button onClick={() => setPhase('missions')}>
+                            {lt.phaseMissions}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   )}
 
                   {phase === 'missions' && (
                     <div className="space-y-3">
+                      <div className="rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-3 space-y-2">
+                        <Button
+                          className="w-full sm:w-auto"
+                          onClick={completeLesson}
+                          disabled={!canComplete || submitting}
+                        >
+                          {submitting ? lt.grading : lt.markDone}
+                        </Button>
+                        <p className="text-xs text-[var(--text-muted)]">{lt.passAfterReviewHint}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {checkComplete && (
+                            <Button variant="outline" onClick={() => setPhase('feedback')}>
+                              {lt.phaseFeedback}
+                            </Button>
+                          )}
+                          <Button variant="outline" onClick={retakeCheck}>
+                            {lt.retakeCheck}
+                          </Button>
+                        </div>
+                      </div>
                       <div className="rounded-xl border border-[var(--surface-border)] p-3">
                         <p className="text-xs font-semibold text-[var(--accent)]">{lt.missionVideo}</p>
                         <p className="mt-1 text-sm text-[var(--text-muted)]">
@@ -944,19 +1410,6 @@ export function LanguageTutorView() {
                         </button>
                       </div>
 
-                      {lesson.status !== 'done' && (
-                        <div className="space-y-2 pt-2">
-                          <Button onClick={completeLesson} disabled={!canComplete}>
-                            {lt.markDone}
-                          </Button>
-                          {!checkComplete && (
-                            <p className="text-xs text-amber-300">{lt.checkRequired}</p>
-                          )}
-                          {checkComplete && !schedule?.grammarGateOpen && (
-                            <p className="text-xs text-amber-300">{lt.grammarBlocked}</p>
-                          )}
-                        </div>
-                      )}
                     </div>
                   )}
                 </>
@@ -1024,8 +1477,12 @@ export function LanguageTutorView() {
                   className="flex-1 rounded-xl border border-[var(--surface-border)] bg-[var(--background-alt)]/50 px-3 py-2 text-sm"
                 />
                 {isSpeechRecognitionSupported() && (
-                  <Button variant="outline" onClick={startMic} disabled={listening}>
-                    {listening ? '…' : lt.mic}
+                  <Button
+                    variant={listening ? 'primary' : 'outline'}
+                    onClick={toggleMic}
+                    aria-pressed={listening}
+                  >
+                    {listening ? lt.micStop : lt.micStart}
                   </Button>
                 )}
                 <Button onClick={() => sendChat(chatInput)} disabled={chatSending}>
@@ -1036,7 +1493,17 @@ export function LanguageTutorView() {
           )}
 
           {tab === 'flashcards' && (
-            <GlassPanel className="p-6">
+            <GlassPanel className="space-y-4 p-6">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-[var(--text-muted)]">{lt.flashcardProgressHint}</p>
+                <Button
+                  variant="outline"
+                  onClick={generateNewFlashcards}
+                  disabled={generatingCards}
+                >
+                  {generatingCards ? lt.generating : lt.generateFlashcards}
+                </Button>
+              </div>
               {currentCard ?
                 <div className="text-center">
                   <p className="text-xs text-[var(--text-muted)]">
@@ -1100,20 +1567,51 @@ export function LanguageTutorView() {
                   )}
                   <div>
                     <h3 className="text-sm font-semibold text-[var(--accent)]">{lt.filmsTitle}</h3>
-                    <ul className="mt-2 list-disc pl-5 text-sm text-[var(--text-muted)]">
+                    <ul className="mt-2 space-y-2 text-sm text-[var(--text-muted)]">
                       {immersion.films.map((f) => (
-                        <li key={f}>{f}</li>
+                        <li key={f} className="flex flex-wrap items-center justify-between gap-2">
+                          <span>{f}</span>
+                          <button
+                            type="button"
+                            onClick={() => void markImmersionDone('film', f)}
+                            className="text-xs text-[var(--accent)] hover:underline"
+                          >
+                            {lt.markImmersionDone}
+                          </button>
+                        </li>
                       ))}
                     </ul>
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold text-[var(--accent)]">{lt.booksTitle}</h3>
-                    <ul className="mt-2 list-disc pl-5 text-sm text-[var(--text-muted)]">
+                    <ul className="mt-2 space-y-2 text-sm text-[var(--text-muted)]">
                       {immersion.books.map((b) => (
-                        <li key={b}>{b}</li>
+                        <li key={b} className="flex flex-wrap items-center justify-between gap-2">
+                          <span>{b}</span>
+                          <button
+                            type="button"
+                            onClick={() => void markImmersionDone('book', b)}
+                            className="text-xs text-[var(--accent)] hover:underline"
+                          >
+                            {lt.markImmersionDone}
+                          </button>
+                        </li>
                       ))}
                     </ul>
                   </div>
+                  {((immersion.doneFilms?.length ?? 0) > 0 || (immersion.doneBooks?.length ?? 0) > 0) && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-[var(--accent)]">{lt.immersionDoneTitle}</h3>
+                      <ul className="mt-2 list-disc pl-5 text-xs text-[var(--text-muted)]">
+                        {(immersion.doneFilms ?? []).map((f) => (
+                          <li key={`df-${f}`}>🎬 {f}</li>
+                        ))}
+                        {(immersion.doneBooks ?? []).map((b) => (
+                          <li key={`db-${b}`}>📖 {b}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   {immersion.cultureBooks.length > 0 && (
                     <div>
                       <h3 className="text-sm font-semibold text-[var(--accent)]">{lt.cultureBooks}</h3>

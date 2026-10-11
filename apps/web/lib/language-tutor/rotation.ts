@@ -16,19 +16,40 @@ export function isSunday(date: Date): boolean {
   return date.getDay() === 0
 }
 
-/** Mon=fr, Tue=es, Wed=ar, Thu=fr, Fri=es, Sat=ar, Sun=fr (unless sundayBreak). */
+/** Weekday 0=Sun…6=Sat for a YYYY-MM-DD civil date (timezone-safe). */
+export function weekdayFromCalendarDate(dateStr: string): number {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(Date.UTC(y!, (m ?? 1) - 1, d ?? 1, 12, 0, 0)).getUTCDay()
+}
+
+/**
+ * Mon=fr, Tue=es, Wed=ar, Thu=fr, Fri=es, Sat=ar, Sun=fr (unless sundayBreak).
+ * Prefer this over `languageForDate(new Date())` on UTC servers.
+ */
+export function languageForCalendarDate(
+  dateStr: string,
+  rotation: TutorLanguage[] = DEFAULT_ROTATION,
+  sundayBreak = false,
+): { language: TutorLanguage | null; isRestDay: boolean } {
+  const weekday = weekdayFromCalendarDate(dateStr)
+  if (sundayBreak && weekday === 0) {
+    return { language: null, isRestDay: true }
+  }
+  const learningDayIndex = weekday === 0 ? 0 : weekday - 1
+  const lang = rotation[learningDayIndex % rotation.length] ?? rotation[0]!
+  return { language: lang, isRestDay: false }
+}
+
+/** Uses the machine-local calendar day of `date` (prefer languageForCalendarDate + Istanbul date). */
 export function languageForDate(
   date: Date,
   rotation: TutorLanguage[] = DEFAULT_ROTATION,
   sundayBreak = false,
 ): { language: TutorLanguage | null; isRestDay: boolean } {
-  if (sundayBreak && isSunday(date)) {
-    return { language: null, isRestDay: true }
-  }
-  const weekday = date.getDay()
-  const learningDayIndex = weekday === 0 ? 0 : weekday - 1
-  const lang = rotation[learningDayIndex % rotation.length] ?? rotation[0]!
-  return { language: lang, isRestDay: false }
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return languageForCalendarDate(`${y}-${m}-${d}`, rotation, sundayBreak)
 }
 
 /** Count learning days since program start (skips Sundays only when sundayBreak). */

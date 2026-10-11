@@ -9,23 +9,44 @@ export interface CurriculumUnit {
   youtubeTopic: string
 }
 
+/** French A2 crash course (30 days): A2 start → solid A2+ / early B1. Dense, not longer. */
 const FR_UNITS: Omit<CurriculumUnit, 'language'>[] = [
-  { id: 'fr-01', order: 1, topic: 'Greetings & introductions', grammarFocus: 'Tu vs vous, être', youtubeTopic: 'French greetings beginner' },
-  { id: 'fr-02', order: 2, topic: 'Numbers, age & phone', grammarFocus: 'Numbers 0-100, quel âge', youtubeTopic: 'French numbers' },
-  { id: 'fr-03', order: 3, topic: 'Present tense -er verbs', grammarFocus: 'Regular -er conjugation', youtubeTopic: 'French present tense er verbs' },
-  { id: 'fr-04', order: 4, topic: 'Questions & negation', grammarFocus: 'Est-ce que, ne...pas', youtubeTopic: 'French questions negation' },
-  { id: 'fr-05', order: 5, topic: 'Articles, gender & adjectives', grammarFocus: 'le/la/les, agreement', youtubeTopic: 'French articles gender' },
-  { id: 'fr-06', order: 6, topic: 'Avoir & être deep dive', grammarFocus: 'Avoir vs être + expressions', youtubeTopic: 'French avoir etre' },
-  { id: 'fr-07', order: 7, topic: 'Family & describing people', grammarFocus: 'Possessives mon/ma/mes', youtubeTopic: 'French family vocabulary' },
-  { id: 'fr-08', order: 8, topic: 'Daily routine', grammarFocus: 'Reflexive verbs intro', youtubeTopic: 'French daily routine' },
-  { id: 'fr-09', order: 9, topic: 'Time, days & schedules', grammarFocus: 'Il est... / à + time', youtubeTopic: 'French telling time' },
-  { id: 'fr-10', order: 10, topic: 'Food & café ordering', grammarFocus: 'Partitive du/de la/des', youtubeTopic: 'French restaurant ordering' },
-  { id: 'fr-11', order: 11, topic: 'Places in town', grammarFocus: 'Prepositions à/chez/dans', youtubeTopic: 'French places in town' },
-  { id: 'fr-12', order: 12, topic: 'Directions & getting around', grammarFocus: 'Imperative + location phrases', youtubeTopic: 'French directions' },
-  { id: 'fr-13', order: 13, topic: 'Past: passé composé (avoir)', grammarFocus: 'Passé composé with avoir', youtubeTopic: 'French passe compose' },
-  { id: 'fr-14', order: 14, topic: 'Past with être & agreement', grammarFocus: 'Dr & Mrs Vandertramp', youtubeTopic: 'French passe compose etre' },
-  { id: 'fr-15', order: 15, topic: 'Near future plans', grammarFocus: 'Aller + infinitive', youtubeTopic: 'French futur proche' },
-  { id: 'fr-16', order: 16, topic: 'Shopping & preferences', grammarFocus: 'Je voudrais, combien', youtubeTopic: 'French shopping dialogue' },
+  // 1–5 Foundation compression
+  { id: 'fr-a2-01', order: 1, topic: 'Present irregulars & daily narration', grammarFocus: 'aller/faire/venir/prendre + frequency adverbs', youtubeTopic: 'French irregular present verbs A2' },
+  { id: 'fr-a2-02', order: 2, topic: 'Articles, partitives & quantity', grammarFocus: 'du/de la/des vs le/la; beaucoup de / un peu de', youtubeTopic: 'French partitive articles A2' },
+  { id: 'fr-a2-03', order: 3, topic: 'Questions that sound natural', grammarFocus: 'inversion, est-ce que, intonation; question words', youtubeTopic: 'French question forms A2' },
+  { id: 'fr-a2-04', order: 4, topic: 'Negation beyond ne…pas', grammarFocus: 'ne…jamais/plus/rien/personne; person vs thing', youtubeTopic: 'French negation A2' },
+  { id: 'fr-a2-05', order: 5, topic: 'Adjectives & agreement in real speech', grammarFocus: 'position before/after noun; irregular adjectives', youtubeTopic: 'French adjective agreement position A2' },
+  // 6–10 Past
+  { id: 'fr-a2-06', order: 6, topic: 'Passé composé with avoir (core)', grammarFocus: 'PC formation + common irregular PP', youtubeTopic: 'French passe compose avoir A2' },
+  { id: 'fr-a2-07', order: 7, topic: 'Passé composé with être & agreement', grammarFocus: 'DR MRS VANDERTRAMP + agreement with subject', youtubeTopic: 'French passe compose etre A2' },
+  { id: 'fr-a2-08', order: 8, topic: 'Imparfait for description & habit', grammarFocus: 'imparfait forms + used-to / was-ing', youtubeTopic: 'French imparfait A2' },
+  { id: 'fr-a2-09', order: 9, topic: 'PC vs imparfait in storytelling', grammarFocus: 'background vs event; time markers', youtubeTopic: 'French passe compose vs imparfait' },
+  { id: 'fr-a2-10', order: 10, topic: 'Time since / ago / for', grammarFocus: 'depuis, il y a, pendant, ça fait…que', youtubeTopic: 'French depuis il y a pendant' },
+  // 11–15 Future + modal
+  { id: 'fr-a2-11', order: 11, topic: 'Near future & plans', grammarFocus: 'aller + infinitive; venir de', youtubeTopic: 'French futur proche venir de' },
+  { id: 'fr-a2-12', order: 12, topic: 'Futur simple essentials', grammarFocus: 'regular + key irregulars (être, avoir, aller, faire)', youtubeTopic: 'French futur simple A2' },
+  { id: 'fr-a2-13', order: 13, topic: 'Conditionnel for politeness & wishes', grammarFocus: 'je voudrais / aimerais; soft requests', youtubeTopic: 'French conditionnel present A2' },
+  { id: 'fr-a2-14', order: 14, topic: 'Modal verbs in real life', grammarFocus: 'devoir / pouvoir / vouloir / falloir nuances', youtubeTopic: 'French devoir pouvoir vouloir' },
+  { id: 'fr-a2-15', order: 15, topic: 'Hypotheses with si (A2)', grammarFocus: 'si + présent → futur; si + imparfait → conditionnel', youtubeTopic: 'French si clauses A2' },
+  // 16–20 Sentence expansion
+  { id: 'fr-a2-16', order: 16, topic: 'Relative clauses: qui / que / où', grammarFocus: 'qui vs que; où for place/time', youtubeTopic: 'French relative pronouns qui que ou' },
+  { id: 'fr-a2-17', order: 17, topic: 'Relative dont & ce qui / ce que', grammarFocus: 'dont basics; ce qui / ce que', youtubeTopic: 'French dont ce qui ce que' },
+  { id: 'fr-a2-18', order: 18, topic: 'Object pronouns COD / COI', grammarFocus: 'le/la/les, lui/leur; placement before verb', youtubeTopic: 'French object pronouns COD COI' },
+  { id: 'fr-a2-19', order: 19, topic: 'Pronouns y and en', grammarFocus: 'y for places/à; en for de / quantities', youtubeTopic: 'French pronouns y en A2' },
+  { id: 'fr-a2-20', order: 20, topic: 'Comparisons & superlatives', grammarFocus: 'plus/moins/aussi…que; le plus / le moins', youtubeTopic: 'French comparative superlative' },
+  // 21–25 Opinion / assumption
+  { id: 'fr-a2-21', order: 21, topic: 'Subjonctif triggers (core set)', grammarFocus: 'il faut que, vouloir que, avant que (intro)', youtubeTopic: 'French subjonctif present basics' },
+  { id: 'fr-a2-22', order: 22, topic: 'Opinion, emotion & doubt', grammarFocus: 'je suis content que / je doute que + subjonctif vs indicatif', youtubeTopic: 'French subjonctif opinion emotion' },
+  { id: 'fr-a2-23', order: 23, topic: 'Reported speech (simple)', grammarFocus: 'il a dit que + tense shift intro', youtubeTopic: 'French discours rapporte A2' },
+  { id: 'fr-a2-24', order: 24, topic: 'Linking ideas smoothly', grammarFocus: 'parce que, puisque, donc, pourtant, cependant', youtubeTopic: 'French connectors A2' },
+  { id: 'fr-a2-25', order: 25, topic: 'Passive & on (spoken French)', grammarFocus: 'on = we/people; être + PP passive intro', youtubeTopic: 'French on passive voice A2' },
+  // 26–30 Usage & integration
+  { id: 'fr-a2-26', order: 26, topic: 'Formal vs informal register', grammarFocus: 'tu/vous; email vs chat; softener phrases', youtubeTopic: 'French formal informal register' },
+  { id: 'fr-a2-27', order: 27, topic: 'Argue a simple point', grammarFocus: 'je pense que / à mon avis / d’un côté…', youtubeTopic: 'French giving opinions A2' },
+  { id: 'fr-a2-28', order: 28, topic: 'Work & bureaucracy dialogues', grammarFocus: 'rendez-vous, documents, polite requests', youtubeTopic: 'French office appointments vocabulary' },
+  { id: 'fr-a2-29', order: 29, topic: 'Travel problems & solutions', grammarFocus: 'complaints, delays, asking for help', youtubeTopic: 'French travel problems dialogue' },
+  { id: 'fr-a2-30', order: 30, topic: 'Media reading & error clinic', grammarFocus: 'integrate PC/imparfait/relatifs/pronouns; self-correction', youtubeTopic: 'French A2 reading comprehension news' },
 ]
 
 const ES_UNITS: Omit<CurriculumUnit, 'language'>[] = [

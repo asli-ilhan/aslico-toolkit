@@ -8,7 +8,8 @@ import {
 } from '@aslico/ai'
 import { createClient } from '@/lib/supabase/server'
 import { isMissingLanguageTutorTable } from '@/lib/supabase/errors'
-import { languageForDate } from '@/lib/language-tutor/rotation'
+import { languageForCalendarDate } from '@/lib/language-tutor/rotation'
+import { calendarDateInTimeZone } from '@/lib/language-tutor/dates'
 import { fetchTutorSettings } from '@/lib/language-tutor/lesson'
 import { languageDayIndex } from '@/lib/language-tutor/curriculum'
 import { gatedUnitForLanguageDay } from '@/lib/language-tutor/progress'
@@ -32,7 +33,11 @@ export async function POST(request: NextRequest) {
   if (!message) return NextResponse.json({ error: 'message required' }, { status: 400 })
 
   const settings = await fetchTutorSettings(supabase, user.id)
-  const { language } = languageForDate(new Date(), settings.rotation, settings.sundayBreak)
+  const { language } = languageForCalendarDate(
+    calendarDateInTimeZone(),
+    settings.rotation,
+    settings.sundayBreak,
+  )
   const lang = (body.language ?? language ?? 'fr') as TutorLanguage
 
   const { data: historyRows } = await supabase

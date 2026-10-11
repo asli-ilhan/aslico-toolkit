@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isMissingLanguageTutorTable } from '@/lib/supabase/errors'
 import { fetchTutorSettings } from '@/lib/language-tutor/lesson'
-import { languageForDate, languageLabel } from '@/lib/language-tutor/rotation'
+import { languageForCalendarDate, languageLabel } from '@/lib/language-tutor/rotation'
+import { calendarDateInTimeZone } from '@/lib/language-tutor/dates'
 import { languageDayIndex } from '@/lib/language-tutor/curriculum'
 import { gatedUnitForLanguageDay } from '@/lib/language-tutor/progress'
 import { fetchImmersionBundle } from '@/lib/language-tutor/immersion'
@@ -15,7 +16,11 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const settings = await fetchTutorSettings(supabase, user.id)
-  const { language, isRestDay } = languageForDate(new Date(), settings.rotation, settings.sundayBreak)
+  const { language, isRestDay } = languageForCalendarDate(
+    calendarDateInTimeZone(),
+    settings.rotation,
+    settings.sundayBreak,
+  )
 
   if (isRestDay || !language) {
     return NextResponse.json({ restDay: true })
